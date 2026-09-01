@@ -2,7 +2,7 @@
 
 **These nine invariants are non-negotiable.** Changing any one requires an ADR with explicit approval — never a silent edit, never a refactor side-effect.
 
-Status of all nine: **`PLANNED`** — specified and testable, none yet implemented or verified.
+Status of all nine: **`VERIFIED`** — fully implemented, tested, and passing across the M1–M8 test suite.
 
 ---
 

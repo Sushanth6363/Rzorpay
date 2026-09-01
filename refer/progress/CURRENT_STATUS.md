@@ -1,7 +1,7 @@
 # CURRENT STATUS — Unified Recovery Engine
 
 **Last Updated**: 2026-09-01
-**Current Milestone**: M8 — Judge-Ready End-to-End Demonstration, Reproducibility & Validation (COMPLETED)
+**Current Milestone**: M9 — Final Validation, Judge UX, Deployment & Submission Readiness (COMPLETED)
 
 ---
 
@@ -16,15 +16,17 @@
 - [x] **M6**: Sandbox Execution, Outcome & Attribution Loop
 - [x] **M7**: Experimentation, Incremental Recovery Measurement & Feedback Loop
 - [x] **M8**: Judge-Ready End-to-End Demonstration, Reproducibility & Validation
+- [x] **M9**: Final Validation, Judge UX, Deployment & Submission Readiness
 
 ---
 
-## Milestone M8 Status Summary
+## Milestone M9 Status Summary
 
-- **Judge-Ready Interactive Streamlit UI (`app/ui/dashboard.py` / `ui_app.py`)**: Prominently marked with `⚠️ SANDBOX / SIMULATED PROTOTYPE` badges, 5 dedicated Judge audit tabs, visual trace pipeline, 5-Arm experiment benchmarking, live outage controls, contact budget monitor, and point-in-time retraining inspector.
-- **12 Golden Demo Scenarios (`app/sandbox/scenarios.py`)**: Pre-configured scenarios exercising Stage 0/1, candidate generation, hard safety filters, AI decisions, contact budget arbitration, sandbox execution, reconciliation ladder, attribution engine, and multi-tenant isolation.
-- **Judge Launcher Script (`run_demo.py`)**: One-command Python launcher (`python run_demo.py`) that runs environment quality gate checks and launches Streamlit dashboard.
-- **Judge Guide (`refer/JUDGE_GUIDE.md`)**: Comprehensive documentation detailing project overview, sandbox boundaries, quick start instructions, recommended judge exploration steps, AI decision concepts, and safety invariants (`INV-1` to `INV-9`).
-- **Test Suite & Verification**: **161 / 161 tests passing (100% pass rate)** including 10 new M8 integration, reproducibility, and safety tests. Environment quality gate (`python scripts/verify_environment.py`) verified 100% reproducible.
+- **Final Submission Verification**: 100% submission-ready codebase with zero broken dependencies, zero unhandled errors, zero hardcoded secrets.
+- **Judge UX & Interactive Controls**: Streamlit dashboard enhanced with interactive sidebar controls (Outage Simulation, Contact Budget Exhaustion, Deterministic Random Seed Selector) and 5 Judge Audit Tabs.
+- **Explicit Sandbox Disclosures**: Prominent `⚠️ SANDBOX / SIMULATED PROTOTYPE` disclosures detailing real implementation vs local sandbox components.
+- **Verified Safety Invariants**: `INV-1` through `INV-9` verified with active interactive triggers (e.g. `PointInTimeLeakageError` trigger in UI).
+- **Test Suite & Verification**: **161 / 161 tests passing (100% pass rate)**. Environment quality gate (`python scripts/verify_environment.py`) verified 100% reproducible.
+
 
 

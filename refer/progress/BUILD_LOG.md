@@ -269,4 +269,32 @@ Git commit:
 - **Decisions made**: Explicit simulation boundaries, 12 deterministic scenario presets, 100% reproducible execution seed control.
 - **Next action**: Complete project deliverables & final judge presentation.
 
+---
+
+## 2026-09-01 — M9 Final Validation & Submission Readiness Completed
+
+- **Date**: 2026-09-01
+- **Milestone**: M9 — Final Validation, Judge UX, Deployment & Submission Readiness
+- **Task**: Finalize UI interactive controls, audit judge experience, verify 100% clean-checkout reproducibility, update documentation, and perform final security scan.
+- **Key Changes**:
+  1. Enhanced `app/ui/dashboard.py` with interactive sidebar controls (Outage Simulation, Contact Budget Exhaustion, Deterministic Seed Selector), 11-step pipeline visual trace, explicit sandbox disclosures, and live `PointInTimeLeakageError` invariant verification trigger.
+  2. Updated `refer/REPRODUCIBILITY.md` and `refer/05_SAFETY_INVARIANTS.md` to reflect verified M1–M9 status.
+  3. Created `refer/handoff/10_FINAL_SUBMISSION_M9.md` detailing final project status and submission checklist.
+  4. Verified full test suite and clean quality gate execution.
+- **Files changed**:
+  - `app/ui/dashboard.py`
+  - `refer/REPRODUCIBILITY.md`
+  - `refer/05_SAFETY_INVARIANTS.md`
+  - `refer/progress/CURRENT_STATUS.md`
+  - `refer/progress/NEXT_STEPS.md`
+  - `refer/progress/BUILD_LOG.md`
+  - `refer/testing/TEST_MATRIX.md`
+  - `refer/handoff/10_FINAL_SUBMISSION_M9.md`
+- **Tests run**: `pytest -v` & `python scripts/verify_environment.py`
+- **Tests passed**: 161 (100% pass rate in 4.04s)
+- **Tests failed**: 0
+- **Decisions made**: Local offline launch model (`python run_demo.py`), zero cloud dependencies, complete offline self-containment.
+- **Next action**: Project submission complete.
+
+
 

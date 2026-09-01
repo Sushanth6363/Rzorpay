@@ -53,7 +53,7 @@ python scripts/verify_environment.py
 ```bash
 pytest -v
 ```
-*Expected output*: `4 passed in < 5.0s`.
+*Expected output*: `161 passed in < 10.0s`.
 
 ---
 
@@ -88,5 +88,6 @@ The automated quality gate script (`scripts/verify_environment.py`) validates si
 
 - **Last Quality Gate Execution**: 2026-09-01
 - **Quality Gate Result**: `PASS` (6/6 checks passed)
-- **Pytest Output**: `4 passed in 0.45s`
+- **Pytest Output**: `161 passed in 3.75s`
 - **Secret Scan Result**: `0 matches`
+
