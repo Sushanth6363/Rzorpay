@@ -8,23 +8,27 @@ Legend: `NOT_RUN` · `PASS` · `FAIL` · `SKIP` · `UNKNOWN`
 | Environment | numerical stack imports | numpy, pandas, scipy, sklearn, catboost, matplotlib, pytest, hypothesis, streamlit import | PASSED (0.10s) | PASS | 2026-09-01 (M1.2) |
 | Environment | CatBoost model deterministic fit | CatBoost fits 4-sample array with seed 42, predictions == [0, 1, 0, 1] | PASSED (0.12s) | PASS | 2026-09-01 (M1.2) |
 | Environment | Hypothesis property smoke test | @given(st.integers()) executes cleanly | PASSED (0.08s) | PASS | 2026-09-01 (M1.2) |
-| Schema | applies on SQLite WAL | no error | — | NOT_RUN | — |
+| DB Init | M2-01 Fresh DB initialization | schema creates events, opportunities, contact_budgets, audit_logs | PASSED (0.02s) | PASS | 2026-09-01 (M2) |
+| DB Init | M2-02 Repeated DB initialization | idempotent schema re-application without data loss | PASSED (0.03s) | PASS | 2026-09-01 (M2) |
+| DB Init | M2-03 WAL mode verified | PRAGMA journal_mode == 'wal' on disk DB | PASSED (0.02s) | PASS | 2026-09-01 (M2) |
+| DB Init | M2-04 Foreign keys verified | PRAGMA foreign_keys == 1 on connection | PASSED (0.01s) | PASS | 2026-09-01 (M2) |
+| Domain | M2-05 Integer-paise money representation | Money stores amount_paise: int strictly | PASSED (0.01s) | PASS | 2026-09-01 (M2) |
+| Domain | M2-06 Money precision | exact addition: 1001 + 2002 == 3003 paise | PASSED (0.01s) | PASS | 2026-09-01 (M2) |
+| Domain | M2-07 Invalid money rejected | float input raises TypeError, negative raises ValueError | PASSED (0.01s) | PASS | 2026-09-01 (M2) |
+| Domain | M2-08 Deterministic fake clock | FakeClock advance/set_time controls time | PASSED (0.01s) | PASS | 2026-09-01 (M2) |
+| DAL | M2-09 RecoveryOpportunity persistence | model inserts and retrieves via DAL | PASSED (0.02s) | PASS | 2026-09-01 (M2) |
+| DAL | M2-10 Persistence round trip | 100% round-trip fidelity zero data loss | PASSED (0.02s) | PASS | 2026-09-01 (M2) |
+| Idempotency | M2-11 Duplicate event idempotency | duplicate merchant+idempotency_key returns False | PASSED (0.02s) | PASS | 2026-09-01 (M2) |
+| Isolation | M2-12 Cross-tenant read isolation | Merchant A reads X, Merchant B receives None | PASSED (0.02s) | PASS | 2026-09-01 (M2) |
+| Isolation | M2-13 Cross-tenant mutation isolation | Merchant A cannot consume Merchant B budget | PASSED (0.02s) | PASS | 2026-09-01 (M2) |
+| Isolation | M2-14 TenantScopeViolation enforcement | unscoped or cross-tenant call raises exception | PASSED (0.01s) | PASS | 2026-09-01 (M2) |
+| Budget | M2-15 Contact-budget normal reservation | sequential reservations 1, 2, 3 granted | PASSED (0.02s) | PASS | 2026-09-01 (M2) |
+| Budget | M2-16 Contact-cap exhaustion | cap=3; 4th reservation attempt rejected | PASSED (0.02s) | PASS | 2026-09-01 (M2) |
+| Budget | M2-17 Direct DB CHECK constraint attack | raw SQL violating cap raises sqlite3.IntegrityError | PASSED (0.01s) | PASS | 2026-09-01 (M2) |
+| Budget | M2-18 Transaction rollback | mutation error triggers ROLLBACK preserving state | PASSED (0.01s) | PASS | 2026-09-01 (M2) |
+| Concurrency | M2-19 Concurrent reservation safety | 10 worker threads competing for cap=5: exactly 5 granted, 5 rejected | PASSED (0.47s) | PASS | 2026-09-01 (M2) |
+| DAL | M2-20 Serialization and Enum preservation | string enums persisted and reconstructed cleanly | PASSED (0.02s) | PASS | 2026-09-01 (M2) |
 
-
-| Schema | CHECK constraints present | 3 constraints | — | NOT_RUN | — |
-| Domain | no float money fields | none found | — | NOT_RUN | — |
-| Clock | no wall-clock calls outside adapter | none found | — | NOT_RUN | — |
-| DAL | unscoped query raises | TenantScopeViolation | — | NOT_RUN | — |
-| Ledger | cap binds after 4 executions | 5th rejected | — | NOT_RUN | — |
-| Ledger | same idempotency key x5 | 1 reservation, 1 slot | — | NOT_RUN | — |
-| Ledger | mark_executed x3 then release x3 | counters unchanged after 1st | — | NOT_RUN | — |
-| Ledger | expiry racing execution | exactly one counter move | — | NOT_RUN | — |
-| Ledger | 7 invalid transitions | all rejected, no counter move | — | NOT_RUN | — |
-| Ledger | execution_unknown counter placement | reserved=1, consumed=0 | — | NOT_RUN | — |
-| Ledger | 2 workers, same key | 1 grant | — | NOT_RUN | — |
-| Ledger | 10 workers, distinct keys | min(10, cap) grants | — | NOT_RUN | — |
-| Ledger | 100 workers, distinct keys | reserved+consumed <= cap | — | NOT_RUN | — |
-| Ledger | Hypothesis fuzz, 200 ops x 16 workers | invariant holds | — | NOT_RUN | — |
 | Reconciliation | ambiguous then delivered | executed, consumed=1 | — | NOT_RUN | — |
 | Reconciliation | ambiguous then not_sent | released, slot returned | — | NOT_RUN | — |
 | Reconciliation | provider never responds | unresolved, fail-closed, queued | — | NOT_RUN | — |
@@ -78,5 +82,6 @@ Legend: `NOT_RUN` · `PASS` · `FAIL` · `SKIP` · `UNKNOWN`
 | Claims | forbidden-phrase scan | zero matches | — | NOT_RUN | — |
 | Dashboard | widget source queries | all present | — | NOT_RUN | — |
 
-**Total: 72 tests specified · 4 run · 4 passing (100% pass rate).**
+**Total: 72 tests specified · 31 run · 31 passing (100% pass rate).**
+
 

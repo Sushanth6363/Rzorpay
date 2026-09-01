@@ -93,8 +93,37 @@ Git commit:
 - **Decisions made**: Reconfigured console encoding in `scripts/verify_environment.py` for cross-platform Windows compatibility; added Hypothesis property smoke test to ensure P-B testing readiness prior to M3.
 - **Problems discovered**: Windows console `cp1252` encoding error when printing unicode emojis in quality gate script; resolved by setting explicit stdout encoding reconfiguration.
 - **Verification performed**: `python scripts/verify_environment.py` output `[PASSED] QUALITY GATE PASSED: Environment is 100% reproducible!` with exit code 0.
-- **Next action**: M2 — Domain model + Database schema (sqlite WAL).
+- **Next action**: M3 — Atomic Contact Ledger & Reconciliation Engine.
 - **Git commit**: `e5831900bc2b193d59bfd4d3750199de0dc8a60c`
+
+---
+
+## 2026-09-01 — M2 Domain Model & SQLite WAL Persistence Foundation
+
+- **Date**: 2026-09-01
+- **Agent/model**: Antigravity Agent
+- **Goal**: Implement M2 — Domain Model + Database Schema + SQLite WAL Persistence Foundation with 20 acceptance tests.
+- **Work performed**:
+  - Created `app/domain/money.py`: `Money` value object enforcing strict integer paise representation, rejecting float input, implementing mathematical operations, exact rupee formatting, and Hypothesis fuzzing.
+  - Created `app/domain/enums.py`: Stable string enumerations (`EventType`, `OpportunityStatus`, `ActionType`, `ExecutionStatus`, `AttributionStatus`, `EventSource`).
+  - Created `app/domain/models.py`: Dataclass models (`RecoveryOpportunity`, `CustomerContactBudget`, `EventLog`, `CanonicalEvent`).
+  - Created `app/clock.py`: Controllable clock abstraction (`Clock`, `SystemClock`, `FakeClock`).
+  - Created `app/db/schema.sql`: DDL schema for `events`, `opportunities`, `contact_budgets`, `audit_logs` with composite primary keys, foreign keys, unique indices, and mandatory database `CHECK (reserved_count + consumed_count <= cap)`.
+  - Created `app/db/init.py`: Connection factory and database initializer setting `PRAGMA journal_mode=WAL;`, `PRAGMA foreign_keys=ON;`, `PRAGMA busy_timeout=5000;`.
+  - Created `app/db/dal.py`: `TenantScopedDB` Data Access Layer enforcing explicit `merchant_id` tenant scoping on all operations, parameterized queries, and atomic contact budget reservation via conditional `UPDATE`. Added bounded retry policy for transient SQLite lock contention under concurrency.
+  - Created comprehensive test suite covering all 20 required acceptance tests (M2-01 through M2-20): `tests/domain/test_money.py`, `tests/domain/test_clock.py`, `tests/db/test_init.py`, `tests/db/test_dal.py`, `tests/db/test_tenant_isolation.py`, `tests/db/test_idempotency.py`, `tests/db/test_contact_budget.py`, `tests/db/test_concurrency.py`.
+- **Files changed**: `app/domain/money.py`, `app/domain/enums.py`, `app/domain/models.py`, `app/clock.py`, `app/db/schema.sql`, `app/db/init.py`, `app/db/dal.py`, `pytest.ini`, `tests/domain/test_money.py`, `tests/domain/test_clock.py`, `tests/db/test_init.py`, `tests/db/test_dal.py`, `tests/db/test_tenant_isolation.py`, `tests/db/test_idempotency.py`, `tests/db/test_contact_budget.py`, `tests/db/test_concurrency.py`, `refer/progress/CURRENT_STATUS.md`, `refer/progress/BUILD_LOG.md`, `refer/progress/NEXT_STEPS.md`, `refer/testing/TEST_MATRIX.md`.
+- **Tests run**: `pytest -v` (31 tests) & `python scripts/verify_environment.py` (Quality gate)
+- **Tests passed**: 31 passed (100% pass rate in 4.47s)
+- **Tests failed**: 0
+- **Decisions made**:
+  1. Default `init_contact_budget` ON CONFLICT clause set to `DO UPDATE SET updated_at = excluded.updated_at` to prevent default `cap` reset on internal budget checks during reservation.
+  2. Multi-threaded worker connections configure pragmas (`PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;`) via `get_db_connection` without executing schema DDL on every worker connection.
+- **Problems discovered**: Initial 10-worker concurrency test hit initial `cap=3` reset due to `ON CONFLICT DO UPDATE SET cap = excluded.cap` in `reserve_contact_slot`'s internal budget call. Resolved by updating ON CONFLICT clause to retain existing `cap`.
+- **Verification performed**: Executed 10-worker multi-threaded concurrency safety test (M2-19) on disk WAL database file (exactly 5 granted, 5 rejected, reserved_count <= 5 verified). Executed quality gate script (6/6 checks passed).
+- **Next action**: M3 — Atomic Contact Ledger & Reconciliation Engine.
+- **Git commit**: (pending commit)
+
 
 
 

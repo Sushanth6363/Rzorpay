@@ -6,9 +6,8 @@ You are joining an existing project. **Do not assume anything.**
 
 ## The rule everything else follows from
 
-> **Documentation is evidence, not truth. Code plus executed tests determine implementation status.**
+This repository contains verified foundation code for **M1.1** (repository foundation & smoke tests), **M1.2** (reproducibility & environment quality gate), and **M2** (Domain Model & SQLite WAL Persistence Foundation). The contact ledger (M3), recovery stages, and UI remain `PLANNED`.
 
-This repository contains verified foundation code for **M1.1** (repository foundation & smoke tests) and **M1.2** (reproducibility & environment quality gate). The core domain model (M2), contact ledger (M3), recovery stages, and UI remain `PLANNED`.
 
 Before claiming anything works, look at the code. Before claiming a test passes, run `python scripts/verify_environment.py` or `pytest`.
 

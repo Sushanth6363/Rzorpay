@@ -30,15 +30,16 @@ Prioritised queue. **P0 items block everything below them.**
 
 ### P0-3 — Schema + domain model (M2)
 - **Why**: everything else persists through it. The CHECK constraints are the enforcement mechanism for INV-2.
-- **Dependency**: P0-2
-- **Definition of done**: schema applies on SQLite WAL; three CHECK constraints present; `TenantScopedDB` rejects unscoped SQL; integer-paise money type; `FixedClock` injected everywhere; the four M2 tests pass.
-- **Status**: NOT_STARTED
+- **Dependency**: P0-2b
+- **Definition of done**: schema applies on SQLite WAL; CHECK constraints present; `TenantScopedDB` rejects unscoped SQL; integer-paise money type; `FakeClock` injected everywhere; 20 M2 acceptance tests pass.
+- **Status**: COMPLETED (Date: 2026-09-01)
 
 ### P0-4 — Contact ledger (M3) — **hard gate**
 - **Why**: the project's central safety claim. It fails silently, so it must be proven before anything is built on top of it.
 - **Dependency**: P0-3
 - **Definition of done**: all 15 ledger and reconciliation rows in `TEST_MATRIX.md` show `PASS` with a date and commit — including 100 concurrent workers and the Hypothesis fuzz.
 - **Status**: NOT_STARTED
+
 
 ---
 
