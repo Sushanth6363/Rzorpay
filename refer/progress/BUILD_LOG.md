@@ -70,7 +70,32 @@ Git commit:
 - **Problems discovered**: CPython 3.14 pre-release experienced OpenMP thread locking when invoking C-extension bindings in CatBoost/scikit-learn on Windows. Resolved cleanly by selecting Python 3.12.9.
 - **Verification performed**: `catboost` 1.2.10 imported and fit verified in Python 3.12, `pytest` 1 passed in 1.92s, regex secret scanner returned 0 matches, `.env` verified ignored.
 - **Next action**: M2 — Domain model + Database schema (sqlite WAL).
+- **Git commit**: `23f5e192645c00beb4df64933628079294f18a2c`
+
+---
+
+## 2026-09-01 — M1.2 Reproducibility, Quality Gate & Handoff Foundation
+
+- **Date**: 2026-09-01
+- **Agent/model**: Antigravity Agent
+- **Goal**: Implement M1.2 — Reproducibility, Quality Gate & Handoff Foundation for independent verification.
+- **Work performed**:
+  - Created `tests/test_environment.py` with CatBoost deterministic model fit test (`random_seed=42`), numerical stack import test, and Hypothesis property test.
+  - Created `scripts/verify_environment.py` as an automated environment quality gate verifying Python runtime, `pip check`, library imports, CatBoost fit, pytest suite execution, and secret scanning.
+  - Executed `scripts/verify_environment.py` (6/6 quality gate checks passed, 4/4 tests passed in 3.43s).
+  - Created `refer/REPRODUCIBILITY.md` documenting fresh environment installation, determinism guarantees, platform limitations, and verification commands.
+  - Updated `Makefile` with `verify` target and cross-platform Python cleanup.
+  - Updated `refer/handoff/AGENT_HANDOFF.md`, `CURRENT_STATUS.md`, `NEXT_STEPS.md`, `TEST_MATRIX.md`.
+- **Files changed**: `tests/test_environment.py`, `scripts/verify_environment.py`, `refer/REPRODUCIBILITY.md`, `Makefile`, `refer/handoff/AGENT_HANDOFF.md`, `refer/progress/CURRENT_STATUS.md`, `refer/progress/NEXT_STEPS.md`, `refer/progress/BUILD_LOG.md`, `refer/testing/TEST_MATRIX.md`.
+- **Tests run**: `python scripts/verify_environment.py` & `pytest -v`
+- **Tests passed**: 4 (`tests/test_smoke.py::test_app_import_and_version`, `tests/test_environment.py::test_numerical_stack_imports`, `tests/test_environment.py::test_catboost_fit_deterministic`, `tests/test_environment.py::test_hypothesis_property_smoke`)
+- **Tests failed**: 0
+- **Decisions made**: Reconfigured console encoding in `scripts/verify_environment.py` for cross-platform Windows compatibility; added Hypothesis property smoke test to ensure P-B testing readiness prior to M3.
+- **Problems discovered**: Windows console `cp1252` encoding error when printing unicode emojis in quality gate script; resolved by setting explicit stdout encoding reconfiguration.
+- **Verification performed**: `python scripts/verify_environment.py` output `[PASSED] QUALITY GATE PASSED: Environment is 100% reproducible!` with exit code 0.
+- **Next action**: M2 — Domain model + Database schema (sqlite WAL).
 - **Git commit**: (pending commit)
+
 
 
 

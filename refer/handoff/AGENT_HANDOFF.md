@@ -8,9 +8,10 @@ You are joining an existing project. **Do not assume anything.**
 
 > **Documentation is evidence, not truth. Code plus executed tests determine implementation status.**
 
-This repository contains a large volume of design documentation and, at the time of writing, **zero lines of implementation code**. That asymmetry is the single most likely source of error for a new agent: the documents describe a complete system in the present tense, and none of it exists.
+This repository contains verified foundation code for **M1.1** (repository foundation & smoke tests) and **M1.2** (reproducibility & environment quality gate). The core domain model (M2), contact ledger (M3), recovery stages, and UI remain `PLANNED`.
 
-Before claiming anything works, look at the code. Before claiming a test passes, run it.
+Before claiming anything works, look at the code. Before claiming a test passes, run `python scripts/verify_environment.py` or `pytest`.
+
 
 ---
 

@@ -19,11 +19,12 @@ Prioritised queue. **P0 items block everything below them.**
 - **Definition of done**: `.gitignore`, `requirements.txt`, `pytest.ini`, `app/__init__.py`, `tests/__init__.py`, `tests/test_smoke.py`, `.env.example`, `Makefile`; `pytest` runs 1 real smoke test and passes; initial commit created.
 - **Status**: COMPLETED (Commit: `eb52c38fde3018ac12417474e158f5f90638f802`, Date: 2026-09-01)
 
-### P0-2b — Razorpay Test Mode Research & Spec (M1.2)
-- **Why**: Establish official Razorpay Test Mode API/Webhook capability matrix, signature verification, idempotency rules, and adapter boundaries before building domain/DB layer.
+### P0-2b — Reproducibility, Quality Gate & Handoff Foundation (M1.2)
+- **Why**: Make repository reproducible, independently verifiable, secret-scanned, and quality-gated before building domain model and database layer.
 - **Dependency**: P0-2
-- **Definition of done**: `refer/integrations/RAZORPAY_TEST_MODE.md` created; ADR-0012, ADR-0013, ADR-0014 created.
-- **Status**: IN_PROGRESS
+- **Definition of done**: `tests/test_environment.py` created; `scripts/verify_environment.py` passes 6/6 quality checks; `refer/REPRODUCIBILITY.md` created; `Makefile` updated; agent handoff documented.
+- **Status**: COMPLETED (Date: 2026-09-01)
+
 
 
 

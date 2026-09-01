@@ -4,10 +4,12 @@
 
 Legend: `NOT_RUN` · `PASS` · `FAIL` · `SKIP` · `UNKNOWN`
 
-| Component | Test | Expected | Actual | Status | Last Run |
-|---|---|---|---|---|---|
-| Smoke Test | app package import and version | app imports, __version__ == '0.1.0' | PASSED (1.96s) | PASS | 2026-09-01 (466df02) |
+| Smoke Test | app package import and version | app imports, __version__ == '0.1.0' | PASSED (0.23s) | PASS | 2026-09-01 (eb52c38) |
+| Environment | numerical stack imports | numpy, pandas, scipy, sklearn, catboost, matplotlib, pytest, hypothesis, streamlit import | PASSED (0.10s) | PASS | 2026-09-01 (M1.2) |
+| Environment | CatBoost model deterministic fit | CatBoost fits 4-sample array with seed 42, predictions == [0, 1, 0, 1] | PASSED (0.12s) | PASS | 2026-09-01 (M1.2) |
+| Environment | Hypothesis property smoke test | @given(st.integers()) executes cleanly | PASSED (0.08s) | PASS | 2026-09-01 (M1.2) |
 | Schema | applies on SQLite WAL | no error | — | NOT_RUN | — |
+
 
 | Schema | CHECK constraints present | 3 constraints | — | NOT_RUN | — |
 | Domain | no float money fields | none found | — | NOT_RUN | — |
@@ -76,4 +78,5 @@ Legend: `NOT_RUN` · `PASS` · `FAIL` · `SKIP` · `UNKNOWN`
 | Claims | forbidden-phrase scan | zero matches | — | NOT_RUN | — |
 | Dashboard | widget source queries | all present | — | NOT_RUN | — |
 
-**Total: 69 tests specified · 1 run · 1 passing (100% pass rate).**
+**Total: 72 tests specified · 4 run · 4 passing (100% pass rate).**
+
