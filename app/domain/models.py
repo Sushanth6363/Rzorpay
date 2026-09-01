@@ -1,12 +1,13 @@
 """Domain models for Unified Recovery Engine.
 
-Defines core business entities (RecoveryOpportunity, CustomerContactBudget, EventLog, CanonicalEvent, ContactLedgerEntry)
+Defines core business entities (RecoveryOpportunity, CustomerContactBudget, EventLog, CanonicalEvent,
+ContactLedgerEntry, Stage0Result, DiagnosisResult, ActionCandidate, RecoveryDecisionContext)
 using clean type-annotated dataclasses.
 """
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 from app.domain.enums import (
     EventType,
     OpportunityStatus,
@@ -15,6 +16,12 @@ from app.domain.enums import (
     LedgerStatus,
     AttributionStatus,
     EventSource,
+    Stage0Decision,
+    Stage0Reason,
+    DiagnosisCode,
+    EligibilityStatus,
+    SafetyRejectReason,
+    DataProvenance,
 )
 from app.domain.money import Money
 
@@ -59,6 +66,7 @@ class RecoveryOpportunity:
     observed_at: str
     created_at: str = field(default_factory=current_iso_timestamp)
     updated_at: str = field(default_factory=current_iso_timestamp)
+    context_data: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert model to dictionary for persistence/serialization."""
@@ -76,6 +84,7 @@ class RecoveryOpportunity:
             "observed_at": self.observed_at,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
+            "context_data": self.context_data,
         }
 
     @classmethod
@@ -95,6 +104,7 @@ class RecoveryOpportunity:
             observed_at=data["observed_at"],
             created_at=data.get("created_at", current_iso_timestamp()),
             updated_at=data.get("updated_at", current_iso_timestamp()),
+            context_data=data.get("context_data", {}),
         )
 
 
@@ -169,3 +179,104 @@ class ContactLedgerEntry:
             LedgerStatus.RELEASED,
             LedgerStatus.EXPIRED,
         )
+
+
+# ------------------------------------------------------------------
+# Milestone M4 Models
+# ------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Stage0Result:
+    """Explicit Stage 0 recoverability evaluation output."""
+
+    decision: Stage0Decision
+    reason_code: Stage0Reason
+    evidence: Dict[str, Any]
+    evaluated_at: str
+
+    @property
+    def is_recoverable(self) -> bool:
+        """Return True if opportunity is genuinely recoverable."""
+        return self.decision == Stage0Decision.VALID_RECOVERY
+
+
+@dataclass(frozen=True)
+class DiagnosisResult:
+    """Structured Stage 1 failure context diagnosis."""
+
+    diagnosis_code: DiagnosisCode
+    evidence: Dict[str, Any]
+    confidence: float
+    observed_at: str
+
+
+@dataclass(frozen=True)
+class ActionCandidate:
+    """Inspected candidate action with safety eligibility status."""
+
+    action_type: ActionType
+    eligibility: EligibilityStatus
+    reject_reason: SafetyRejectReason
+    reason_explanation: str
+    evidence: Dict[str, Any]
+    is_counterfactual: bool = False
+
+    @property
+    def is_eligible(self) -> bool:
+        """Return True if action candidate is eligible for AI evaluation/arbitration."""
+        return self.eligibility == EligibilityStatus.ELIGIBLE
+
+
+@dataclass(frozen=True)
+class RecoveryDecisionContext:
+    """Clean decision surface contract handed off from M4 to M5 AI Scorer.
+
+    INVARIANT: M4 prepares context but DOES NOT reserve or consume contact slots.
+    """
+
+    opportunity: RecoveryOpportunity
+    stage0_result: Stage0Result
+    diagnosis: DiagnosisResult
+    candidates: List[ActionCandidate]
+    decision_timestamp: str
+    feature_snapshot: Dict[str, Any]
+    provenance: DataProvenance
+    is_contact_reserved: bool = False
+
+    def get_eligible_candidates(self) -> List[ActionCandidate]:
+        """Return subset of candidates that passed hard safety filter."""
+        return [c for c in self.candidates if c.is_eligible]
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize context deterministically for audit and golden testing."""
+        return {
+            "opportunity": self.opportunity.to_dict(),
+            "stage0_result": {
+                "decision": self.stage0_result.decision.value,
+                "reason_code": self.stage0_result.reason_code.value,
+                "evidence": self.stage0_result.evidence,
+                "evaluated_at": self.stage0_result.evaluated_at,
+            },
+            "diagnosis": {
+                "diagnosis_code": self.diagnosis.diagnosis_code.value,
+                "evidence": self.diagnosis.evidence,
+                "confidence": self.diagnosis.confidence,
+                "observed_at": self.diagnosis.observed_at,
+            },
+            "candidates": [
+                {
+                    "action_type": c.action_type.value,
+                    "eligibility": c.eligibility.value,
+                    "reject_reason": c.reject_reason.value,
+                    "reason_explanation": c.reason_explanation,
+                    "evidence": c.evidence,
+                    "is_counterfactual": c.is_counterfactual,
+                }
+                for c in self.candidates
+            ],
+            "decision_timestamp": self.decision_timestamp,
+            "feature_snapshot": self.feature_snapshot,
+            "provenance": self.provenance.value,
+            "is_contact_reserved": self.is_contact_reserved,
+        }

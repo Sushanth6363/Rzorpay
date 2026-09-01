@@ -25,9 +25,6 @@ Prioritised queue. **P0 items block everything below them.**
 - **Definition of done**: `tests/test_environment.py` created; `scripts/verify_environment.py` passes 6/6 quality checks; `refer/REPRODUCIBILITY.md` created; `Makefile` updated; agent handoff documented.
 - **Status**: COMPLETED (Date: 2026-09-01)
 
-
-
-
 ### P0-3 — Schema + domain model (M2)
 - **Why**: everything else persists through it. The CHECK constraints are the enforcement mechanism for INV-2.
 - **Dependency**: P0-2b
@@ -43,10 +40,14 @@ Prioritised queue. **P0 items block everything below them.**
 ### P0-5 — Recovery pipeline & candidate generators (M4)
 - **Why**: provides stage 0 validation, stage 1 diagnosis, and candidate action generation before scoring or policy evaluation.
 - **Dependency**: P0-4
-- **Definition of done**: Stage 0 and Stage 1 modules implemented with full unit tests.
+- **Definition of done**: Stage 0 and Stage 1 modules implemented with 30 new unit, scenario, and property tests (86 total passing tests).
+- **Status**: COMPLETED (Date: 2026-09-01)
+
+### P0-6 — AI Scorer & Counterfactual Policy Engine (M5)
+- **Why**: turns RecoveryDecisionContext candidates into calibrated recovery probability scores (P_recovery), cost-benefit trade-off calculations, and optimal action arbitration.
+- **Dependency**: P0-5
+- **Definition of done**: Scorer module, CatBoost model interface, counterfactual policy evaluator, and arbitration layer implemented and verified with unit tests.
 - **Status**: NOT_STARTED
-
-
 
 ---
 
