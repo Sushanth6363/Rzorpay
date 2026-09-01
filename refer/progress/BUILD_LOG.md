@@ -122,7 +122,34 @@ Git commit:
 - **Problems discovered**: Initial 10-worker concurrency test hit initial `cap=3` reset due to `ON CONFLICT DO UPDATE SET cap = excluded.cap` in `reserve_contact_slot`'s internal budget call. Resolved by updating ON CONFLICT clause to retain existing `cap`.
 - **Verification performed**: Executed 10-worker multi-threaded concurrency safety test (M2-19) on disk WAL database file (exactly 5 granted, 5 rejected, reserved_count <= 5 verified). Executed quality gate script (6/6 checks passed).
 - **Next action**: M3 — Atomic Contact Ledger & Reconciliation Engine.
-- **Git commit**: `5b7e7d0`
+- **Git commit**: `5b7e7d0` (docs: `367899d`)
+
+---
+
+## 2026-09-01 — M3 Atomic Contact Ledger & Reconciliation Engine
+
+- **Date**: 2026-09-01
+- **Agent/model**: Antigravity Agent
+- **Goal**: Implement M3 — Atomic Contact Ledger & Reconciliation Engine with 25 acceptance and property tests.
+- **Work performed**:
+  - Updated `app/domain/enums.py`: Added `LedgerStatus` enum (`RESERVED`, `EXECUTION_ATTEMPTED`, `EXECUTED`, `FAILED_CLOSED`, `EXECUTION_UNKNOWN`, `RECONCILED_DELIVERED`, `RECONCILED_NOT_SENT`, `RECONCILED_UNRESOLVED`, `RELEASED`, `EXPIRED`).
+  - Updated `app/domain/models.py`: Added `ContactLedgerEntry` dataclass.
+  - Updated `app/db/schema.sql`: Added `contact_ledger` table with primary key `(merchant_id, ledger_id)`, unique constraint `(merchant_id, intervention_idempotency_key)`, foreign key to `contact_budgets`, and performance indices.
+  - Updated `app/db/dal.py`: Implemented `reserve_contact_ledger` (atomic budget update + ledger insert + audit log in single transaction) and `transition_ledger_status` (Compare-And-Swap status transitions with counter updates).
+  - Created `app/ledger/engine.py`: High-level `ContactLedgerEngine` API wrapping DAL primitives.
+  - Created 25 new M3 tests across `tests/ledger/`: `test_ledger_creation.py` (M3-01..03), `test_ledger_idempotency.py` (M3-04..05), `test_ledger_atomicity.py` (M3-06, 07, 21), `test_execution_transitions.py` (M3-08..11, 14..16), `test_reconciliation.py` (M3-12, 13, 24), `test_ledger_concurrency.py` (M3-18..20), `test_ledger_audit.py` (M3-17, 22, 23), `test_ledger_hypothesis.py` (M3-36 property testing).
+- **Files changed**: `app/domain/enums.py`, `app/domain/models.py`, `app/db/schema.sql`, `app/db/dal.py`, `app/clock.py`, `app/ledger/__init__.py`, `app/ledger/engine.py`, `tests/ledger/*.py`, `refer/progress/CURRENT_STATUS.md`, `refer/progress/BUILD_LOG.md`, `refer/progress/NEXT_STEPS.md`, `refer/testing/TEST_MATRIX.md`, `refer/handoff/AGENT_HANDOFF.md`.
+- **Tests run**: `pytest -v` (56 tests) & `python scripts/verify_environment.py` (Quality gate)
+- **Tests passed**: 56 passed (100% pass rate in 5.69s)
+- **Tests failed**: 0
+- **Decisions made**:
+  1. `EXECUTION_UNKNOWN` holds slot in `reserved_count` without modifying counters until resolved by bounded reconciliation.
+  2. Re-invoking `reconcile` on an already reconciled entry returns `True` without double-decrementing counters or modifying database state (100% idempotent).
+- **Problems discovered**: `FakeClock` initially raised `AttributeError` when ISO `str` was passed instead of `datetime`; resolved cleanly by enhancing `FakeClock.__init__` and `set_time` to parse ISO strings.
+- **Verification performed**: Ran 10-worker multi-threaded concurrency safety tests for same-key idempotency (M3-18) and distinct keys (M3-19) on disk WAL DB, plus Hypothesis property fuzzing. Executed quality gate script (6/6 checks passed).
+- **Next action**: M4 — Recovery Pipeline & Candidate Generators.
+- **Git commit**: (pending commit)
+
 
 
 

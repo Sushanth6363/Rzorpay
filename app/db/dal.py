@@ -4,20 +4,33 @@ INVARIANTS:
 1. Every query is parameterized to prevent SQL injection.
 2. Every tenant-scoped query explicitly requires merchant_id. Unscoped queries raise TenantScopeViolation.
 3. Contact budget reservation uses atomic SQL UPDATE enforcing reserved_count + consumed_count <= cap.
+4. Contact ledger state transitions are Compare-And-Swap (CAS) operations preserving atomicity and auditability.
 """
 
 import json
 import sqlite3
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from app.clock import Clock, SystemClock
-from app.domain.enums import EventType, OpportunityStatus, EventSource
-from app.domain.models import RecoveryOpportunity, CustomerContactBudget, EventLog
+from app.domain.enums import (
+    EventType,
+    OpportunityStatus,
+    ActionType,
+    ExecutionStatus,
+    LedgerStatus,
+    EventSource,
+)
+from app.domain.models import RecoveryOpportunity, CustomerContactBudget, EventLog, ContactLedgerEntry
 from app.domain.money import Money
 
 
 class TenantScopeViolation(Exception):
     """Raised when an operation attempts unscoped or cross-tenant database access."""
+    pass
+
+
+class InvalidStateTransition(Exception):
+    """Raised when an illegal ledger state transition is requested."""
     pass
 
 
@@ -133,7 +146,7 @@ class TenantScopedDB:
         return cursor.rowcount > 0
 
     # ------------------------------------------------------------------
-    # 3. Contact Budget & Atomic Reservation Primitive
+    # 3. Contact Budget & Counter Primitives
     # ------------------------------------------------------------------
 
     def init_contact_budget(self, customer_id: str, cap: int = 3, max_retries: int = 5) -> CustomerContactBudget:
@@ -143,7 +156,6 @@ class TenantScopedDB:
         INSERT INTO contact_budgets (merchant_id, customer_id, cap, reserved_count, consumed_count, updated_at)
         VALUES (?, ?, ?, 0, 0, ?)
         ON CONFLICT(merchant_id, customer_id) DO UPDATE SET updated_at = excluded.updated_at;
-
         """
         for attempt in range(max_retries):
             try:
@@ -187,11 +199,8 @@ class TenantScopedDB:
         ATOMIC INVARIANT (ADR-0003):
         Check reserved_count + consumed_count < cap in conditional UPDATE.
         Returns True if reservation granted, False if cap exhausted.
-        Handles transient SQLite lock contention with explicit bounded retries.
         """
         now_iso = self.clock.now_iso()
-        
-        # Ensure budget record exists
         self.init_contact_budget(customer_id)
 
         sql = """
@@ -213,7 +222,6 @@ class TenantScopedDB:
                 else:
                     raise
         return False
-
 
     def mark_reservation_executed(self, customer_id: str) -> bool:
         """Transition 1 reserved slot to consumed status."""
@@ -240,7 +248,361 @@ class TenantScopedDB:
         return cursor.rowcount > 0
 
     # ------------------------------------------------------------------
-    # 4. Audit Logging
+    # 4. Contact Ledger Primitives (M3)
+    # ------------------------------------------------------------------
+
+    def get_ledger_entry_by_idempotency_key(self, intervention_idempotency_key: str) -> Optional[ContactLedgerEntry]:
+        """Retrieve ContactLedgerEntry by deterministic intervention idempotency key."""
+        sql = """
+        SELECT ledger_id, merchant_id, customer_id, opportunity_id, action_type,
+               intervention_idempotency_key, status, created_at, updated_at,
+               attempted_at, resolved_at, metadata_json
+        FROM contact_ledger
+        WHERE merchant_id = ? AND intervention_idempotency_key = ?;
+        """
+        cursor = self.conn.execute(sql, (self.merchant_id, intervention_idempotency_key))
+        row = cursor.fetchone()
+        if not row:
+            return None
+
+        return ContactLedgerEntry(
+            ledger_id=row["ledger_id"],
+            merchant_id=row["merchant_id"],
+            customer_id=row["customer_id"],
+            opportunity_id=row["opportunity_id"],
+            action_type=ActionType(row["action_type"]),
+            intervention_idempotency_key=row["intervention_idempotency_key"],
+            status=LedgerStatus(row["status"]),
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+            attempted_at=row["attempted_at"],
+            resolved_at=row["resolved_at"],
+            metadata_json=row["metadata_json"] or "{}",
+        )
+
+    def get_ledger_entry(self, ledger_id: str) -> Optional[ContactLedgerEntry]:
+        """Retrieve ContactLedgerEntry by ID within tenant scope."""
+        sql = """
+        SELECT ledger_id, merchant_id, customer_id, opportunity_id, action_type,
+               intervention_idempotency_key, status, created_at, updated_at,
+               attempted_at, resolved_at, metadata_json
+        FROM contact_ledger
+        WHERE merchant_id = ? AND ledger_id = ?;
+        """
+        cursor = self.conn.execute(sql, (self.merchant_id, ledger_id))
+        row = cursor.fetchone()
+        if not row:
+            return None
+
+        return ContactLedgerEntry(
+            ledger_id=row["ledger_id"],
+            merchant_id=row["merchant_id"],
+            customer_id=row["customer_id"],
+            opportunity_id=row["opportunity_id"],
+            action_type=ActionType(row["action_type"]),
+            intervention_idempotency_key=row["intervention_idempotency_key"],
+            status=LedgerStatus(row["status"]),
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+            attempted_at=row["attempted_at"],
+            resolved_at=row["resolved_at"],
+            metadata_json=row["metadata_json"] or "{}",
+        )
+
+    def get_customer_ledger_history(self, customer_id: str) -> List[ContactLedgerEntry]:
+        """Retrieve complete contact ledger history for a customer within tenant scope."""
+        sql = """
+        SELECT ledger_id, merchant_id, customer_id, opportunity_id, action_type,
+               intervention_idempotency_key, status, created_at, updated_at,
+               attempted_at, resolved_at, metadata_json
+        FROM contact_ledger
+        WHERE merchant_id = ? AND customer_id = ?
+        ORDER BY created_at ASC;
+        """
+        cursor = self.conn.execute(sql, (self.merchant_id, customer_id))
+        results = []
+        for row in cursor.fetchall():
+            results.append(
+                ContactLedgerEntry(
+                    ledger_id=row["ledger_id"],
+                    merchant_id=row["merchant_id"],
+                    customer_id=row["customer_id"],
+                    opportunity_id=row["opportunity_id"],
+                    action_type=ActionType(row["action_type"]),
+                    intervention_idempotency_key=row["intervention_idempotency_key"],
+                    status=LedgerStatus(row["status"]),
+                    created_at=row["created_at"],
+                    updated_at=row["updated_at"],
+                    attempted_at=row["attempted_at"],
+                    resolved_at=row["resolved_at"],
+                    metadata_json=row["metadata_json"] or "{}",
+                )
+            )
+        return results
+
+    def reserve_contact_ledger(
+        self,
+        customer_id: str,
+        opportunity_id: str,
+        action_type: ActionType,
+        intervention_idempotency_key: str,
+        cap: int = 3,
+        max_retries: int = 5,
+    ) -> Optional[ContactLedgerEntry]:
+        """Atomically reserve budget slot AND create ContactLedgerEntry in a single transaction.
+
+        IDEMPOTENT: If intervention_idempotency_key already exists for merchant,
+        returns existing entry without consuming additional capacity.
+        """
+        # Check idempotency first
+        existing = self.get_ledger_entry_by_idempotency_key(intervention_idempotency_key)
+        if existing:
+            return existing
+
+        now_iso = self.clock.now_iso()
+        ledger_id = f"ldg_{uuid.uuid4().hex[:12]}"
+
+        for attempt in range(max_retries):
+            try:
+                # Ensure customer budget record exists
+                self.init_contact_budget(customer_id, cap=cap)
+
+                self.conn.execute("BEGIN TRANSACTION;")
+
+                # Step 1: Conditional atomic update on contact budget
+                sql_budget = """
+                UPDATE contact_budgets
+                SET reserved_count = reserved_count + 1, updated_at = ?
+                WHERE merchant_id = ? AND customer_id = ? AND (reserved_count + consumed_count < cap);
+                """
+                cursor_budget = self.conn.execute(sql_budget, (now_iso, self.merchant_id, customer_id))
+                if cursor_budget.rowcount == 0:
+                    self.conn.execute("ROLLBACK;")
+                    return None  # Cap exhausted!
+
+                # Step 2: Insert contact ledger record
+                sql_ledger = """
+                INSERT INTO contact_ledger (
+                    ledger_id, merchant_id, customer_id, opportunity_id, action_type,
+                    intervention_idempotency_key, status, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+                """
+                params_ledger = (
+                    ledger_id,
+                    self.merchant_id,
+                    customer_id,
+                    opportunity_id,
+                    action_type.value,
+                    intervention_idempotency_key,
+                    LedgerStatus.RESERVED.value,
+                    now_iso,
+                    now_iso,
+                )
+                self.conn.execute(sql_ledger, params_ledger)
+
+                # Step 3: Insert audit log entry
+                sql_audit = """
+                INSERT INTO audit_logs (log_id, merchant_id, entity_type, entity_id, action, details_json, timestamp)
+                VALUES (?, ?, ?, ?, ?, ?, ?);
+                """
+                audit_details = json.dumps(
+                    {
+                        "customer_id": customer_id,
+                        "opportunity_id": opportunity_id,
+                        "action_type": action_type.value,
+                        "idempotency_key": intervention_idempotency_key,
+                    }
+                )
+                self.conn.execute(
+                    sql_audit,
+                    (str(uuid.uuid4()), self.merchant_id, "contact_ledger", ledger_id, "RESERVE", audit_details, now_iso),
+                )
+
+                self.conn.commit()
+
+                return ContactLedgerEntry(
+                    ledger_id=ledger_id,
+                    merchant_id=self.merchant_id,
+                    customer_id=customer_id,
+                    opportunity_id=opportunity_id,
+                    action_type=action_type,
+                    intervention_idempotency_key=intervention_idempotency_key,
+                    status=LedgerStatus.RESERVED,
+                    created_at=now_iso,
+                    updated_at=now_iso,
+                )
+
+            except sqlite3.IntegrityError:
+                # Key race condition: another thread inserted same idempotency key
+                self.conn.execute("ROLLBACK;")
+                return self.get_ledger_entry_by_idempotency_key(intervention_idempotency_key)
+
+            except sqlite3.OperationalError as err:
+                self.conn.execute("ROLLBACK;")
+                if "locked" in str(err).lower() or "busy" in str(err).lower():
+                    if attempt == max_retries - 1:
+                        raise
+                    import time
+                    time.sleep(0.01 * (2 ** attempt))
+                else:
+                    raise
+
+        return None
+
+    def transition_ledger_status(
+        self,
+        ledger_id: str,
+        target_status: LedgerStatus,
+        expected_status: Optional[LedgerStatus] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> bool:
+        """Atomically transition ContactLedgerEntry status and adjust budget counters accordingly.
+
+        CAS Transition Rules:
+        - If already in target_status -> Return True (IDEMPOTENT).
+        - If entry in terminal status and target_status differs -> Return False / raise InvalidStateTransition.
+        - Transition to EXECUTED / FAILED_CLOSED / RECONCILED_DELIVERED / RECONCILED_UNRESOLVED:
+            reserved_count - 1, consumed_count + 1
+        - Transition to RELEASED / EXPIRED / RECONCILED_NOT_SENT:
+            reserved_count - 1 (capacity returned)
+        - Transition to EXECUTION_ATTEMPTED / EXECUTION_UNKNOWN:
+            counters unchanged
+        """
+        entry = self.get_ledger_entry(ledger_id)
+        if not entry:
+            return False
+
+        # Idempotent re-invocation check
+        if entry.status == target_status:
+            return True
+
+        # Legal state transitions definition
+        valid_transitions: Dict[LedgerStatus, List[LedgerStatus]] = {
+            LedgerStatus.RESERVED: [
+                LedgerStatus.EXECUTION_ATTEMPTED,
+                LedgerStatus.EXECUTED,
+                LedgerStatus.FAILED_CLOSED,
+                LedgerStatus.EXECUTION_UNKNOWN,
+                LedgerStatus.RELEASED,
+                LedgerStatus.EXPIRED,
+            ],
+            LedgerStatus.EXECUTION_ATTEMPTED: [
+                LedgerStatus.EXECUTED,
+                LedgerStatus.FAILED_CLOSED,
+                LedgerStatus.EXECUTION_UNKNOWN,
+                LedgerStatus.RELEASED,
+                LedgerStatus.EXPIRED,
+            ],
+            LedgerStatus.EXECUTION_UNKNOWN: [
+                LedgerStatus.RECONCILED_DELIVERED,
+                LedgerStatus.RECONCILED_NOT_SENT,
+                LedgerStatus.RECONCILED_UNRESOLVED,
+            ],
+        }
+
+        allowed_next_states = valid_transitions.get(entry.status, [])
+        if target_status not in allowed_next_states:
+            return False  # Invalid state transition rejected!
+
+        if expected_status and entry.status != expected_status:
+            return False
+
+        now_iso = self.clock.now_iso()
+        attempted_at = now_iso if target_status in (LedgerStatus.EXECUTION_ATTEMPTED, LedgerStatus.EXECUTED, LedgerStatus.EXECUTION_UNKNOWN) else entry.attempted_at
+        resolved_at = now_iso if target_status in (
+            LedgerStatus.EXECUTED,
+            LedgerStatus.FAILED_CLOSED,
+            LedgerStatus.RECONCILED_DELIVERED,
+            LedgerStatus.RECONCILED_NOT_SENT,
+            LedgerStatus.RECONCILED_UNRESOLVED,
+            LedgerStatus.RELEASED,
+            LedgerStatus.EXPIRED,
+        ) else entry.resolved_at
+
+        metadata_json = json.dumps(metadata) if metadata else entry.metadata_json
+
+        self.conn.execute("BEGIN TRANSACTION;")
+
+        # Update ledger entry using CAS on status
+        sql_cas = """
+        UPDATE contact_ledger
+        SET status = ?, updated_at = ?, attempted_at = COALESCE(?, attempted_at),
+            resolved_at = COALESCE(?, resolved_at), metadata_json = ?
+        WHERE merchant_id = ? AND ledger_id = ? AND status = ?;
+        """
+        params_cas = (
+            target_status.value,
+            now_iso,
+            attempted_at,
+            resolved_at,
+            metadata_json,
+            self.merchant_id,
+            ledger_id,
+            entry.status.value,
+        )
+        cursor_cas = self.conn.execute(sql_cas, params_cas)
+        if cursor_cas.rowcount == 0:
+            self.conn.execute("ROLLBACK;")
+            return False
+
+        # Adjust counters based on transition semantics
+        # Case A: Transition consumes slot permanently (reserved -> consumed)
+        if target_status in (
+            LedgerStatus.EXECUTED,
+            LedgerStatus.FAILED_CLOSED,
+            LedgerStatus.RECONCILED_DELIVERED,
+            LedgerStatus.RECONCILED_UNRESOLVED,
+        ):
+            sql_counter = """
+            UPDATE contact_budgets
+            SET reserved_count = reserved_count - 1, consumed_count = consumed_count + 1, updated_at = ?
+            WHERE merchant_id = ? AND customer_id = ? AND reserved_count > 0;
+            """
+            cursor_cnt = self.conn.execute(sql_counter, (now_iso, self.merchant_id, entry.customer_id))
+            if cursor_cnt.rowcount == 0:
+                self.conn.execute("ROLLBACK;")
+                return False
+
+        # Case B: Transition releases slot (reserved -> released, capacity returned)
+        elif target_status in (
+            LedgerStatus.RELEASED,
+            LedgerStatus.EXPIRED,
+            LedgerStatus.RECONCILED_NOT_SENT,
+        ):
+            sql_counter = """
+            UPDATE contact_budgets
+            SET reserved_count = reserved_count - 1, updated_at = ?
+            WHERE merchant_id = ? AND customer_id = ? AND reserved_count > 0;
+            """
+            cursor_cnt = self.conn.execute(sql_counter, (now_iso, self.merchant_id, entry.customer_id))
+            if cursor_cnt.rowcount == 0:
+                self.conn.execute("ROLLBACK;")
+                return False
+
+        # Case C: EXECUTION_ATTEMPTED / EXECUTION_UNKNOWN -> counters held in reserved_count, no counter movement
+
+        # Log audit entry
+        sql_audit = """
+        INSERT INTO audit_logs (log_id, merchant_id, entity_type, entity_id, action, details_json, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?, ?);
+        """
+        audit_details = json.dumps(
+            {
+                "previous_status": entry.status.value,
+                "new_status": target_status.value,
+                "customer_id": entry.customer_id,
+            }
+        )
+        self.conn.execute(
+            sql_audit,
+            (str(uuid.uuid4()), self.merchant_id, "contact_ledger", ledger_id, target_status.value, audit_details, now_iso),
+        )
+
+        self.conn.commit()
+        return True
+
+    # ------------------------------------------------------------------
+    # 5. Audit Logging
     # ------------------------------------------------------------------
 
     def log_audit(self, entity_type: str, entity_id: str, action: str, details: Dict[str, Any]) -> None:

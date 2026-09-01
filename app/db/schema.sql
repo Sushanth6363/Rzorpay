@@ -49,7 +49,26 @@ CREATE TABLE IF NOT EXISTS contact_budgets (
     CONSTRAINT chk_contact_cap_limit CHECK (reserved_count + consumed_count <= cap)
 );
 
--- 4. Audit Log
+-- 4. Contact Ledger (Individual intervention attempts & outcome lifecycle)
+CREATE TABLE IF NOT EXISTS contact_ledger (
+    ledger_id TEXT NOT NULL,
+    merchant_id TEXT NOT NULL,
+    customer_id TEXT NOT NULL,
+    opportunity_id TEXT NOT NULL,
+    action_type TEXT NOT NULL,
+    intervention_idempotency_key TEXT NOT NULL,
+    status TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    attempted_at TEXT,
+    resolved_at TEXT,
+    metadata_json TEXT DEFAULT '{}',
+    PRIMARY KEY (merchant_id, ledger_id),
+    UNIQUE (merchant_id, intervention_idempotency_key),
+    FOREIGN KEY (merchant_id, customer_id) REFERENCES contact_budgets(merchant_id, customer_id)
+);
+
+-- 5. Audit Log
 CREATE TABLE IF NOT EXISTS audit_logs (
     log_id TEXT PRIMARY KEY,
     merchant_id TEXT NOT NULL,
@@ -64,3 +83,6 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 CREATE INDEX IF NOT EXISTS idx_opportunities_merchant_customer ON opportunities(merchant_id, customer_id);
 CREATE INDEX IF NOT EXISTS idx_events_merchant_idempotency ON events(merchant_id, idempotency_key);
 CREATE INDEX IF NOT EXISTS idx_budgets_merchant_customer ON contact_budgets(merchant_id, customer_id);
+CREATE INDEX IF NOT EXISTS idx_ledger_merchant_customer ON contact_ledger(merchant_id, customer_id);
+CREATE INDEX IF NOT EXISTS idx_ledger_merchant_opportunity ON contact_ledger(merchant_id, opportunity_id);
+CREATE INDEX IF NOT EXISTS idx_ledger_merchant_idempotency ON contact_ledger(merchant_id, intervention_idempotency_key);

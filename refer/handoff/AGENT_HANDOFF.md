@@ -6,7 +6,8 @@ You are joining an existing project. **Do not assume anything.**
 
 ## The rule everything else follows from
 
-This repository contains verified foundation code for **M1.1** (repository foundation & smoke tests), **M1.2** (reproducibility & environment quality gate), and **M2** (Domain Model & SQLite WAL Persistence Foundation). The contact ledger (M3), recovery stages, and UI remain `PLANNED`.
+This repository contains verified foundation code for **M1.1** (repository foundation & smoke tests), **M1.2** (reproducibility & environment quality gate), **M2** (Domain Model & SQLite WAL Persistence Foundation), and **M3** (Atomic Contact Ledger & Reconciliation Engine). Recovery stages, candidate generators, heuristic/CatBoost models, policy filter, and UI remain `PLANNED`.
+
 
 
 Before claiming anything works, look at the code. Before claiming a test passes, run `python scripts/verify_environment.py` or `pytest`.

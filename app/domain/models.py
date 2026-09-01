@@ -1,13 +1,21 @@
 """Domain models for Unified Recovery Engine.
 
-Defines core business entities (RecoveryOpportunity, CustomerContactBudget, EventLog, CanonicalEvent)
+Defines core business entities (RecoveryOpportunity, CustomerContactBudget, EventLog, CanonicalEvent, ContactLedgerEntry)
 using clean type-annotated dataclasses.
 """
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
-from app.domain.enums import EventType, OpportunityStatus, ActionType, ExecutionStatus, AttributionStatus, EventSource
+from app.domain.enums import (
+    EventType,
+    OpportunityStatus,
+    ActionType,
+    ExecutionStatus,
+    LedgerStatus,
+    AttributionStatus,
+    EventSource,
+)
 from app.domain.money import Money
 
 
@@ -131,3 +139,33 @@ class EventLog:
     payload_json: str
     idempotency_key: str
     created_at: str = field(default_factory=current_iso_timestamp)
+
+
+@dataclass
+class ContactLedgerEntry:
+    """Durable ledger record for an individual contact intervention attempt."""
+
+    ledger_id: str
+    merchant_id: str
+    customer_id: str
+    opportunity_id: str
+    action_type: ActionType
+    intervention_idempotency_key: str
+    status: LedgerStatus
+    created_at: str = field(default_factory=current_iso_timestamp)
+    updated_at: str = field(default_factory=current_iso_timestamp)
+    attempted_at: Optional[str] = None
+    resolved_at: Optional[str] = None
+    metadata_json: str = "{}"
+
+    def is_terminal(self) -> bool:
+        """Return True if entry is in a terminal state."""
+        return self.status in (
+            LedgerStatus.EXECUTED,
+            LedgerStatus.FAILED_CLOSED,
+            LedgerStatus.RECONCILED_DELIVERED,
+            LedgerStatus.RECONCILED_NOT_SENT,
+            LedgerStatus.RECONCILED_UNRESOLVED,
+            LedgerStatus.RELEASED,
+            LedgerStatus.EXPIRED,
+        )

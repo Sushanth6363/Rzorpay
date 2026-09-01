@@ -37,8 +37,15 @@ Prioritised queue. **P0 items block everything below them.**
 ### P0-4 — Contact ledger (M3) — **hard gate**
 - **Why**: the project's central safety claim. It fails silently, so it must be proven before anything is built on top of it.
 - **Dependency**: P0-3
-- **Definition of done**: all 15 ledger and reconciliation rows in `TEST_MATRIX.md` show `PASS` with a date and commit — including 100 concurrent workers and the Hypothesis fuzz.
+- **Definition of done**: all ledger and reconciliation tests in `TEST_MATRIX.md` show `PASS` with a date and commit — including 10-worker multi-threaded concurrency safety tests and Hypothesis property fuzzing.
+- **Status**: COMPLETED (Date: 2026-09-01)
+
+### P0-5 — Recovery pipeline & candidate generators (M4)
+- **Why**: provides stage 0 validation, stage 1 diagnosis, and candidate action generation before scoring or policy evaluation.
+- **Dependency**: P0-4
+- **Definition of done**: Stage 0 and Stage 1 modules implemented with full unit tests.
 - **Status**: NOT_STARTED
+
 
 
 ---

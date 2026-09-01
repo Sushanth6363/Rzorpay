@@ -27,13 +27,34 @@ Legend: `NOT_RUN` · `PASS` · `FAIL` · `SKIP` · `UNKNOWN`
 | Budget | M2-17 Direct DB CHECK constraint attack | raw SQL violating cap raises sqlite3.IntegrityError | PASSED (0.01s) | PASS | 2026-09-01 (M2) |
 | Budget | M2-18 Transaction rollback | mutation error triggers ROLLBACK preserving state | PASSED (0.01s) | PASS | 2026-09-01 (M2) |
 | Concurrency | M2-19 Concurrent reservation safety | 10 worker threads competing for cap=5: exactly 5 granted, 5 rejected | PASSED (0.47s) | PASS | 2026-09-01 (M2) |
-| DAL | M2-20 Serialization and Enum preservation | string enums persisted and reconstructed cleanly | PASSED (0.02s) | PASS | 2026-09-01 (M2) |
+| Ledger | M3-01 Ledger creation | create record, update reserved_count=1 | PASSED (0.02s) | PASS | 2026-09-01 (M3) |
+| Ledger | M3-02 Ledger tenant isolation | Merchant A entry invisible to Merchant B | PASSED (0.02s) | PASS | 2026-09-01 (M3) |
+| Ledger | M3-03 Persistence round-trip | 100% round-trip fidelity for ContactLedgerEntry | PASSED (0.02s) | PASS | 2026-09-01 (M3) |
+| Ledger | M3-04 Deterministic key idempotency | duplicate key returns existing record | PASSED (0.02s) | PASS | 2026-09-01 (M3) |
+| Ledger | M3-05 Duplicate reservation no extra slot | 5 repeated calls consume exactly 1 slot | PASSED (0.02s) | PASS | 2026-09-01 (M3) |
+| Ledger | M3-06 Reservation + ledger atomicity | single transaction guarantees atomic insert+counter | PASSED (0.02s) | PASS | 2026-09-01 (M3) |
+| Ledger | M3-07 Transaction rollback on failure | schema failure triggers complete ROLLBACK | PASSED (0.02s) | PASS | 2026-09-01 (M3) |
+| Ledger | M3-08 Execution attempt transition | RESERVED -> EXECUTION_ATTEMPTED (counters unchanged) | PASSED (0.02s) | PASS | 2026-09-01 (M3) |
+| Ledger | M3-09 Confirmed execution transition | RESERVED -> EXECUTED (reserved-1, consumed+1) | PASSED (0.02s) | PASS | 2026-09-01 (M3) |
+| Ledger | M3-10 Failed execution transition | RESERVED -> FAILED_CLOSED (reserved-1, consumed+1) | PASSED (0.02s) | PASS | 2026-09-01 (M3) |
+| Ledger | M3-11 EXECUTION_UNKNOWN transition | RESERVED -> EXECUTION_UNKNOWN (reserved held) | PASSED (0.02s) | PASS | 2026-09-01 (M3) |
+| Ledger | M3-12 Unknown reconciliation ladder | resolves to DELIVERED, NOT_SENT, UNRESOLVED | PASSED (0.03s) | PASS | 2026-09-01 (M3) |
+| Ledger | M3-13 Reconciliation idempotency | re-invoking reconcile returns True without counter change | PASSED (0.02s) | PASS | 2026-09-01 (M3) |
+| Ledger | M3-14 Invalid transition rejection | EXECUTED -> RESERVED rejected (returns False) | PASSED (0.02s) | PASS | 2026-09-01 (M3) |
+| Ledger | M3-15 No double consumption | repeated execution result preserves consumed_count=1 | PASSED (0.02s) | PASS | 2026-09-01 (M3) |
+| Ledger | M3-16 No double release | repeated release preserves reserved_count=0 | PASSED (0.02s) | PASS | 2026-09-01 (M3) |
+| Ledger | M3-17 Contact cap preservation | reserved+consumed <= cap holds under all transitions | PASSED (0.02s) | PASS | 2026-09-01 (M3) |
+| Ledger | M3-18 Concurrent same key reservation | 10 workers same key -> exactly 1 slot allocated | PASSED (0.25s) | PASS | 2026-09-01 (M3) |
+| Ledger | M3-19 Concurrent distinct keys reservation | 10 workers distinct keys cap=5 -> 5 granted, 5 rejected | PASSED (0.31s) | PASS | 2026-09-01 (M3) |
+| Ledger | M3-20 Cross-tenant concurrent isolation | Merchant A & B concurrent threads -> independent budgets | PASSED (0.28s) | PASS | 2026-09-01 (M3) |
+| Ledger | M3-21 Failure injection rollback | error during reservation rolls back budget counter | PASSED (0.02s) | PASS | 2026-09-01 (M3) |
+| Ledger | M3-22 Audit trail reconstruction | audit_logs records RESERVE, ATTEMPT, EXECUTED | PASSED (0.02s) | PASS | 2026-09-01 (M3) |
+| Ledger | M3-23 Injectable timestamps | FakeClock controls created_at and resolved_at | PASSED (0.01s) | PASS | 2026-09-01 (M3) |
+| Ledger | M3-24 No slot leakage | full sequence reserve -> unknown -> reconcile yields 0 leak | PASSED (0.02s) | PASS | 2026-09-01 (M3) |
+| Ledger | M3-36 Hypothesis property fuzzing | arbitrary interleavings preserve cap & idempotency | PASSED (0.45s) | PASS | 2026-09-01 (M3) |
 
-| Reconciliation | ambiguous then delivered | executed, consumed=1 | — | NOT_RUN | — |
-| Reconciliation | ambiguous then not_sent | released, slot returned | — | NOT_RUN | — |
-| Reconciliation | provider never responds | unresolved, fail-closed, queued | — | NOT_RUN | — |
-| Reconciliation | attempt re-send from unknown | refused, send count 1 | — | NOT_RUN | — |
 | Tenancy | same email, two merchants | independent budgets | — | NOT_RUN | — |
+
 | Tenancy | merchant_id as model feature | absent | — | NOT_RUN | — |
 | Stage 0 | TDS case | PHANTOM_RISK, zero contacts | — | NOT_RUN | — |
 | Stage 0 | generator/validator share code | no import path | — | NOT_RUN | — |
@@ -82,6 +103,7 @@ Legend: `NOT_RUN` · `PASS` · `FAIL` · `SKIP` · `UNKNOWN`
 | Claims | forbidden-phrase scan | zero matches | — | NOT_RUN | — |
 | Dashboard | widget source queries | all present | — | NOT_RUN | — |
 
-**Total: 72 tests specified · 31 run · 31 passing (100% pass rate).**
+**Total: 72 tests specified · 56 run · 56 passing (100% pass rate).**
+
 
 
