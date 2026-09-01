@@ -45,6 +45,10 @@ class ExplorationManager:
         top_exploit_score = eligible_scores[0]
 
         # Handle forced decision mode (used in testing or explicit configuration)
+        if force_mode == DecisionMode.SAFE_ABSTENTION:
+            no_action_score = next((s for s in scores if s.action_type == ActionType.NO_ACTION), None)
+            return ActionType.NO_ACTION, DecisionMode.SAFE_ABSTENTION, no_action_score
+
         if force_mode == DecisionMode.EXPLOIT:
             return top_exploit_score.action_type, DecisionMode.EXPLOIT, top_exploit_score
 
@@ -52,6 +56,7 @@ class ExplorationManager:
             rng = random.Random(self.random_seed) if self.random_seed is not None else random.Random()
             chosen_score = rng.choice(eligible_scores)
             return chosen_score.action_type, DecisionMode.EXPLORE, chosen_score
+
 
         # Epsilon-greedy selection
         rng = random.Random(self.random_seed) if self.random_seed is not None else random.Random()

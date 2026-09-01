@@ -1,23 +1,23 @@
 # NEXT STEPS — Unified Recovery Engine
 
-**Current Focus**: Preparing for Milestone M6 — Arbitration Engine & Multi-Opportunity Optimization.
+**Current Focus**: Milestone M7 — Multi-Arm Experimentation & Simulation Benchmarking Framework.
 
 ---
 
-## Immediate Next Steps (M6 Preparation)
+## Immediate Next Steps (M7 Preparation)
 
-1. **Multi-Opportunity Arbitration Engine**:
-   - Implement global merchant-level arbitration across concurrent opportunities.
-   - Enforce capacity-constrained global expected value maximization under contact caps.
-
-2. **Atomic Budget Reservation Integration**:
-   - Integrate M5 `AIRecoveryDecision` outputs with M3 `ContactLedger` atomic reservation (`reserve_slot`).
-   - Transition selected intervention action from `NEW` to `RESERVED` status atomically.
-
-3. **Opt-Out & Cooldown Arbitration**:
-   - Apply customer-level contact cooldown windows (e.g. max 1 contact per 24 hours).
-   - Abort reservation and release budget if opt-out or cooldown triggers between decision and execution.
-
-4. **Multi-Arm Experimentation Framework (M7)**:
-   - Prepare five experiment arms (A1, A2ns, A2, A3, A5) per ADR-0011.
-   - Set up pre-registration and primary metric evaluation (incremental recovery rate).
+1. **5-Arm Experimentation Pipeline**:
+   - Implement experiment controller for arms:
+     - `A1`: Simple Rule / Fixed Retry Policy
+     - `A2ns`: Heuristic Prioritization without Safety Controls
+     - `A2`: Heuristic Prioritization with Safety Controls
+     - `A3`: Machine Learning Probability Ranking without Counterfactual Baseline
+     - `A5`: Full AI Decision Engine (S-Learner, Incremental EV, Safety Filters, Epsilon Exploration)
+2. **Simulation Benchmark Runner**:
+   - Execute batch simulation across 10,000+ synthetic/historical payment failure events.
+   - Collect structured `RecoveryObservation` records for all 5 arms under identical event inputs.
+3. **Judge-Facing Metrics & Visualizations**:
+   - Calculate primary metrics: Net Recovered Revenue (paise), Incremental Recovery Rate (%), Safety Invariant Violation Count (strictly 0), Contact Cap Breach Count (strictly 0).
+   - Build Streamlit Judge Dashboard tab for side-by-side strategy comparison.
+4. **Final System Verification**:
+   - Run end-to-end regression suite and update final build log and architecture handoff document.

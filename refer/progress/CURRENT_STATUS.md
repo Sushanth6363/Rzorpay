@@ -1,7 +1,7 @@
 # CURRENT STATUS — Unified Recovery Engine
 
 **Last Updated**: 2026-09-01
-**Current Milestone**: M5 — AI Recovery Decision Engine (COMPLETED)
+**Current Milestone**: M6 — Sandbox Execution, Outcome & Attribution Loop (COMPLETED)
 
 ---
 
@@ -13,18 +13,18 @@
 - [x] **M3**: Atomic Contact Ledger & Reconciliation Engine
 - [x] **M4**: Recovery Pipeline & Candidate Generators
 - [x] **M5**: AI Recovery Decision Engine
+- [x] **M6**: Sandbox Execution, Outcome & Attribution Loop
 
 ---
 
-## Milestone M5 Status Summary
+## Milestone M6 Status Summary
 
-- **CatBoost S-Learner Architecture (ADR-0005)**: Implemented `CatBoostSLearner` single model predicting $p(x,a) = P(Y=1 | X=x, A=a)$ with action as an explicit feature.
-- **Counterfactual Baseline ($NO\_ACTION$)**: Every decision context evaluates $P(x, NO\_ACTION)$ first. Incremental effect $\hat{\Delta}(x,a) = \hat{p}(x,a) - \hat{p}(x, NO\_ACTION)$ is strictly enforced.
-- **Expected Value (EV) Calculation**: Monetary EV calculated as $EV(x,a) = \hat{\Delta}(x,a) \times amount\_paise - action\_cost\_paise$ strictly in integer paise. Negative uplift produces negative EV and prevents raw high probability ranking bypass.
-- **Point-in-Time Feature Safety (INV-7)**: `FeatureBuilder` enforces $observed\_at \le decision\_timestamp$ and checks denylisted post-decision fields, raising `PointInTimeLeakageError` on any future leakage.
-- **Safety-Constrained Exploration (ADR-0004, INV-3)**: Epsilon-exploration ($\varepsilon=0.05$) selects ONLY from actions approved as `ELIGIBLE` by M4 hard safety filter. `SAFETY_REJECTED` candidates can NEVER be selected or explored.
-- **Multi-Tenant Isolation (INV-1)**: `merchant_id` excluded from model feature vector to eliminate merchant bias; tenant isolation enforced across all evaluation contexts.
-- **File-Based Model Registry (ADR-0008)**: Models registered under `models/vN.cbm` with sibling `vN.meta.json` containing SHA256 artifact hash, feature schema, and metrics. Zero external ML platform dependencies.
-- **Audit-Ready AI Decision Record**: Produces `AIRecoveryDecision` containing `decision_id`, baseline probability, candidate scores, incremental EV, decision mode, and provenance.
-- **No Contact Slot Consumption**: Maintained strict invariant that M5 decision preparation does NOT reserve contact slots or execute payments (`is_contact_reserved=False`).
-- **Test Matrix Verification**: 113 / 113 tests passing (100% pass rate), including Golden AI Decision Scenarios `AI-01` through `AI-10`.
+- **Provider-Neutral Sandbox Simulator**: Stateful `SandboxSimulator` modeling delivery, latency, random noise, and failure injection (`EXECUTION_UNKNOWN`, outages, failed delivery). Zero production external API credentials required.
+- **Closed-Loop Recovery Orchestrator (`RecoveryOrchestrator`)**: Composes M4 pipeline -> M5 AI decision engine -> M3 atomic contact ledger -> M6 sandbox simulator -> M6 attribution engine into a single verifiable execution loop.
+- **Attribution Engine (`AttributionEngine`)**:
+  - **Self-Cure Rule**: Payments occurring before/independently of contact delivery, or under $NO\_ACTION$, are classified as `SELF_CURED` with **₹0 AI Attribution** (`attributed_recovered_paise = 0`).
+  - **Intervention Recovery Rule**: Confirmed payments following delivered interventions are attributed 100% of recovery value in integer paise.
+- **Atomic Reservation Integration**: $NO\_ACTION$ and abstentions consume zero contact budget slots. Active interventions atomically reserve slots prior to execution; failed reservations safely fallback to uncontacted evaluation without slot leakage.
+- **Reconciliation & Auditing**: Direct integration with M3 reconciliation ladder. `EXECUTION_UNKNOWN` results pass through `RECONCILED_DELIVERED`, `RECONCILED_NOT_SENT`, or `RECONCILED_UNRESOLVED` (conservatively held).
+- **Trace-Based Provenance**: Complete trace ID (`event_id -> opportunity_id -> decision_id -> ledger_id -> execution_id -> attribution_id`) generated and audited for judge exploration.
+- **Test Matrix Verification**: **130 / 130 tests passing (100% pass rate)**, including 12 Golden M6 Scenarios (`M6-E01` through `M6-E12`).

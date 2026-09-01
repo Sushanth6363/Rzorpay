@@ -151,5 +151,41 @@ Git commit:
 - **Tests passed**: 113 (100% pass rate in 5.46s)
 - **Tests failed**: 0
 - **Decisions made**: CatBoost S-Learner architecture (ADR-0005), Safety-Constrained Exploration (ADR-0004), File-Based Model Registry (ADR-0008).
-- **Next action**: M6 — Arbitration Engine & Multi-Opportunity Optimization.
+- **Next action**: M6 — Sandbox Execution, Recovery Outcome & Attribution Loop.
 
+---
+
+## 2026-09-01 — M6 Sandbox Execution & Attribution Loop Completed
+
+- **Date**: 2026-09-01
+- **Milestone**: M6 — Sandbox Execution, Recovery Outcome & Attribution Loop
+- **Task**: Implement deterministic sandbox simulator, closed-loop orchestrator, self-cure/intervention attribution engine, atomic ledger reservation integration, and Golden E2E scenarios.
+- **Key Changes**:
+  1. Created `refer/design/M6_SANDBOX_EXECUTION_DESIGN.md` defining closed-loop contracts.
+  2. Extended `app/domain/enums.py` and `app/domain/models.py` with `PaymentOutcome`, `SandboxActionRequest`, `SandboxExecutionResult`, `RecoveryAttribution`, `RecoveryObservation`, and `EndToEndRecoveryResult`.
+  3. Implemented `app/sandbox/simulator.py` (`SandboxSimulator` provider-neutral execution simulator).
+  4. Implemented `app/attribution/attribution_engine.py` (`AttributionEngine` enforcing ₹0 AI attribution for self-cure payments).
+  5. Implemented `app/orchestration/recovery_orchestrator.py` (`RecoveryOrchestrator` combining pipeline -> decision -> atomic reservation -> sandbox -> attribution).
+  6. Added 17 new tests under `tests/sandbox/`, `tests/attribution/`, and `tests/orchestration/` covering unit, property, and 12 Golden E2E scenarios (`M6-E01` to `M6-E12`).
+- **Files changed**:
+  - `app/domain/enums.py`
+  - `app/domain/models.py`
+  - `app/sandbox/__init__.py`
+  - `app/sandbox/simulator.py`
+  - `app/attribution/__init__.py`
+  - `app/attribution/attribution_engine.py`
+  - `app/orchestration/__init__.py`
+  - `app/orchestration/recovery_orchestrator.py`
+  - `app/scoring/exploration.py`
+  - `tests/sandbox/test_simulator.py`
+  - `tests/attribution/test_attribution.py`
+  - `tests/orchestration/test_m6_golden_scenarios.py`
+  - `refer/progress/CURRENT_STATUS.md`
+  - `refer/progress/NEXT_STEPS.md`
+  - `refer/progress/BUILD_LOG.md`
+  - `refer/testing/TEST_MATRIX.md`
+- **Tests run**: `pytest -v`
+- **Tests passed**: 130 (100% pass rate in 6.73s)
+- **Tests failed**: 0
+- **Decisions made**: Closed-loop sandbox orchestration, ₹0 AI attribution for self-cure payments, atomic ledger integration, trace ID correlation.
+- **Next action**: M7 — Multi-Arm Experimentation & Simulation Benchmarking Framework.

@@ -185,3 +185,19 @@ class AbstentionReason(str, Enum):
     SAFETY_FILTER_REJECTION = "SAFETY_FILTER_REJECTION"
     NEGATIVE_EXPECTED_VALUE = "NEGATIVE_EXPECTED_VALUE"
     MODEL_PREDICTION_ERROR = "MODEL_PREDICTION_ERROR"
+
+
+# ------------------------------------------------------------------
+# Milestone M6 Additions
+# ------------------------------------------------------------------
+
+
+class PaymentOutcome(str, Enum):
+    """Deterministic simulated payment and customer outcomes for M6 Sandbox."""
+
+    PAYMENT_SUCCESS = "PAYMENT_SUCCESS"
+    PAYMENT_FAILED = "PAYMENT_FAILED"
+    NO_PAYMENT = "NO_PAYMENT"
+    EXECUTION_UNKNOWN = "EXECUTION_UNKNOWN"
+    SELF_CURED = "SELF_CURED"
+

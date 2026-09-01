@@ -24,11 +24,13 @@ from app.domain.enums import (
     DataProvenance,
     AbstentionReason,
     DecisionMode,
+    PaymentOutcome,
 )
 from app.domain.money import Money
 
 
 def current_iso_timestamp() -> str:
+
     """Return ISO 8601 UTC timestamp string."""
     return datetime.now(timezone.utc).isoformat()
 
@@ -364,4 +366,199 @@ class AIRecoveryDecision:
             "random_seed": self.random_seed,
             "is_contact_reserved": self.is_contact_reserved,
         }
+
+
+# ------------------------------------------------------------------
+# Milestone M6 Additions
+# ------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class SandboxActionRequest:
+    """Request contract for executing a candidate recovery action in the M6 sandbox."""
+
+    action_id: str
+    decision_id: str
+    merchant_id: str
+    customer_id: str
+    opportunity_id: str
+    action_type: ActionType
+    amount_paise: int
+    requested_at: str
+    idempotency_key: str
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "action_id": self.action_id,
+            "decision_id": self.decision_id,
+            "merchant_id": self.merchant_id,
+            "customer_id": self.customer_id,
+            "opportunity_id": self.opportunity_id,
+            "action_type": self.action_type.value,
+            "amount_paise": self.amount_paise,
+            "requested_at": self.requested_at,
+            "idempotency_key": self.idempotency_key,
+        }
+
+
+@dataclass(frozen=True)
+class SandboxExecutionResult:
+    """Result of sandbox intervention execution."""
+
+    execution_id: str
+    action_id: str
+    decision_id: str
+    opportunity_id: str
+    merchant_id: str
+    customer_id: str
+    action_type: ActionType
+    execution_status: ExecutionStatus  # EXECUTED | FAILED_CLOSED | EXECUTION_UNKNOWN
+    payment_outcome: PaymentOutcome  # PAYMENT_SUCCESS | PAYMENT_FAILED | NO_PAYMENT | EXECUTION_UNKNOWN | SELF_CURED
+    executed_at: str
+    delivered_at: Optional[str] = None
+    failure_reason: Optional[str] = None
+    raw_response: Dict[str, Any] = field(default_factory=dict)
+    provenance: DataProvenance = DataProvenance.SIMULATED_EXTERNAL_STATE
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "execution_id": self.execution_id,
+            "action_id": self.action_id,
+            "decision_id": self.decision_id,
+            "opportunity_id": self.opportunity_id,
+            "merchant_id": self.merchant_id,
+            "customer_id": self.customer_id,
+            "action_type": self.action_type.value,
+            "execution_status": self.execution_status.value,
+            "payment_outcome": self.payment_outcome.value,
+            "executed_at": self.executed_at,
+            "delivered_at": self.delivered_at,
+            "failure_reason": self.failure_reason,
+            "raw_response": self.raw_response,
+            "provenance": self.provenance.value,
+        }
+
+
+@dataclass(frozen=True)
+class RecoveryAttribution:
+    """Structured attribution record linking payment recovery to intervention causality."""
+
+    attribution_id: str
+    opportunity_id: str
+    merchant_id: str
+    customer_id: str
+    decision_id: str
+    ledger_id: Optional[str]
+    execution_id: Optional[str]
+    selected_action: ActionType
+    attribution_status: AttributionStatus  # SELF_CURED | RECOVERED | FAILED_UNRECOVERED | PENDING
+    payment_outcome: PaymentOutcome
+    gross_recovered_paise: int  # Actual simulated payment amount recovered
+    attributed_recovered_paise: int  # ₹0 for SELF_CURED, equal to gross if attributed intervention
+    amount_at_risk_paise: int
+    evaluated_at: str
+    delivered_at: Optional[str] = None
+    payment_at: Optional[str] = None
+    explanation: str = ""
+
+    @property
+    def is_self_cured(self) -> bool:
+        return self.attribution_status == AttributionStatus.SELF_CURED
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "attribution_id": self.attribution_id,
+            "opportunity_id": self.opportunity_id,
+            "merchant_id": self.merchant_id,
+            "customer_id": self.customer_id,
+            "decision_id": self.decision_id,
+            "ledger_id": self.ledger_id,
+            "execution_id": self.execution_id,
+            "selected_action": self.selected_action.value,
+            "attribution_status": self.attribution_status.value,
+            "payment_outcome": self.payment_outcome.value,
+            "gross_recovered_paise": self.gross_recovered_paise,
+            "attributed_recovered_paise": self.attributed_recovered_paise,
+            "amount_at_risk_paise": self.amount_at_risk_paise,
+            "evaluated_at": self.evaluated_at,
+            "delivered_at": self.delivered_at,
+            "payment_at": self.payment_at,
+            "explanation": self.explanation,
+            "is_self_cured": self.is_self_cured,
+        }
+
+
+@dataclass(frozen=True)
+class RecoveryObservation:
+    """Structured observation record captured for future experiment analysis (M7 preparation)."""
+
+    observation_id: str
+    experiment_id: str
+    arm: str
+    opportunity_id: str
+    merchant_id: str
+    customer_id: str
+    decision_id: str
+    selected_action: ActionType
+    outcome: PaymentOutcome
+    amount_at_risk_paise: int
+    gross_recovered_paise: int
+    attributed_recovered_paise: int
+    self_cured: bool
+    decision_timestamp: str
+    outcome_timestamp: str
+    model_version: str
+    provenance: DataProvenance = DataProvenance.SIMULATED_EXTERNAL_STATE
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "observation_id": self.observation_id,
+            "experiment_id": self.experiment_id,
+            "arm": self.arm,
+            "opportunity_id": self.opportunity_id,
+            "merchant_id": self.merchant_id,
+            "customer_id": self.customer_id,
+            "decision_id": self.decision_id,
+            "selected_action": self.selected_action.value,
+            "outcome": self.outcome.value,
+            "amount_at_risk_paise": self.amount_at_risk_paise,
+            "gross_recovered_paise": self.gross_recovered_paise,
+            "attributed_recovered_paise": self.attributed_recovered_paise,
+            "self_cured": self.self_cured,
+            "decision_timestamp": self.decision_timestamp,
+            "outcome_timestamp": self.outcome_timestamp,
+            "model_version": self.model_version,
+            "provenance": self.provenance.value,
+        }
+
+
+@dataclass(frozen=True)
+class EndToEndRecoveryResult:
+    """Complete closed-loop recovery result containing full correlation trace."""
+
+    opportunity_id: str
+    merchant_id: str
+    customer_id: str
+    event_id: str
+    decision: AIRecoveryDecision
+    ledger_entry: Optional[ContactLedgerEntry]
+    execution_result: Optional[SandboxExecutionResult]
+    attribution: RecoveryAttribution
+    observation: RecoveryObservation
+    trace_id: str
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "trace_id": self.trace_id,
+            "opportunity_id": self.opportunity_id,
+            "merchant_id": self.merchant_id,
+            "customer_id": self.customer_id,
+            "event_id": self.event_id,
+            "decision": self.decision.to_dict(),
+            "ledger_entry": self.ledger_entry.to_dict() if self.ledger_entry else None,
+            "execution_result": self.execution_result.to_dict() if self.execution_result else None,
+            "attribution": self.attribution.to_dict(),
+            "observation": self.observation.to_dict(),
+        }
+
 

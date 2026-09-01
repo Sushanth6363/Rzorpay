@@ -80,5 +80,11 @@ Legend: `NOT_RUN` · `PASS` · `FAIL` · `SKIP` · `UNKNOWN`
 | AI Tenancy | M5-21 Merchant ID feature exclusion | merchant_id excluded from feature vector (INV-1) | PASSED (0.01s) | PASS | 2026-09-01 (M5) |
 | AI Tenancy | M5-22 Cross-tenant decision isolation | identical customer at 2 merchants receives isolated decision | PASSED (0.02s) | PASS | 2026-09-01 (M5) |
 | Golden Scenarios | AI Golden Scenarios AI-01 to AI-10 | 10 standardized AI decision engine golden scenarios verified | PASSED (0.25s) | PASS | 2026-09-01 (M5) |
+| Sandbox | M6-01 Sandbox simulator execution | stateful delivery simulation & failure injection | PASSED (0.02s) | PASS | 2026-09-01 (M6) |
+| Sandbox | M6-02 Deterministic sandbox seed | identical seed produces 100% reproducible execution result | PASSED (0.01s) | PASS | 2026-09-01 (M6) |
+| Attribution | M6-03 Self-cure ₹0 attribution | self-cure payments receive ₹0 AI attribution (INV-1) | PASSED (0.01s) | PASS | 2026-09-01 (M6) |
+| Attribution | M6-04 Intervention attribution | delivered intervention payment receives 100% attributed recovery | PASSED (0.01s) | PASS | 2026-09-01 (M6) |
+| Golden Scenarios | M6 Golden E2E Scenarios M6-E01-E12 | 12 standardized end-to-end sandbox recovery scenarios verified | PASSED (0.35s) | PASS | 2026-09-01 (M6) |
 
-**Total: 113 tests specified · 113 run · 113 passing (100% pass rate).**
+**Total: 130 tests specified · 130 run · 130 passing (100% pass rate).**
+
