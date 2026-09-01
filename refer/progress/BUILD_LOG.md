@@ -234,3 +234,39 @@ Git commit:
 - **Decisions made**: Five pre-registered experiment arms (ADR-0011), Primary metric incremental recovery rate on A2 vs A1, Holm-Bonferroni multiplicity correction, Zero post-decision feature leakage (INV-7).
 - **Next action**: M8 — Production Readiness, Model Governance & Final Audit.
 
+---
+
+## 2026-09-01 — M8 Judge-Ready Demonstration & Validation Completed
+
+- **Date**: 2026-09-01
+- **Milestone**: M8 — Judge-Ready End-to-End Demonstration, Reproducibility & Validation
+- **Task**: Implement interactive judge dashboard UI, 12 Golden Demo Scenarios, one-command launcher, judge guide, and comprehensive integration/reproducibility test suite.
+- **Key Changes**:
+  1. Created `app/sandbox/scenarios.py` with 12 pre-configured Golden Demo Scenarios and ScenarioRunner.
+  2. Enhanced `app/ui/dashboard.py` Streamlit UI with 5 dedicated Judge audit tabs (Golden Scenarios, Experiment Bench, Invariant Monitor, Retraining Inspector, Judge Guide).
+  3. Created `ui_app.py` entrypoint for Streamlit web interface.
+  4. Created `run_demo.py` clean-start entrypoint script with automated quality gate execution.
+  5. Created `refer/JUDGE_GUIDE.md` comprehensive judge documentation.
+  6. Added 10 new integration and reproducibility tests in `tests/ui/` (`test_dashboard_integration.py`, `test_m8_reproducibility_and_safety.py`).
+  7. Updated test matrix, current status, next steps, and handoff documentation.
+- **Files changed**:
+  - `app/sandbox/scenarios.py`
+  - `app/ui/dashboard.py`
+  - `ui_app.py`
+  - `run_demo.py`
+  - `refer/JUDGE_GUIDE.md`
+  - `tests/ui/__init__.py`
+  - `tests/ui/test_dashboard_integration.py`
+  - `tests/ui/test_m8_reproducibility_and_safety.py`
+  - `refer/progress/CURRENT_STATUS.md`
+  - `refer/progress/NEXT_STEPS.md`
+  - `refer/progress/BUILD_LOG.md`
+  - `refer/testing/TEST_MATRIX.md`
+  - `refer/handoff/09_HANDOFF_M8_COMPLETED.md`
+- **Tests run**: `pytest -v` & `python scripts/verify_environment.py`
+- **Tests passed**: 161 (100% pass rate in 3.75s)
+- **Tests failed**: 0
+- **Decisions made**: Explicit simulation boundaries, 12 deterministic scenario presets, 100% reproducible execution seed control.
+- **Next action**: Complete project deliverables & final judge presentation.
+
+

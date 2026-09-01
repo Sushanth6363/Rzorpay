@@ -1,7 +1,7 @@
 # CURRENT STATUS — Unified Recovery Engine
 
 **Last Updated**: 2026-09-01
-**Current Milestone**: M7 — Experimentation, Incremental Recovery Measurement & Feedback Loop (COMPLETED)
+**Current Milestone**: M8 — Judge-Ready End-to-End Demonstration, Reproducibility & Validation (COMPLETED)
 
 ---
 
@@ -15,19 +15,16 @@
 - [x] **M5**: AI Recovery Decision Engine
 - [x] **M6**: Sandbox Execution, Outcome & Attribution Loop
 - [x] **M7**: Experimentation, Incremental Recovery Measurement & Feedback Loop
+- [x] **M8**: Judge-Ready End-to-End Demonstration, Reproducibility & Validation
 
 ---
 
-## Milestone M7 Status Summary
+## Milestone M8 Status Summary
 
-- **5 Pre-Registered Experiment Arms (ADR-0011)**: Fully implemented and pre-registered configurations (`CONTROL`, `A1`, `A2ns`, `A2`, `A3`, `A5`).
-- **Deterministic Seeded Arm Assignment (`ExperimentAssigner`)**: Cryptographic hashing (`sha256(exp_id | merch_id | cust_id | opp_id | seed)`) guarantees 100% reproducible assignment across seeds (21–60) with tenant isolation (`INV-1`) and zero outcome leakage.
-- **Batch Experiment Runner & Evaluator (`ExperimentRunner`)**:
-  - Primary metric: Incremental Recovery Rate on `A2 vs A1` comparison (ADR-0011).
-  - Secondary metrics: Gross recovered revenue, attributed recovery (₹0 for self-cures), cost, net incremental value, abstention, and contact rates.
-  - Multiplicity control: Holm-Bonferroni step-down correction applied to secondary comparison family (`A2ns vs A1`, `A2 vs A2ns`, `A3 vs A2`, `A5 vs A3`, `A5 vs CONTROL`).
-  - Strict statistical verdict vocabulary: `STATISTICALLY_SIGNIFICANT` vs `INCONCLUSIVE` / `INSUFFICIENT_SAMPLE`.
-- **Feedback Loop & Retraining Tuple Generator (`FeedbackLoopEngine`)**: Transforms `RecoveryObservation` records into point-in-time compliant `TrainingRecord` tuples ($X, A, Y$), enforcing strict separation of feature vector $X$ from target outcome $Y$ (`INV-7`).
-- **Streamlit Judge Dashboard (`app/ui/dashboard.py`)**: Interactive benchmarking UI with 5-Arm summary tables, primary comparison CIs, individual trace inspection, and feedback loop dataset viewer. All outputs prominently tagged as **SANDBOX / SIMULATED EXPERIMENT**.
-- **Test Matrix Verification**: **151 / 151 tests passing (100% pass rate)**, including 12 M7 Golden Scenarios (`M7-E01` through `M7-E12`).
+- **Judge-Ready Interactive Streamlit UI (`app/ui/dashboard.py` / `ui_app.py`)**: Prominently marked with `⚠️ SANDBOX / SIMULATED PROTOTYPE` badges, 5 dedicated Judge audit tabs, visual trace pipeline, 5-Arm experiment benchmarking, live outage controls, contact budget monitor, and point-in-time retraining inspector.
+- **12 Golden Demo Scenarios (`app/sandbox/scenarios.py`)**: Pre-configured scenarios exercising Stage 0/1, candidate generation, hard safety filters, AI decisions, contact budget arbitration, sandbox execution, reconciliation ladder, attribution engine, and multi-tenant isolation.
+- **Judge Launcher Script (`run_demo.py`)**: One-command Python launcher (`python run_demo.py`) that runs environment quality gate checks and launches Streamlit dashboard.
+- **Judge Guide (`refer/JUDGE_GUIDE.md`)**: Comprehensive documentation detailing project overview, sandbox boundaries, quick start instructions, recommended judge exploration steps, AI decision concepts, and safety invariants (`INV-1` to `INV-9`).
+- **Test Suite & Verification**: **161 / 161 tests passing (100% pass rate)** including 10 new M8 integration, reproducibility, and safety tests. Environment quality gate (`python scripts/verify_environment.py`) verified 100% reproducible.
+
 

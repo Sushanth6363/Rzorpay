@@ -1,18 +1,23 @@
 # NEXT STEPS — Unified Recovery Engine
 
-**Current Focus**: Milestone M8 — Production Readiness, Model Governance & Final Audit.
+**Current State**: M8 COMPLETE — awaiting review / next milestone approval.
 
 ---
 
-## Immediate Next Steps (M8 Preparation)
+## Current Status Summary
+All core milestones M1 through M8 are complete and fully verified:
+- [x] M1: Repository & Environment Foundation
+- [x] M2: Domain Model & SQLite WAL Persistence
+- [x] M3: Atomic Contact Ledger & Reconciliation Engine
+- [x] M4: Recovery Pipeline & Candidate Generators
+- [x] M5: AI Recovery Decision Engine (CatBoost S-Learner & EV Ranking)
+- [x] M6: Sandbox Execution, Outcome & Attribution Loop
+- [x] M7: Experimentation, Measurement & Feedback Loop
+- [x] M8: Judge-Ready End-to-End Demonstration, Reproducibility & Validation
 
-1. **Model Governance & Registry Audit**:
-   - Verify model artifact checksums and file-based model registry versioning (ADR-0008).
-   - Ensure reproducible training pipeline with fixed seed configuration.
-2. **Production Packaging & CLI Verification**:
-   - Verify non-interactive execution entrypoints and Makefile targets.
-   - Run full 151-test regression matrix with zero skipped or failing tests.
-3. **Judge Walkthrough & Audit Artifact Generation**:
-   - Finalize submission reports, build logs, and architecture documentation.
-   - Run Streamlit dashboard demo and record final submission video/walkthrough.
+## Recommended Actions
+1. Review `refer/JUDGE_GUIDE.md` for complete demonstration instructions.
+2. Launch Streamlit UI via `python run_demo.py` or `streamlit run ui_app.py`.
+3. Run full test suite via `pytest -v` (161/161 tests passing).
+
 

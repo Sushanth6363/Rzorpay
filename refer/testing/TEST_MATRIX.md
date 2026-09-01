@@ -95,7 +95,18 @@ Legend: `NOT_RUN` · `PASS` · `FAIL` · `SKIP` · `UNKNOWN`
 | Feedback Loop | M7-08 Retraining record transformation | RecoveryObservation transformed to TrainingRecord (X, A, Y) | PASSED (0.01s) | PASS | 2026-09-01 (M7) |
 | Feedback Loop | M7-09 Point-in-time feature leakage | post-decision outcome fields in X raise PointInTimeLeakageError (INV-7) | PASSED (0.01s) | PASS | 2026-09-01 (M7) |
 | Golden Scenarios | M7 Golden Scenarios M7-E01-E12 | 12 standardized M7 experiment golden scenarios verified | PASSED (0.45s) | PASS | 2026-09-01 (M7) |
+| UI Integration | M8-01 All 12 Golden Scenarios execute | Every scenario in GOLDEN_DEMO_SCENARIOS runs to completion | PASSED (0.35s) | PASS | 2026-09-01 (M8) |
+| UI Integration | M8-02 Scenario 1 Retry Recovery | Scenario 1 produces intervention recovery with attributed recovery > 0 | PASSED (0.05s) | PASS | 2026-09-01 (M8) |
+| UI Integration | M8-03 Scenario 3 Self-Cure Attribution (INV-8) | Scenario 3 yields SELF_CURED outcome with strictly ₹0 AI Attribution | PASSED (0.04s) | PASS | 2026-09-01 (M8) |
+| UI Integration | M8-04 Scenario 5 Gateway Outage Safety (INV-4) | Scenario 5 suppresses retry recommendations via hard safety filter | PASSED (0.04s) | PASS | 2026-09-01 (M8) |
+| UI Integration | M8-05 Scenario 6 Contact Cap Exhaustion (INV-2) | Scenario 6 blocks active intervention reservation | PASSED (0.05s) | PASS | 2026-09-01 (M8) |
+| UI Integration | M8-06 Scenario 11 Cross-Tenant Isolation (INV-1) | Scenario 11 preserves complete tenant isolation | PASSED (0.06s) | PASS | 2026-09-01 (M8) |
+| Reproducibility | M8-07 Deterministic Scenario Reproducibility | Identical scenario execution with same seed produces 100% identical outputs | PASSED (0.05s) | PASS | 2026-09-01 (M8) |
+| Reproducibility | M8-08 Reproducible Experiment Runner | ExperimentRunner with identical seeds produces identical summary metric hashes | PASSED (0.08s) | PASS | 2026-09-01 (M8) |
+| Reconciliation | M8-09 Scenario 8 Execution Unknown Reconciled | EXECUTION_UNKNOWN simulation correctly transitions to reconciliation status | PASSED (0.05s) | PASS | 2026-09-01 (M8) |
+| Abstention | M8-10 Scenario 12 Negative EV Abstention | Scenario 12 forces NO_ACTION | PASSED (0.04s) | PASS | 2026-09-01 (M8) |
 
-**Total: 151 tests specified · 151 run · 151 passing (100% pass rate).**
+**Total: 161 tests specified · 161 run · 161 passing (100% pass rate).**
+
 
 
