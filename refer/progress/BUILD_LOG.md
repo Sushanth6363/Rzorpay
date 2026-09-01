@@ -148,7 +148,8 @@ Git commit:
 - **Problems discovered**: `FakeClock` initially raised `AttributeError` when ISO `str` was passed instead of `datetime`; resolved cleanly by enhancing `FakeClock.__init__` and `set_time` to parse ISO strings.
 - **Verification performed**: Ran 10-worker multi-threaded concurrency safety tests for same-key idempotency (M3-18) and distinct keys (M3-19) on disk WAL DB, plus Hypothesis property fuzzing. Executed quality gate script (6/6 checks passed).
 - **Next action**: M4 — Recovery Pipeline & Candidate Generators.
-- **Git commit**: (pending commit)
+- **Git commit**: `fe61b50`
+
 
 
 
