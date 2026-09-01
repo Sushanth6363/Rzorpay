@@ -122,7 +122,8 @@ Git commit:
 - **Problems discovered**: Initial 10-worker concurrency test hit initial `cap=3` reset due to `ON CONFLICT DO UPDATE SET cap = excluded.cap` in `reserve_contact_slot`'s internal budget call. Resolved by updating ON CONFLICT clause to retain existing `cap`.
 - **Verification performed**: Executed 10-worker multi-threaded concurrency safety test (M2-19) on disk WAL database file (exactly 5 granted, 5 rejected, reserved_count <= 5 verified). Executed quality gate script (6/6 checks passed).
 - **Next action**: M3 — Atomic Contact Ledger & Reconciliation Engine.
-- **Git commit**: (pending commit)
+- **Git commit**: `5b7e7d0`
+
 
 
 

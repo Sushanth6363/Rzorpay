@@ -13,7 +13,8 @@ PROJECT PHASE:            Implementation Phase (M1.1, M1.2 & M2 complete)
 CURRENT MILESTONE:        M2 — Domain Model + SQLite WAL Persistence (COMPLETED)
 CURRENT TASK:             M2 — Domain Model + Database Schema + SQLite WAL Persistence Foundation (COMPLETED)
 LAST COMPLETED TASK:      M2 — Domain Model + SQLite WAL Persistence Foundation (2026-09-01)
-LATEST COMMIT:            (pending commit)
+LATEST COMMIT:            5b7e7d0
+
 
 NEXT EXACT ACTION:        M3 — Atomic Contact Ledger & Reconciliation Engine. See NEXT_STEPS.md.
 ```
