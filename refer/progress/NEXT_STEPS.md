@@ -16,8 +16,15 @@ Prioritised queue. **P0 items block everything below them.**
 ### P0-2 — Initialise the repository and make the first commit (M1.1)
 - **Why**: zero commits exist. The anti-rigging evidence depends on commit ordering (response function frozen before either scorer) and cannot be reconstructed later. Every subsequent step assumes version control.
 - **Dependency**: none
-- **Definition of done**: `.gitignore`, `requirements.txt`, `pytest.ini`, `app/__init__.py`, `tests/__init__.py`, `tests/test_smoke.py`, `.env.example`, `Makefile`; `pytest` runs 1 real smoke test and passes; at least one commit exists.
-- **Status**: COMPLETED (Commit: `466df026f0cacac2101e9bfd9f2341e6b38e2ff9`, Date: 2026-09-01)
+- **Definition of done**: `.gitignore`, `requirements.txt`, `pytest.ini`, `app/__init__.py`, `tests/__init__.py`, `tests/test_smoke.py`, `.env.example`, `Makefile`; `pytest` runs 1 real smoke test and passes; initial commit created.
+- **Status**: COMPLETED (Commit: `eb52c38fde3018ac12417474e158f5f90638f802`, Date: 2026-09-01)
+
+### P0-2b — Razorpay Test Mode Research & Spec (M1.2)
+- **Why**: Establish official Razorpay Test Mode API/Webhook capability matrix, signature verification, idempotency rules, and adapter boundaries before building domain/DB layer.
+- **Dependency**: P0-2
+- **Definition of done**: `refer/integrations/RAZORPAY_TEST_MODE.md` created; ADR-0012, ADR-0013, ADR-0014 created.
+- **Status**: IN_PROGRESS
+
 
 
 ### P0-3 — Schema + domain model (M2)

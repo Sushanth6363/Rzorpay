@@ -17,8 +17,12 @@ Every significant decision is recorded as an ADR. **An ADR is mandatory before**
 | [0009](ADR-0009-external-data-calibration-only.md) | External data for calibration only | ACCEPTED | 2026-08-31 | data, claims |
 | [0010](ADR-0010-streamlit-over-react.md) | Streamlit over a Node frontend | ACCEPTED | 2026-08-31 | frontend, toolchain |
 | [0011](ADR-0011-five-arms-and-primary-metric.md) | Five experiment arms; primary metric = incremental recovery rate | ACCEPTED | 2026-08-31 | experiment, claims |
+| [0012](ADR-0012-adapter-boundary-and-canonical-event.md) | Provider-neutral adapter boundary & `CanonicalEvent` contract (Razorpay Test Mode + Simulator) | PROPOSED | 2026-09-01 | ingestion, adapters, domain |
+| [0013](ADR-0013-webhook-verification-and-idempotency.md) | Webhook HMAC SHA256 verification, idempotency, and tenant mapping | PROPOSED | 2026-09-01 | webhooks, security, ledger |
+| [0014](ADR-0014-streamlit-judge-sandbox-architecture.md) | Streamlit Public Live Demo & Judge Interactive Sandbox (Live, Sandbox, Red-Team modes) | PROPOSED | 2026-09-01 | UI, judge sandbox, deployment |
 
 ## Open decisions
+
 
 | # | Question | Blocking | Owner |
 |---|---|---|---|

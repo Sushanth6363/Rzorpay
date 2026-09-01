@@ -8,13 +8,21 @@ Canonical build sequence. **Every milestone is `NOT_STARTED`.**
 
 ---
 
-## M1 — Project setup
+## M1 — Project setup (M1.1 Foundation)
 - **Goal**: reproducible environment, first commit
 - **Dependencies**: none
-- **Files**: `requirements.txt`, `pyproject.toml` or `pytest.ini`, `.gitignore`, `.env.example`, `Makefile`, `app/__init__.py`
-- **Tests**: `pytest` collects and runs an empty suite
-- **DoD**: fresh clone → `pip install -r requirements.txt` → `pytest` green; **repo has at least one commit**
-- **Status**: `NOT_STARTED`
+- **Files**: `requirements.txt`, `pytest.ini`, `.gitignore`, `.env.example`, `Makefile`, `app/__init__.py`, `tests/__init__.py`, `tests/test_smoke.py`
+- **Tests**: `pytest` executes smoke test (`tests/test_smoke.py::test_app_import_and_version PASSED`)
+- **DoD**: fresh clone → `pip install -r requirements.txt` → `pytest` green; **repo has initial commit `eb52c38`**
+- **Status**: `COMPLETED` (2026-09-01, commit `eb52c38`)
+
+## M1.2 — Razorpay Test Mode Integration Research & Spec
+- **Goal**: official Razorpay Test Mode API/webhook capability matrix and provider-neutral adapter specification
+- **Dependencies**: M1
+- **Files**: `refer/integrations/RAZORPAY_TEST_MODE.md`, `refer/decisions/ADR-0012-adapter-boundary-and-canonical-event.md`, `ADR-0013-webhook-verification-and-idempotency.md`, `ADR-0014-streamlit-judge-sandbox-architecture.md`
+- **Tests**: n/a (specification)
+- **DoD**: document all verified Test Mode capabilities vs unverified internal capabilities; define `CanonicalEvent` contract
+- **Status**: `IN_PROGRESS`
 
 ## M2 — Domain model + database
 - **Goal**: schema and types that make invalid states unrepresentable
@@ -32,12 +40,12 @@ Canonical build sequence. **Every milestone is `NOT_STARTED`.**
 - **DoD**: **all ledger tests green.** Until then, no other milestone starts
 - **Status**: `NOT_STARTED`
 
-## M4 — Recovery core loop
-- **Goal**: an opportunity flows end to end with stub stages
+## M4 — Recovery core loop & Event Adapters
+- **Goal**: an opportunity flows end to end via dual paths (Razorpay Test Mode + Deterministic Simulator)
 - **Dependencies**: M3
-- **Files**: `app/ingestion/events.py`, `app/identity/resolve.py`, `app/candidates/generate.py`
-- **Tests**: duplicate event no-op; `NO_ACTION` in every candidate set; unresolved identity stays distinct
-- **DoD**: event → opportunity → candidates, persisted and traceable
+- **Files**: `app/adapters/base.py`, `app/adapters/razorpay/*`, `app/adapters/simulator/*`, `app/ingestion/events.py`, `app/identity/resolve.py`, `app/candidates/generate.py`
+- **Tests**: webhook signature verification; duplicate event no-op; `NO_ACTION` in every candidate set; unresolved identity stays distinct
+- **DoD**: event → canonical event → opportunity → candidates, persisted and traceable for both `RAZORPAY_TEST` and `SIMULATED` sources
 - **Status**: `NOT_STARTED`
 
 ## M5 — Safety layer
@@ -48,8 +56,8 @@ Canonical build sequence. **Every milestone is `NOT_STARTED`.**
 - **DoD**: INV-1, INV-3, INV-9 tests green
 - **Status**: `NOT_STARTED`
 
-## M6 — Simulator
-- **Goal**: reproducible synthetic world with a frozen response function
+## M6 — Simulator & Event Factory
+- **Goal**: reproducible synthetic world with a frozen response function and judge scenario factory
 - **Dependencies**: M2
 - **Files**: `app/simulation/generate.py`, `response.py`, `provider_sim.py`, `app/data/base.py`, `synthetic_adapter.py`
 - **Tests**: same seed + reference timestamp → identical hash across processes and days · hash sensitive to every input · generation order-independent · simulator internals unreachable
@@ -64,16 +72,16 @@ Canonical build sequence. **Every milestone is `NOT_STARTED`.**
 - **DoD**: A1, A2ns, A2 runnable; heuristic tuned on seeds 1–10 only
 - **Status**: `NOT_STARTED`
 
-## M8 — CatBoost
-- **Goal**: the AI under test
+## M8 — CatBoost AI Model
+- **Goal**: the AI under test estimating $P(Y=1 \mid X, A)$ and incremental EV vs `NO_ACTION`
 - **Dependencies**: M7
 - **Files**: `app/scoring/model.py`, `app/models/train.py`, `features.py`, `registry.py`
 - **Tests**: point-in-time assertions raise on violation (`pytest -m leakage`) · calibration slope ∈ [0.85, 1.15] · Brier improved · arms differ only in the scorer
 - **DoD**: `models/v1.cbm` + metadata; A3 and A5 runnable
 - **Status**: `NOT_STARTED`
 
-## M9 — Arbitration
-- **Goal**: competing agents, one contact
+## M9 — Multi-Agent Arbitration
+- **Goal**: competing agents (12 simulated agent recommendations), one contact slot
 - **Dependencies**: M3, M5
 - **Files**: `app/arbitration/arbitrate.py`, `app/agents/*.py`
 - **Tests**: two agents → one contact with real suppression reasons; deterministic under reordering
@@ -81,15 +89,15 @@ Canonical build sequence. **Every milestone is `NOT_STARTED`.**
 - **Status**: `NOT_STARTED`
 
 ## M10 — Attribution
-- **Goal**: separate caused from would-have-happened
+- **Goal**: separate caused from would-have-happened (distinguishing self-cure)
 - **Dependencies**: M4, M6
 - **Files**: `app/attribution/classify.py`
 - **Tests**: payment before delivery → `SELF_CURED` · window boundaries · partial + TDS tolerance · post-window censoring · self-cure agrees across arms
 - **DoD**: INV-8 green; six recovery metrics distinct
 - **Status**: `NOT_STARTED`
 
-## M11 — Feedback
-- **Goal**: outcomes become the next model
+## M11 — Feedback Loop
+- **Goal**: outcomes become the next model version
 - **Dependencies**: M8, M10
 - **Files**: `app/models/train.py`, `registry.py`
 - **Tests**: dataset roles disjoint · holdout locked until promotion decided · v2 never evaluated on its training data · bad model rejected · model hash constant within a run
@@ -97,28 +105,29 @@ Canonical build sequence. **Every milestone is `NOT_STARTED`.**
 - **Status**: `NOT_STARTED`
 
 ## M12 — Experiments
-- **Goal**: the evidence
+- **Goal**: the evidence harness comparing AI vs baseline arms
 - **Dependencies**: M7, M8, M9, M10
 - **Files**: `app/evaluation/run.py`, `stats.py`, `falsification.py`, `experiments/preregistration.json`
 - **Tests**: identical `input_hash` and `world_hash` across arms · tuning ∩ eval seeds = ∅ · exactly one primary metric · null experiment reports inconclusive · Holm applied · four falsification runs
 - **DoD**: `results/report.json` regenerable from seeds alone; pre-registration git-tagged **before** the first run
 - **Status**: `NOT_STARTED`
 
-## M13 — Dashboard
-- **Goal**: "why did the engine do this?"
+## M13 — Streamlit Judge Interactive Sandbox & Decision Trace
+- **Goal**: "Why did the engine do this?" — Interactive Judge Sandbox with Live Test, Sandbox, and Red-Team modes
 - **Dependencies**: M12
-- **Files**: `app/dashboard.py`
-- **Tests**: trace answers all six audit questions · renders without an LLM · no hardcoded values · every widget has a source query
-- **DoD**: the trace screen works; nothing else is built until it does
+- **Files**: `app/ui/app.py`, `app/ui/trace.py`, `app/ui/sandbox.py`, `app/ui/red_team.py`, `app/ui/db_inspector.py`
+- **Tests**: trace answers all six audit questions · renders without an LLM · no hardcoded values · every widget has a source query · 9 red-team attack cards return verified `PASS`/`FAIL`
+- **DoD**: Judge sandbox fully operational with zero pre-scripted outputs; safe read-only database inspector active
 - **Status**: `NOT_STARTED`
 
-## M14 — Final demo
-- **Goal**: five beats, five minutes
+## M14 — Public Live Demo Deployment & Final Submission Package
+- **Goal**: deployable public HTTPS URL + complete submission package
 - **Dependencies**: M13
-- **Files**: `README.md`, `RESULTS.md`, demo script, recording
-- **Tests**: full suite green · forbidden-phrase scan clean · `make eval` reproduces every README number
-- **DoD**: repo frozen and tagged; video matches the code exactly
+- **Files**: `README.md`, `RESULTS.md`, deployment config, video walk-through
+- **Tests**: full suite green · secret scan clean · public deployment boots cleanly in zero-credential `SIMULATION MODE`
+- **DoD**: public live demo URL active; repo frozen and tagged; video matches code exactly
 - **Status**: `NOT_STARTED`
+
 
 ---
 

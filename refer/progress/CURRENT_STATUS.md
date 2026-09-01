@@ -11,15 +11,17 @@
 ```
 PROJECT PHASE:            Implementation started (M1 complete)
 CURRENT MILESTONE:        M1 — Project setup (COMPLETED)
-CURRENT TASK:             M1.1 — Repository + Reproducibility Foundation (COMPLETED)
+CURRENT TASK:             M1.2 — Razorpay Test Mode Integration Research & Spec
 LAST COMPLETED TASK:      M1.1 — Repository + Reproducibility Foundation (2026-09-01)
-LATEST COMMIT:            466df026f0cacac2101e9bfd9f2341e6b38e2ff9
-NEXT EXACT ACTION:        M2 — Domain model + Database schema (sqlite WAL). See NEXT_STEPS.md.
+LATEST COMMIT:            eb52c38fde3018ac12417474e158f5f90638f802
+NEXT EXACT ACTION:        M1.2 — Write refer/integrations/RAZORPAY_TEST_MODE.md and ADRs 0012-0014.
 ```
 
 ## Implemented components
 
-- **Repository skeleton & reproducibility foundation** (M1.1): `.gitignore`, `requirements.txt`, `pytest.ini`, `.env.example`, `Makefile`, `app/__init__.py`, `tests/__init__.py`, `tests/test_smoke.py`. Verified 2026-09-01 by `pytest` (1 passed).
+- **Repository skeleton & reproducibility foundation** (M1.1): `.gitignore`, `requirements.txt`, `pytest.ini`, `.env.example`, `Makefile`, `app/__init__.py`, `tests/__init__.py`, `tests/test_smoke.py`. Verified 2026-09-01 by `pytest` (1 passed) and Git commit `eb52c38`.
+- **Environment & Secret Hygiene**: Python 3.12.9 LTS virtual environment verified compatible with CatBoost 1.2.10, scikit-learn 1.9.0, scipy 1.18.1, pandas 3.0.5, numpy 2.5.2. Automated secret scan clean.
+
 
 ## Unimplemented components
 

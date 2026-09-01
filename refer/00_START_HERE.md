@@ -8,33 +8,34 @@
 
 ## CURRENT PROJECT STATUS (keep this block current)
 
+## CURRENT PROJECT STATUS (keep this block current)
+
 ```
-CURRENT PROJECT STATUS:   DESIGN COMPLETE — IMPLEMENTATION NOT STARTED
-CURRENT PHASE:            Pre-implementation (architecture frozen)
-CURRENT MILESTONE:        M1 — Project setup  (NOT STARTED)
-LAST COMPLETED TASK:      refer/ handoff system created (2026-09-01)
-CURRENT TASK:             None in progress
-NEXT TASK:                M1.1 — create venv, requirements.txt, repo skeleton, first git commit
-BLOCKERS:                 1. Repository has ZERO git commits — nothing is version controlled
-                          2. Submission deadline unverified; third-party sources say 2026-09-05
-                             (4 days from today). NOT confirmed by Razorpay. VERIFY FIRST.
-OPEN QUESTIONS:           1. Actual deadline (see above) — decides 10-day vs 3-day plan
-                          2. NPCI / MSME Samadhaan licence terms (blocks calibration; fallback exists)
-LAST VERIFIED TEST:       NONE — no test has ever been run
+CURRENT PROJECT STATUS:   IMPLEMENTATION STARTED (M1 COMPLETE)
+CURRENT PHASE:            Implementation Phase (M1 Foundation verified)
+CURRENT MILESTONE:        M1 — Project setup (COMPLETED)
+LAST COMPLETED TASK:      M1.1 — Repository + Reproducibility Foundation (2026-09-01)
+CURRENT TASK:             M1.2 — Razorpay Test Mode Integration Research & Spec
+NEXT TASK:                M2 — Domain model + Database schema (sqlite WAL)
+BLOCKERS:                 B-1 RESOLVED (Git commit `eb52c38`). B-2 (Deadline verification) open.
+OPEN QUESTIONS:           1. Actual deadline — decides 10-day vs 3-day plan
+                          2. NPCI / MSME Samadhaan licence terms (fallback active)
+                          3. Razorpay Payment Downtime API access (simulator fallback active)
+LAST VERIFIED TEST:       tests/test_smoke.py::test_app_import_and_version PASSED (2026-09-01)
 LAST VERIFIED EXPERIMENT: NONE — no experiment has ever been run
 ```
 
-**Verified 2026-09-01 by direct inspection**: no `.py` files exist, `git log` reports no commits, no `requirements.txt`, no `Makefile`, no database. The `app/` directory exists but is empty.
+**Verified 2026-09-01 by direct execution**: `.venv` running Python 3.12.9 LTS, `pytest` 1 passed in 1.92s, Git repository active (`eb52c38`), 0 secrets in scanned code.
 
 ---
 
 ## What are we building?
 
-A **Unified Recovery Engine**: one decision system sitting above four revenue-leak types (failed payment, abandoned checkout, failed subscription renewal, overdue B2B invoice). For each at-risk case it decides whether money was genuinely lost, diagnoses why, ranks the possible interventions — including doing nothing — and executes at most one, under a contact budget shared across all four streams.
+A **Unified Recovery Engine**: a single decision system sitting above four revenue-leak channels (failed payment, abandoned checkout, failed subscription renewal, overdue B2B invoice). It ingests events via **dual paths** (**Razorpay TEST MODE** webhooks/APIs where available and a **Deterministic Simulator** for sandbox/red-team scenarios), validates whether money was genuinely lost (**Stage 0**), diagnoses why (**Stage 1**), ranks candidate interventions including `NO_ACTION` using a calibrated CatBoost model (**Stage 2 AI**), enforces a shared per-customer contact budget across streams via an atomic SQLite contact ledger, arbitrates competing agent proposals deterministically, executes interventions safely, attributes recovery accurately (excluding self-cure), and presents full audit traces via an interactive **Streamlit Judge Sandbox** deployable to a **Public Live Demo**.
 
 ## Why?
 
-Razorpay ships **twelve single-purpose recovery agents across two platforms** (7 Agent Studio + 5 RazorpayX) with no published shared customer state. A customer appearing in three of them can receive three messages from three systems, none aware of the others. Nothing published arbitrates across leak types for the same customer, and nothing checks whether the "at-risk" money was ever at risk.
+Razorpay ships **twelve single-purpose recovery agents across two platforms** (7 Agent Studio + 5 RazorpayX) with no published shared customer state. A customer appearing in three of them can receive three messages from three systems, none aware of the others. Nothing published arbitrates across leak types for the same customer, and nothing checks whether the "at-risk" money was ever at risk. In our prototype, these 12 agents are modeled as **SIMULATED AGENT RECOMMENDATIONS** competing for the single contact slot.
 
 ## What problem does it solve?
 
@@ -48,7 +49,8 @@ Razorpay ships **twelve single-purpose recovery agents across two platforms** (7
 |---|---|
 | **D1** | Shared per-customer contact ledger + cross-stream arbitration |
 | **D3** | Stage 0 — validate that money was lost *before* acting (a gate, not a report) |
-| **D2** | Consuming Razorpay's own downtime signal at the *recovery* layer (narrow claim) |
+| **D2** | Consuming Razorpay's downtime signal at the *recovery* layer (narrow claim) |
+| **Sandbox** | Interactive Judge Sandbox with Sandbox, Live Test, and Red-Team modes |
 | — | Abstention as a first-class output; per-case permission derivation |
 
 ## What is NOT novel (never claim it)
@@ -65,19 +67,24 @@ The hard policy filter, the atomic contact ledger, deterministic arbitration, te
 
 ## What is simulated vs real?
 
-| Simulated / synthetic | Really built |
+| Input Path / Component | Execution Model |
 |---|---|
-| Razorpay payments, message delivery, customer response, gateway outages, execution outcomes | Contact ledger, policy engine, arbitration, AI model, attribution, experiment + statistics, audit trail |
+| Razorpay Test Mode Events | **REAL** test events via Razorpay Webhooks (`source: RAZORPAY_TEST`) |
+| Simulator / Sandbox Events | **SIMULATED** deterministic event factory (`source: SIMULATED`) |
+| 12 Recovery Agents | **SIMULATED AGENT RECOMMENDATIONS** competing for arbitration |
+| Core Recovery Engine | **REAL** Python domain models, SQLite ledger, Stage 0-2 logic |
+| AI Scoring & Policy | **REAL** CatBoost ML model, hard safety filter, atomic CAS ledger |
 
-Environmental distributions (issuer failure rates, B2B ageing) are **calibrated** from public real data. **No recovery outcome in this project is real.**
+Environmental distributions (issuer failure rates, B2B ageing) are **calibrated** from public real data. **No recovery outcome in this project claims real-world production Razorpay data.**
 
 ## What is already implemented?
 
-**Nothing.** Zero lines of code. See `01_PROJECT_STATE.md` — every component is `PLANNED`.
+- **M1.1 Repository Foundation**: `.gitignore`, `requirements.txt`, `pytest.ini`, `.env.example`, `Makefile`, `app/__init__.py`, `tests/__init__.py`, `tests/test_smoke.py`. Verified by `pytest` (1 passed) and Git commit `eb52c38`.
 
 ## What should be built next?
 
-`M1.1` — repository skeleton and first commit. Then `M3` (contact ledger) before any AI work. See `progress/NEXT_STEPS.md`.
+`M1.2` — Razorpay Test Mode Research & Specification (`refer/integrations/RAZORPAY_TEST_MODE.md`). Then `M2` (domain model & database schema) and `M3` (contact ledger). See `progress/NEXT_STEPS.md`.
+
 
 ## What must never change without an ADR?
 
