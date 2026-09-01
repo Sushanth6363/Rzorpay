@@ -58,8 +58,10 @@ Status of all nine: **`PLANNED`** — specified and testable, none yet implement
 
 - **Reason**: an ambiguous provider response is exactly when a blind resend produces the duplicate contact the whole system exists to prevent.
 - **Implementation**: `execution_unknown` is not re-executable; the slot stays held in `reserved_count`; a bounded reconciliation ladder (1m/5m/30m/2h/6h/24h) resolves to `executed`, `released`, or fail-closed `unresolved` with a human-review queue entry.
+- **Conservative Slot Consumption Rationale**: If an execution attempt outcome remains ambiguous after the reconciliation ladder elapses (`RECONCILED_UNRESOLVED`), the system **cannot safely assume the intervention did not happen**. Releasing capacity back to the customer's budget could allow a subsequent automated decision to send another contact, permitting a duplicate intervention. The conservative safety policy is therefore to **consume the slot** (`reserved_count - 1, consumed_count + 1`) and send the case to the human-review queue. Note that `contacts_delivered` is computed strictly as `COUNT(status='EXECUTED' OR status='RECONCILED_DELIVERED')`, never from `consumed_count`.
 - **Test**: attempt re-execute raises; send count stays 1 after 72 simulated hours; `unresolved_execution_rate` reported.
-- **Failure behaviour**: fail closed — assume it may have been sent.
+- **Failure behaviour**: fail closed — assume it may have been sent, consume slot, enqueue for human review.
+
 
 ## INV-7 — Point-in-time features
 

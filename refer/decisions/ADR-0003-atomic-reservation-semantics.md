@@ -25,7 +25,11 @@ Option 3 is the read-then-write race the whole design exists to avoid. Option 2 
 Two counters to keep consistent instead of one. Mitigated by routing all counter movement through a single `transition()` function.
 
 ## Impact
-`consumed_count` means *permanently unavailable for reuse* — confirmed sent OR failed closed after an unresolved execution. `contacts_sent` must be computed as `COUNT(status='executed')`, never from `consumed_count`.
+`consumed_count` means *permanently unavailable for reuse* — confirmed sent OR failed closed after an unresolved execution (`RECONCILED_UNRESOLVED`).
+
+**Why `RECONCILED_UNRESOLVED` consumes the contact slot**:
+Because the system cannot safely assume the intervention did not happen; releasing capacity back to the customer's contact budget could permit a duplicate intervention. The conservative policy is therefore to consume the slot (`reserved_count - 1, consumed_count + 1`) and send the case to the human-review queue. `contacts_sent` must be computed as `COUNT(status='EXECUTED' OR status='RECONCILED_DELIVERED')`, never directly from `consumed_count`.
+
 
 ## What this prevents
 Silent budget overrun — the exact harm D1 claims to prevent.
