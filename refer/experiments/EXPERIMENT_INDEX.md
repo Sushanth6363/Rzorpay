@@ -18,11 +18,12 @@
 
 | Planned ID | Hypothesis | Arms | Seeds | Status |
 |---|---|---|---|---|
-| E001 | The unified engine recovers more per opportunity than independent agents | A2 vs A1 | 21–60 | NOT YET RUN |
-| E002 | The ledger + arbitration alone contribute measurably | A2ns vs A1 | 21–60 | NOT YET RUN |
-| E003 | Stage 0 validation contributes measurably | A2 vs A2ns | 21–60 | NOT YET RUN |
-| E004 | Downtime-signal consumption contributes measurably | A3 vs A2 | 21–60 | NOT YET RUN |
-| E005 | The model scorer outperforms the heuristic | A5 vs A3 | 21–60 | NOT YET RUN |
+| E001 | The unified engine recovers more per opportunity than independent agents | A2 vs A1 | 21–60 | PRE_REGISTERED (EXECUTABLE) |
+| E002 | The ledger + arbitration alone contribute measurably | A2ns vs A1 | 21–60 | PRE_REGISTERED (EXECUTABLE) |
+| E003 | Stage 0 validation contributes measurably | A2 vs A2ns | 21–60 | PRE_REGISTERED (EXECUTABLE) |
+| E004 | Downtime-signal consumption contributes measurably | A3 vs A2 | 21–60 | PRE_REGISTERED (EXECUTABLE) |
+| E005 | The model scorer outperforms the heuristic | A5 vs A3 | 21–60 | PRE_REGISTERED (EXECUTABLE) |
+
 | E006 | Contact-cap sensitivity sweep | A3 at caps 2/4/6/8 | 21–60 | NOT YET RUN |
 | E007 | Customer-overlap sweep (adversarial: low overlap) | A2 vs A1 at 0.1/0.3/0.5 | 21–60 | NOT YET RUN |
 | F001 | Null: equal action effects → no advantage | A5 vs A3 | 20 | NOT YET RUN |

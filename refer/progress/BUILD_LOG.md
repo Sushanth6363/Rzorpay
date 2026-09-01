@@ -189,3 +189,48 @@ Git commit:
 - **Tests failed**: 0
 - **Decisions made**: Closed-loop sandbox orchestration, ₹0 AI attribution for self-cure payments, atomic ledger integration, trace ID correlation.
 - **Next action**: M7 — Multi-Arm Experimentation & Simulation Benchmarking Framework.
+
+---
+
+## 2026-09-01 — M7 Experimentation & Feedback Loop Completed
+
+- **Date**: 2026-09-01
+- **Milestone**: M7 — Experimentation, Incremental Recovery Measurement & Feedback Loop
+- **Task**: Implement 5-arm experiment randomization, batch experiment runner, Holm-Bonferroni secondary CIs, point-in-time feedback loop, Streamlit judge dashboard, and M7 Golden Scenarios.
+- **Key Changes**:
+  1. Created `refer/design/M7_EXPERIMENTATION_DESIGN.md` and `experiments/preregistration.json`.
+  2. Extended `app/domain/enums.py` and `app/domain/models.py` with `ExperimentArm`, `StatisticalStatus`, `TrainingRecord`, `ArmMetrics`, `StatisticalComparison`, and `ExperimentResultSummary`.
+  3. Implemented `app/experiment/assignment.py` (`ExperimentAssigner` using SHA256 deterministic arm assignment).
+  4. Implemented `app/experiment/policies.py` (`ExperimentPolicyController` for CONTROL, A1, A2ns, A2, A3, A5).
+  5. Implemented `app/experiment/runner.py` (`ExperimentRunner` for paired experiment execution, Newcombe CIs, and Holm-Bonferroni correction).
+  6. Implemented `app/experiment/feedback_loop.py` (`FeedbackLoopEngine` for point-in-time training tuple transformation with zero post-decision feature leakage).
+  7. Implemented `app/ui/dashboard.py` (Streamlit Judge Dashboard with 5-Arm summary tables, primary comparison CIs, individual trace inspection, and feedback loop dataset viewer).
+  8. Added 21 new tests under `tests/experiment/` covering assignment determinism, outcome independence, Holm-Bonferroni correction, point-in-time feature leakage, and 12 Golden M7 Scenarios (`M7-E01` to `M7-E12`).
+- **Files changed**:
+  - `experiments/preregistration.json`
+  - `refer/design/M7_EXPERIMENTATION_DESIGN.md`
+  - `app/domain/enums.py`
+  - `app/domain/models.py`
+  - `app/experiment/__init__.py`
+  - `app/experiment/assignment.py`
+  - `app/experiment/policies.py`
+  - `app/experiment/runner.py`
+  - `app/experiment/feedback_loop.py`
+  - `app/ui/__init__.py`
+  - `app/ui/dashboard.py`
+  - `tests/experiment/test_assignment.py`
+  - `tests/experiment/test_runner.py`
+  - `tests/experiment/test_feedback_loop.py`
+  - `tests/experiment/test_m7_golden_scenarios.py`
+  - `refer/progress/CURRENT_STATUS.md`
+  - `refer/progress/NEXT_STEPS.md`
+  - `refer/progress/BUILD_LOG.md`
+  - `refer/testing/TEST_MATRIX.md`
+  - `refer/experiments/EXPERIMENT_INDEX.md`
+  - `refer/handoff/08_HANDOFF_M7_TO_M8.md`
+- **Tests run**: `pytest -v`
+- **Tests passed**: 151 (100% pass rate in 7.06s)
+- **Tests failed**: 0
+- **Decisions made**: Five pre-registered experiment arms (ADR-0011), Primary metric incremental recovery rate on A2 vs A1, Holm-Bonferroni multiplicity correction, Zero post-decision feature leakage (INV-7).
+- **Next action**: M8 — Production Readiness, Model Governance & Final Audit.
+

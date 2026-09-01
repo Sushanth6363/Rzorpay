@@ -1,0 +1,42 @@
+{
+  "experiment_id": "EXP_M7_CANONICAL_V1",
+  "title": "Unified Recovery Engine 5-Arm Benchmarking Experiment",
+  "created_at": "2026-09-01T00:00:00Z",
+  "status": "PRE_REGISTERED",
+  "primary_metric": {
+    "name": "incremental_recovery_rate",
+    "primary": true,
+    "target_comparison": "A2_vs_A1",
+    "unit": "proportion_difference"
+  },
+  "secondary_metrics": [
+    {"name": "gross_recovered_revenue_paise", "primary": false},
+    {"name": "attributed_recovered_revenue_paise", "primary": false},
+    {"name": "net_incremental_value_paise", "primary": false},
+    {"name": "abstention_rate", "primary": false},
+    {"name": "contact_cap_breach_count", "primary": false}
+  ],
+  "arms": [
+    {"arm_id": "CONTROL", "canonical_name": "NO_ACTION_BASELINE", "description": "Uncontacted counterfactual baseline for self-cure measurement."},
+    {"arm_id": "A1", "canonical_name": "BASELINE_INDEPENDENT", "description": "Independent rule engine without shared ledger or Stage 0."},
+    {"arm_id": "A2ns", "canonical_name": "UNIFIED_NO_STAGE0", "description": "Shared ledger & atomic contact arbitration active; no Stage 0 validation."},
+    {"arm_id": "A2", "canonical_name": "UNIFIED_NO_DOWNTIME", "description": "Shared ledger & Stage 0 active; no downtime signal."},
+    {"arm_id": "A3", "canonical_name": "UNIFIED_DOWNTIME_HEURISTIC", "description": "Shared ledger + Stage 0 + downtime signal; heuristic scoring. (A4 alias)"},
+    {"arm_id": "A5", "canonical_name": "UNIFIED_DOWNTIME_CATBOOST", "description": "Full AI decision engine (S-Learner, Incremental EV, Safety Filters, Epsilon Exploration)."}
+  ],
+  "seeds": {
+    "INITIAL_TRAINING_SET": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    "MODEL_SELECTION_SET": [11, 12, 13, 14, 15],
+    "FINAL_HOLDOUT_SET": [16, 17, 18, 19, 20],
+    "EXPERIMENT_SET": [21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60]
+  },
+  "planned_experiments": [
+    {"id": "E001", "name": "A2 vs A1", "hypothesis": "The unified engine recovers more per opportunity than independent agents."},
+    {"id": "E002", "name": "A2ns vs A1", "hypothesis": "The ledger + arbitration alone contribute measurably."},
+    {"id": "E003", "name": "A2 vs A2ns", "hypothesis": "Stage 0 validation contributes measurably."},
+    {"id": "E004", "name": "A3 vs A2", "hypothesis": "Downtime-signal consumption contributes measurably."},
+    {"id": "E005", "name": "A5 vs A3", "hypothesis": "The model scorer outperforms the heuristic."},
+    {"id": "E006", "name": "Cap Sweep", "hypothesis": "Contact cap sensitivity sweep (caps 2/4/6/8)."},
+    {"id": "E007", "name": "Overlap Sweep", "hypothesis": "Customer-overlap sweep under adversarial overlap."}
+  ]
+}

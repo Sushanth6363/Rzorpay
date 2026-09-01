@@ -201,3 +201,28 @@ class PaymentOutcome(str, Enum):
     EXECUTION_UNKNOWN = "EXECUTION_UNKNOWN"
     SELF_CURED = "SELF_CURED"
 
+
+# ------------------------------------------------------------------
+# Milestone M7 Additions
+# ------------------------------------------------------------------
+
+
+class ExperimentArm(str, Enum):
+    """Pre-registered experiment arms (ADR-0011, 07_EXPERIMENT_METHODOLOGY)."""
+
+    CONTROL = "CONTROL"  # NO_ACTION baseline
+    A1 = "A1"  # BASELINE_INDEPENDENT
+    A2NS = "A2ns"  # UNIFIED_NO_STAGE0
+    A2 = "A2"  # UNIFIED_NO_DOWNTIME
+    A3 = "A3"  # UNIFIED_DOWNTIME_HEURISTIC (A4 alias)
+    A5 = "A5"  # UNIFIED_DOWNTIME_CATBOOST
+
+
+class StatisticalStatus(str, Enum):
+    """Statistical significance verdict status vocabulary."""
+
+    STATISTICALLY_SIGNIFICANT = "STATISTICALLY_SIGNIFICANT"
+    INCONCLUSIVE = "INCONCLUSIVE"
+    INSUFFICIENT_SAMPLE = "INSUFFICIENT_SAMPLE"
+
+

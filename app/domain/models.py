@@ -7,7 +7,7 @@ using clean type-annotated dataclasses.
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from app.domain.enums import (
     EventType,
     OpportunityStatus,
@@ -25,7 +25,10 @@ from app.domain.enums import (
     AbstentionReason,
     DecisionMode,
     PaymentOutcome,
+    ExperimentArm,
+    StatisticalStatus,
 )
+
 from app.domain.money import Money
 
 
@@ -560,5 +563,156 @@ class EndToEndRecoveryResult:
             "attribution": self.attribution.to_dict(),
             "observation": self.observation.to_dict(),
         }
+
+
+# ------------------------------------------------------------------
+# Milestone M7 Additions
+# ------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class TrainingRecord:
+    """Feedback dataset training tuple (X=features, A=action, Y=observed outcome).
+    
+    INVARIANT (INV-7): Feature vector X contains ONLY point-in-time features prior to decision_timestamp.
+    """
+
+    record_id: str
+    experiment_id: str
+    arm: ExperimentArm
+    merchant_id: str
+    customer_id: str
+    opportunity_id: str
+    decision_timestamp: str
+    features: Dict[str, Any]  # X: Point-in-time features
+    selected_action: ActionType  # A: Action
+    observed_outcome: PaymentOutcome  # Y: Observed outcome label
+    gross_recovered_paise: int
+    attributed_recovered_paise: int
+    self_cured: bool
+    model_version: str
+    provenance: DataProvenance
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "record_id": self.record_id,
+            "experiment_id": self.experiment_id,
+            "arm": self.arm.value,
+            "merchant_id": self.merchant_id,
+            "customer_id": self.customer_id,
+            "opportunity_id": self.opportunity_id,
+            "decision_timestamp": self.decision_timestamp,
+            "features": self.features,
+            "selected_action": self.selected_action.value,
+            "observed_outcome": self.observed_outcome.value,
+            "gross_recovered_paise": self.gross_recovered_paise,
+            "attributed_recovered_paise": self.attributed_recovered_paise,
+            "self_cured": self.self_cured,
+            "model_version": self.model_version,
+            "provenance": self.provenance.value,
+        }
+
+
+@dataclass(frozen=True)
+class ArmMetrics:
+    """Aggregated evaluation metrics for a specific experiment arm."""
+
+    arm: ExperimentArm
+    total_opportunities: int
+    successful_recoveries: int
+    recovery_rate: float
+    gross_recovered_paise: int
+    attributed_recovered_paise: int
+    self_cured_count: int
+    total_cost_paise: int
+    net_value_paise: int
+    contact_cap_breaches: int = 0
+    abstention_count: int = 0
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "arm": self.arm.value,
+            "total_opportunities": self.total_opportunities,
+            "successful_recoveries": self.successful_recoveries,
+            "recovery_rate": self.recovery_rate,
+            "gross_recovered_paise": self.gross_recovered_paise,
+            "attributed_recovered_paise": self.attributed_recovered_paise,
+            "self_cured_count": self.self_cured_count,
+            "total_cost_paise": self.total_cost_paise,
+            "net_value_paise": self.net_value_paise,
+            "contact_cap_breaches": self.contact_cap_breaches,
+            "abstention_count": self.abstention_count,
+        }
+
+
+@dataclass(frozen=True)
+class StatisticalComparison:
+    """Statistical comparison between a treatment arm and control/baseline arm."""
+
+    comparison_id: str
+    treatment_arm: ExperimentArm
+    baseline_arm: ExperimentArm
+    treatment_recovery_rate: float
+    baseline_recovery_rate: float
+    incremental_recovery_rate: float  # Treatment rate - Baseline rate
+    relative_lift: float  # (Treatment rate - Baseline rate) / Baseline rate
+    gross_incremental_revenue_paise: int
+    net_incremental_value_paise: int
+    confidence_interval_95: Tuple[float, float]
+    p_value: float
+    status: StatisticalStatus
+    explanation: str
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "comparison_id": self.comparison_id,
+            "treatment_arm": self.treatment_arm.value,
+            "baseline_arm": self.baseline_arm.value,
+            "treatment_recovery_rate": self.treatment_recovery_rate,
+            "baseline_recovery_rate": self.baseline_recovery_rate,
+            "incremental_recovery_rate": self.incremental_recovery_rate,
+            "relative_lift": self.relative_lift,
+            "gross_incremental_revenue_paise": self.gross_incremental_revenue_paise,
+            "net_incremental_value_paise": self.net_incremental_value_paise,
+            "confidence_interval_95": list(self.confidence_interval_95),
+            "p_value": self.p_value,
+            "status": self.status.value,
+            "explanation": self.explanation,
+        }
+
+
+@dataclass(frozen=True)
+class ExperimentResultSummary:
+    """Full machine-readable and human-readable result of an executed experiment."""
+
+    experiment_id: str
+    timestamp: str
+    commit_hash: str
+    dataset_version: str
+    model_version: str
+    simulator_version: str
+    random_seed: int
+    sample_size: int
+    arm_metrics: Dict[str, ArmMetrics]
+    primary_comparison: StatisticalComparison
+    secondary_comparisons: List[StatisticalComparison]
+    provenance: DataProvenance
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "experiment_id": self.experiment_id,
+            "timestamp": self.timestamp,
+            "commit_hash": self.commit_hash,
+            "dataset_version": self.dataset_version,
+            "model_version": self.model_version,
+            "simulator_version": self.simulator_version,
+            "random_seed": self.random_seed,
+            "sample_size": self.sample_size,
+            "arm_metrics": {k: v.to_dict() for k, v in self.arm_metrics.items()},
+            "primary_comparison": self.primary_comparison.to_dict(),
+            "secondary_comparisons": [c.to_dict() for c in self.secondary_comparisons],
+            "provenance": self.provenance.value,
+        }
+
 
 

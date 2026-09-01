@@ -85,6 +85,17 @@ Legend: `NOT_RUN` · `PASS` · `FAIL` · `SKIP` · `UNKNOWN`
 | Attribution | M6-03 Self-cure ₹0 attribution | self-cure payments receive ₹0 AI attribution (INV-1) | PASSED (0.01s) | PASS | 2026-09-01 (M6) |
 | Attribution | M6-04 Intervention attribution | delivered intervention payment receives 100% attributed recovery | PASSED (0.01s) | PASS | 2026-09-01 (M6) |
 | Golden Scenarios | M6 Golden E2E Scenarios M6-E01-E12 | 12 standardized end-to-end sandbox recovery scenarios verified | PASSED (0.35s) | PASS | 2026-09-01 (M6) |
+| Assignment | M7-01 Deterministic arm assignment | sha256 hashing produces 100% reproducible ExperimentArm | PASSED (0.01s) | PASS | 2026-09-01 (M7) |
+| Assignment | M7-02 Tenant-isolated assignment | cross-tenant identical customers receive isolated arm hashing (INV-1) | PASSED (0.01s) | PASS | 2026-09-01 (M7) |
+| Assignment | M7-03 Outcome-independent assignment | arm assignment independent of customer payment outcome | PASSED (0.01s) | PASS | 2026-09-01 (M7) |
+| Experiment Runner | M7-04 5-Arm paired execution | paired evaluation across CONTROL, A1, A2ns, A2, A3, A5 | PASSED (0.25s) | PASS | 2026-09-01 (M7) |
+| Primary Metric | M7-05 Incremental rate A2 vs A1 | primary metric incremental recovery rate evaluated (ADR-0011) | PASSED (0.05s) | PASS | 2026-09-01 (M7) |
+| Multiplicity | M7-06 Holm-Bonferroni correction | secondary comparison family corrected via Holm-Bonferroni | PASSED (0.08s) | PASS | 2026-09-01 (M7) |
+| Sample Safety | M7-07 Insufficient sample handling | small sample size reports INSUFFICIENT_SAMPLE status | PASSED (0.01s) | PASS | 2026-09-01 (M7) |
+| Feedback Loop | M7-08 Retraining record transformation | RecoveryObservation transformed to TrainingRecord (X, A, Y) | PASSED (0.01s) | PASS | 2026-09-01 (M7) |
+| Feedback Loop | M7-09 Point-in-time feature leakage | post-decision outcome fields in X raise PointInTimeLeakageError (INV-7) | PASSED (0.01s) | PASS | 2026-09-01 (M7) |
+| Golden Scenarios | M7 Golden Scenarios M7-E01-E12 | 12 standardized M7 experiment golden scenarios verified | PASSED (0.45s) | PASS | 2026-09-01 (M7) |
 
-**Total: 130 tests specified · 130 run · 130 passing (100% pass rate).**
+**Total: 151 tests specified · 151 run · 151 passing (100% pass rate).**
+
 
