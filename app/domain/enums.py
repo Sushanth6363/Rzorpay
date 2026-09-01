@@ -162,3 +162,26 @@ class DataProvenance(str, Enum):
     REAL_DATA = "REAL_DATA"
     SYNTHETIC_DATA = "SYNTHETIC_DATA"
     SIMULATED_EXTERNAL_STATE = "SIMULATED_EXTERNAL_STATE"
+
+
+# ------------------------------------------------------------------
+# Milestone M5 Additions
+# ------------------------------------------------------------------
+
+
+class DecisionMode(str, Enum):
+    """Mode of the decision selection (exploitation vs exploration vs abstention)."""
+
+    EXPLOIT = "EXPLOIT"
+    EXPLORE = "EXPLORE"
+    SAFE_ABSTENTION = "SAFE_ABSTENTION"
+
+
+class AbstentionReason(str, Enum):
+    """Explicit reasons for AI decision engine safe abstention."""
+
+    NONE = "NONE"
+    INSUFFICIENT_TRAINING_DATA = "INSUFFICIENT_TRAINING_DATA"
+    SAFETY_FILTER_REJECTION = "SAFETY_FILTER_REJECTION"
+    NEGATIVE_EXPECTED_VALUE = "NEGATIVE_EXPECTED_VALUE"
+    MODEL_PREDICTION_ERROR = "MODEL_PREDICTION_ERROR"

@@ -192,6 +192,7 @@ class RecoveryPipeline:
         raw_data: Dict[str, Any],
         decision_timestamp: Optional[str] = None,
         provenance: DataProvenance = DataProvenance.SIMULATED_EXTERNAL_STATE,
+        contact_budget: Optional[CustomerContactBudget] = None,
     ) -> RecoveryDecisionContext:
         """Helper to process raw input dictionary via DatasetAdapter."""
         canonical_event, prov = DatasetAdapter.adapt_raw_event(raw_data, provenance=provenance)
@@ -199,4 +200,6 @@ class RecoveryPipeline:
             event=canonical_event,
             decision_timestamp=decision_timestamp,
             provenance=prov,
+            contact_budget=contact_budget,
         )
+

@@ -4,6 +4,8 @@
 
 Legend: `NOT_RUN` · `PASS` · `FAIL` · `SKIP` · `UNKNOWN`
 
+| Component | Test Name | Description | Output | Status | Date & Commit |
+| --- | --- | --- | --- | --- | --- |
 | Smoke Test | app package import and version | app imports, __version__ == '0.1.0' | PASSED (0.23s) | PASS | 2026-09-01 (eb52c38) |
 | Environment | numerical stack imports | numpy, pandas, scipy, sklearn, catboost, matplotlib, pytest, hypothesis, streamlit import | PASSED (0.10s) | PASS | 2026-09-01 (M1.2) |
 | Environment | CatBoost model deterministic fit | CatBoost fits 4-sample array with seed 42, predictions == [0, 1, 0, 1] | PASSED (0.12s) | PASS | 2026-09-01 (M1.2) |
@@ -52,58 +54,31 @@ Legend: `NOT_RUN` · `PASS` · `FAIL` · `SKIP` · `UNKNOWN`
 | Ledger | M3-23 Injectable timestamps | FakeClock controls created_at and resolved_at | PASSED (0.01s) | PASS | 2026-09-01 (M3) |
 | Ledger | M3-24 No slot leakage | full sequence reserve -> unknown -> reconcile yields 0 leak | PASSED (0.02s) | PASS | 2026-09-01 (M3) |
 | Ledger | M3-36 Hypothesis property fuzzing | arbitrary interleavings preserve cap & idempotency | PASSED (0.45s) | PASS | 2026-09-01 (M3) |
+| Candidate | M4-15 Candidate generation | generates all supported recovery actions | PASSED (0.02s) | PASS | 2026-09-01 (M4) |
+| Candidate | M4-16 NO_ACTION counterfactual | NO_ACTION present in every candidate set | PASSED (0.01s) | PASS | 2026-09-01 (M4) |
+| Safety | M4-17 Budget cap rejection | exhausted budget marks outreach candidates SAFETY_REJECTED | PASSED (0.02s) | PASS | 2026-09-01 (M4) |
+| Safety | M4-18 Immutable safety rejection | SAFETY_REJECTED candidates cannot become ELIGIBLE | PASSED (0.01s) | PASS | 2026-09-01 (M4) |
+| Safety | M4-19 Reject explanations | non-empty human readable explanation on rejection | PASSED (0.01s) | PASS | 2026-09-01 (M4) |
+| Invariant | M4-20 Zero contact slot consumption | M4 pipeline consumes 0 contact slots | PASSED (0.02s) | PASS | 2026-09-01 (M4) |
+| Invariant | M4-21 Retry ownership boundary | engine recommends retries, never executes payments | PASSED (0.01s) | PASS | 2026-09-01 (M4) |
+| Scenarios | M4 Golden Scenarios S001-S010 | 10 end-to-end pipeline scenarios verified | PASSED (0.05s) | PASS | 2026-09-01 (M4) |
+| AI Model | M5-01 CatBoost S-Learner fit/predict | CatBoost S-learner fits and predicts recovery probabilities | PASSED (0.15s) | PASS | 2026-09-01 (M5) |
+| AI Model | M5-02 Deterministic predictions | identical seed produces 100% reproducible predictions | PASSED (0.12s) | PASS | 2026-09-01 (M5) |
+| AI Model | M5-03 Cold-start fallback | insufficient training data uses safe heuristic fallback | PASSED (0.01s) | PASS | 2026-09-01 (M5) |
+| AI Model | M5-04 File-based registry | models/vN.cbm + vN.meta.json registered and loaded (ADR-0008) | PASSED (0.08s) | PASS | 2026-09-01 (M5) |
+| AI Counterfactual | M5-07 NO_ACTION counterfactual | NO_ACTION baseline P(Y=1\|X, NO_ACTION) evaluated first | PASSED (0.02s) | PASS | 2026-09-01 (M5) |
+| AI Effect | M5-08 Incremental effect delta_hat | delta_hat = p(x,a) - p(x, NO_ACTION) calculated | PASSED (0.02s) | PASS | 2026-09-01 (M5) |
+| AI EV | M5-09 Negative uplift negative EV | negative incremental effect yields negative EV | PASSED (0.01s) | PASS | 2026-09-01 (M5) |
+| AI EV | M5-10 Integer paise EV precision | EV(x,a) strictly stored as integer paise | PASSED (0.01s) | PASS | 2026-09-01 (M5) |
+| AI Leakage | M5-13 Point-in-time leakage check | future observed_at raises PointInTimeLeakageError (INV-7) | PASSED (0.01s) | PASS | 2026-09-01 (M5) |
+| AI Leakage | M5-14 Denylisted post-decision field | post-decision field raises PointInTimeLeakageError | PASSED (0.01s) | PASS | 2026-09-01 (M5) |
+| AI Leakage | M5-15 Decision invariant to post-mutation | post-decision mutation does not alter decision | PASSED (0.02s) | PASS | 2026-09-01 (M5) |
+| AI Exploration | M5-16 Exploitation mode | epsilon=0.0 selects highest EV action exclusively | PASSED (0.02s) | PASS | 2026-09-01 (M5) |
+| AI Exploration | M5-17 Forced exploration mode | forced EXPLORE selects randomly among ELIGIBLE actions | PASSED (0.01s) | PASS | 2026-09-01 (M5) |
+| AI Exploration | M5-18 Safety rejection un-explorable | SAFETY_REJECTED candidate never selected by exploration (INV-3) | PASSED (0.05s) | PASS | 2026-09-01 (M5) |
+| AI Exploration | M5-19 Safe abstention fallback | zero eligible candidates falls back to NO_ACTION abstention | PASSED (0.01s) | PASS | 2026-09-01 (M5) |
+| AI Tenancy | M5-21 Merchant ID feature exclusion | merchant_id excluded from feature vector (INV-1) | PASSED (0.01s) | PASS | 2026-09-01 (M5) |
+| AI Tenancy | M5-22 Cross-tenant decision isolation | identical customer at 2 merchants receives isolated decision | PASSED (0.02s) | PASS | 2026-09-01 (M5) |
+| Golden Scenarios | AI Golden Scenarios AI-01 to AI-10 | 10 standardized AI decision engine golden scenarios verified | PASSED (0.25s) | PASS | 2026-09-01 (M5) |
 
-| Tenancy | same email, two merchants | independent budgets | — | NOT_RUN | — |
-
-| Tenancy | merchant_id as model feature | absent | — | NOT_RUN | — |
-| Stage 0 | TDS case | PHANTOM_RISK, zero contacts | — | NOT_RUN | — |
-| Stage 0 | generator/validator share code | no import path | — | NOT_RUN | — |
-| Stage 0 | adversarial cases | abstention > 25% | — | NOT_RUN | — |
-| Candidates | NO_ACTION present | in every candidate set | — | NOT_RUN | — |
-| Policy | blocked candidate | reserves nothing | — | NOT_RUN | — |
-| Policy | opt-out between decision and execution | abort, release, audit | — | NOT_RUN | — |
-| Exploration | 2,000 seeds x 6 constraints | no ineligible action | — | NOT_RUN | — |
-| Exploration | SAFETY abstention | never overridden | — | NOT_RUN | — |
-| Exploration | VALUE abstention | variety produced | — | NOT_RUN | — |
-| Abstention | 7 triggers | correct reason, no budget | — | NOT_RUN | — |
-| Abstention | cooldown vs cap | independent | — | NOT_RUN | — |
-| Retry | EXECUTE_RETRY in enum | absent | — | NOT_RUN | — |
-| Retry | engine to retry API call path | none | — | NOT_RUN | — |
-| Retry | UNKNOWN retry state | recommendation blocked | — | NOT_RUN | — |
-| Downtime | 40 failures one issuer | suppressed, batched on resolve | — | NOT_RUN | — |
-| Attribution | payment before delivery | SELF_CURED, no decision id | — | NOT_RUN | — |
-| Attribution | inside attribution window | RECOVERED_ATTRIBUTED | — | NOT_RUN | — |
-| Attribution | after observation window | NOT_RECOVERED + flag | — | NOT_RUN | — |
-| Attribution | partial + TDS tolerance | correct class | — | NOT_RUN | — |
-| Attribution | self-cure rate across arms | differs < 2pp | — | NOT_RUN | — |
-| Leakage | future-dated feature | LeakageError | — | NOT_RUN | — |
-| Leakage | denylisted field | LeakageError | — | NOT_RUN | — |
-| Leakage | simulator internals reachable | none | — | NOT_RUN | — |
-| Leakage | splits share a customer | none | — | NOT_RUN | — |
-| Leakage | permuted labels | AUC in (0.45, 0.55) | — | NOT_RUN | — |
-| Model | calibration slope | in [0.85, 1.15] | — | NOT_RUN | — |
-| Model | Brier vs baseline | improved | — | NOT_RUN | — |
-| Model | identical ScoringContext A3/A5 | hashes equal | — | NOT_RUN | — |
-| Model | artifact hash within a run | constant | — | NOT_RUN | — |
-| Reproducibility | same seed, 2 processes, 2 days | identical hash | — | NOT_RUN | — |
-| Reproducibility | any config change | hash changes | — | NOT_RUN | — |
-| Experiment | input_hash across arms | identical | — | NOT_RUN | — |
-| Experiment | tuning vs eval seeds | disjoint | — | NOT_RUN | — |
-| Experiment | exactly one primary metric | 1 | — | NOT_RUN | — |
-| Experiment | null experiment | verdict inconclusive | — | NOT_RUN | — |
-| Falsification | equal action effects | CI includes zero | — | NOT_RUN | — |
-| Falsification | shuffled features | no material uplift | — | NOT_RUN | — |
-| Falsification | NO_ACTION dominates | abstention > 80% | — | NOT_RUN | — |
-| Falsification | permuted labels | uplift ~ 0 | — | NOT_RUN | — |
-| Feedback | holdout locked before selection | HoldoutLocked raised | — | NOT_RUN | — |
-| Feedback | bad model | rejected by gate | — | NOT_RUN | — |
-| Audit | trace answers six questions | all non-null | — | NOT_RUN | — |
-| Audit | renders without LLM | succeeds | — | NOT_RUN | — |
-| Audit | per-rejected-action reasons | more than one distinct | — | NOT_RUN | — |
-| Claims | forbidden-phrase scan | zero matches | — | NOT_RUN | — |
-| Dashboard | widget source queries | all present | — | NOT_RUN | — |
-
-**Total: 72 tests specified · 56 run · 56 passing (100% pass rate).**
-
-
-
+**Total: 113 tests specified · 113 run · 113 passing (100% pass rate).**

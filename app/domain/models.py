@@ -22,6 +22,8 @@ from app.domain.enums import (
     EligibilityStatus,
     SafetyRejectReason,
     DataProvenance,
+    AbstentionReason,
+    DecisionMode,
 )
 from app.domain.money import Money
 
@@ -280,3 +282,86 @@ class RecoveryDecisionContext:
             "provenance": self.provenance.value,
             "is_contact_reserved": self.is_contact_reserved,
         }
+
+
+# ------------------------------------------------------------------
+# Milestone M5 Additions
+# ------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class CandidateScore:
+    """Detailed S-learner probability, incremental effect, and EV score for a single candidate."""
+
+    action_type: ActionType
+    eligibility: EligibilityStatus
+    raw_probability: float  # P(Y=1 | X=x, A=a)
+    baseline_probability: float  # P(Y=1 | X=x, A=NO_ACTION)
+    incremental_effect: float  # P(Y=1|X,a) - P(Y=1|X,NO_ACTION)
+    incremental_value_paise: int  # round(incremental_effect * amount_paise)
+    action_cost_paise: int
+    expected_value_paise: int  # incremental_value_paise - action_cost_paise
+    is_eligible: bool
+    reject_reason: SafetyRejectReason = SafetyRejectReason.NONE
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "action_type": self.action_type.value,
+            "eligibility": self.eligibility.value,
+            "raw_probability": round(self.raw_probability, 6),
+            "baseline_probability": round(self.baseline_probability, 6),
+            "incremental_effect": round(self.incremental_effect, 6),
+            "incremental_value_paise": self.incremental_value_paise,
+            "action_cost_paise": self.action_cost_paise,
+            "expected_value_paise": self.expected_value_paise,
+            "is_eligible": self.is_eligible,
+            "reject_reason": self.reject_reason.value,
+        }
+
+
+@dataclass(frozen=True)
+class AIRecoveryDecision:
+    """Structured AI recovery decision produced by M5 AI Decision Engine.
+
+    INVARIANT: M5 produces this decision record, but DOES NOT reserve contact slots or execute payments (M6 responsibility).
+    """
+
+    decision_id: str
+    merchant_id: str
+    opportunity_id: str
+    customer_id: str
+    selected_action: ActionType
+    decision_mode: DecisionMode  # EXPLOIT | EXPLORE | SAFE_ABSTENTION
+    model_version: str
+    decision_timestamp: str
+    baseline_probability: float
+    selected_action_score: Optional[CandidateScore]
+    candidate_scores: List[CandidateScore]
+    abstention_reason: AbstentionReason = AbstentionReason.NONE
+    provenance: DataProvenance = DataProvenance.SIMULATED_EXTERNAL_STATE
+    exploration_epsilon: float = 0.05
+    random_seed: Optional[int] = None
+    is_contact_reserved: bool = False  # Always False in M5
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "decision_id": self.decision_id,
+            "merchant_id": self.merchant_id,
+            "opportunity_id": self.opportunity_id,
+            "customer_id": self.customer_id,
+            "selected_action": self.selected_action.value,
+            "decision_mode": self.decision_mode.value,
+            "model_version": self.model_version,
+            "decision_timestamp": self.decision_timestamp,
+            "baseline_probability": round(self.baseline_probability, 6),
+            "selected_action_score": (
+                self.selected_action_score.to_dict() if self.selected_action_score else None
+            ),
+            "candidate_scores": [cs.to_dict() for cs in self.candidate_scores],
+            "abstention_reason": self.abstention_reason.value,
+            "provenance": self.provenance.value,
+            "exploration_epsilon": self.exploration_epsilon,
+            "random_seed": self.random_seed,
+            "is_contact_reserved": self.is_contact_reserved,
+        }
+

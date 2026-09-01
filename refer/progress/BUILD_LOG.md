@@ -104,3 +104,52 @@ Git commit:
 - **Problems discovered**: None.
 - **Verification performed**: Executed full pytest test suite (86 passing tests including 10 golden scenarios and Hypothesis property tests).
 - **Next action**: M5 — AI Scorer & Counterfactual Policy Engine.
+
+---
+
+## 2026-09-01 — M5 AI Recovery Decision Engine Completed
+
+- **Date**: 2026-09-01
+- **Agent/model**: Antigravity Agent
+- **Goal**: Implement M5 — AI Recovery Decision Engine (CatBoost S-Learner, EV Calculator, Point-in-time safety, Epsilon-exploration, Multi-tenant isolation, File-based model registry).
+- **Work performed**:
+  1. Updated `app/domain/enums.py` and `app/domain/models.py` with M5 decision types (`DecisionMode`, `AbstentionReason`, `CandidateScore`, `AIRecoveryDecision`).
+  2. Implemented `app/scoring/costs.py` (Action cost schedule in integer paise).
+  3. Implemented `app/scoring/feature_builder.py` (`FeatureBuilder` with point-in-time leakage checks `INV-7` and merchant_id exclusion `INV-1`).
+  4. Implemented `app/scoring/s_learner.py` (`CatBoostSLearner` single CatBoost model predicting $p(x,a) = P(Y=1 | X=x, A=a)$ with action as a feature, cold-start fallback).
+  5. Implemented `app/scoring/ev_calculator.py` (`EVCalculator` evaluating $NO\_ACTION$ baseline, calculating incremental effect $\hat{\Delta}(x,a)$, and $EV(x,a)$ in integer paise).
+  6. Implemented `app/scoring/exploration.py` (`ExplorationManager` safety-constrained $\varepsilon=0.05$ exploration over policy-eligible candidates `INV-3`, `ADR-0004`).
+  7. Implemented `app/scoring/registry.py` (`FileBasedModelRegistry` local model artifact & metadata JSON registry `ADR-0008`).
+  8. Implemented `app/scoring/engine.py` (`AIRecoveryDecisionEngine` producing `AIRecoveryDecision` without contact slot reservation).
+  9. Implemented `app/scoring/dataset_generator.py` (`SyntheticDatasetGenerator` for reproducible CatBoost model training bootstrap).
+  10. Added 27 new M5 tests under `tests/scoring/` covering unit, leakage, exploration, multi-tenant isolation, and Golden Scenarios `AI-01` through `AI-10`.
+- **Files changed**:
+  - `app/domain/enums.py`
+  - `app/domain/models.py`
+  - `app/pipeline/recovery_pipeline.py`
+  - `app/scoring/__init__.py`
+  - `app/scoring/costs.py`
+  - `app/scoring/feature_builder.py`
+  - `app/scoring/s_learner.py`
+  - `app/scoring/ev_calculator.py`
+  - `app/scoring/exploration.py`
+  - `app/scoring/registry.py`
+  - `app/scoring/engine.py`
+  - `app/scoring/dataset_generator.py`
+  - `tests/scoring/__init__.py`
+  - `tests/scoring/test_s_learner.py`
+  - `tests/scoring/test_ev_calculator.py`
+  - `tests/scoring/test_leakage_safety.py`
+  - `tests/scoring/test_exploration.py`
+  - `tests/scoring/test_multi_tenant.py`
+  - `tests/scoring/test_ai_golden_scenarios.py`
+  - `refer/progress/CURRENT_STATUS.md`
+  - `refer/progress/NEXT_STEPS.md`
+  - `refer/progress/BUILD_LOG.md`
+  - `refer/testing/TEST_MATRIX.md`
+- **Tests run**: `pytest -v`
+- **Tests passed**: 113 (100% pass rate in 5.46s)
+- **Tests failed**: 0
+- **Decisions made**: CatBoost S-Learner architecture (ADR-0005), Safety-Constrained Exploration (ADR-0004), File-Based Model Registry (ADR-0008).
+- **Next action**: M6 — Arbitration Engine & Multi-Opportunity Optimization.
+
