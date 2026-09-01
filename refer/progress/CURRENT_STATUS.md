@@ -13,7 +13,8 @@ PROJECT PHASE:            Implementation Phase (M1.1 & M1.2 complete)
 CURRENT MILESTONE:        M1 — Project setup (COMPLETED)
 CURRENT TASK:             M1.2 — Reproducibility & Environment Quality Gate (COMPLETED)
 LAST COMPLETED TASK:      M1.2 — Reproducibility & Environment Quality Gate (2026-09-01)
-LATEST COMMIT:            (pending commit)
+LATEST COMMIT:            e5831900bc2b193d59bfd4d3750199de0dc8a60c
+
 NEXT EXACT ACTION:        M2 — Domain model + Database schema (sqlite WAL). See NEXT_STEPS.md.
 ```
 
