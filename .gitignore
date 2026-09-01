@@ -43,6 +43,7 @@ htmlcov/
 # Model artifacts
 models/*.cbm
 !models/.gitkeep
+catboost_info/
 
 # Experiment output / Cache
 results/

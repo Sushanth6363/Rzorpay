@@ -54,6 +54,25 @@ Git commit:
 - **Next action**: M2 — Domain model + Database schema (sqlite WAL).
 - **Git commit**: `466df026f0cacac2101e9bfd9f2341e6b38e2ff9`
 
+---
+
+## 2026-09-01 — Environment Alignment & Secret Hygiene Verification
+
+- **Date**: 2026-09-01
+- **Agent/model**: Antigravity Agent
+- **Goal**: Align Python environment to stable Python 3.12.9 for CatBoost/ML C-extension stability and execute automated secret & config hygiene checks.
+- **Work performed**: Recreated `.venv` with Python 3.12.9 (`py -3.12 -m venv --clear .venv`), reinstalled and verified all dependencies (`catboost==1.2.10`, `scikit-learn==1.9.0`, `scipy==1.18.1`, `pandas==3.0.5`, `numpy==2.5.2`, `pytest==9.1.1`), verified CatBoost import and model operations, ran `pytest` smoke test (`1 passed in 1.92s`), performed secret pattern scanning across repository (0 hardcoded secrets found), added `catboost_info/` to `.gitignore`, verified `.env` exclusion (`.gitignore:41`).
+- **Files changed**: `.gitignore`, `requirements.txt`, `refer/progress/CURRENT_STATUS.md`, `refer/progress/BUILD_LOG.md`.
+- **Tests run**: `pytest`
+- **Tests passed**: 1 (`tests/test_smoke.py::test_app_import_and_version`)
+- **Tests failed**: 0
+- **Decisions made**: Switched virtual environment from CPython 3.14 pre-release to Python 3.12.9 LTS release for guaranteed C-extension/OpenMP compatibility with CatBoost.
+- **Problems discovered**: CPython 3.14 pre-release experienced OpenMP thread locking when invoking C-extension bindings in CatBoost/scikit-learn on Windows. Resolved cleanly by selecting Python 3.12.9.
+- **Verification performed**: `catboost` 1.2.10 imported and fit verified in Python 3.12, `pytest` 1 passed in 1.92s, regex secret scanner returned 0 matches, `.env` verified ignored.
+- **Next action**: M2 — Domain model + Database schema (sqlite WAL).
+- **Git commit**: (pending commit)
+
+
 
 ---
 
