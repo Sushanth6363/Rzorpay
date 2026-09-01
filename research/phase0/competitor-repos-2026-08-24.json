@@ -1,0 +1,1802 @@
+{
+ "Jagadeesh58/chargeback-risk-engine": {
+  "d": "Chargeback Evidence Assembler & Risk-Aware Auto-Responder \u2014 a reason-code-aware risk scoring and policy engine for chargeback disputes, with honest precision/recall metrics on a held-out synthetic test set. Built for Razorpay AI Buildathon 2026, Track 02 (AI Risk Manager).",
+  "push": "2026-08-24",
+  "created": "2026-08-24",
+  "stars": 0
+ },
+ "AdityaWagh19/Aegis": {
+  "d": "Compliant AI-powered recovery and diagnosis platform for failed Razorpay UPI Autopay & e-NACH mandates. Built for the Razorpay Buildathon.",
+  "push": "2026-08-24",
+  "created": "2026-08-23",
+  "stars": 1
+ },
+ "PruthviRajG25/FinRecon": {
+  "d": "A product built for Razorpay AI buildathon",
+  "push": "2026-08-24",
+  "created": "2026-08-24",
+  "stars": 0
+ },
+ "Hemakrishna7406/sentinel-razorpay-buildathon": {
+  "d": "",
+  "push": "2026-08-24",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "Spraveen8-chary/Razorpay-Buildathon-Vasool": {
+  "d": "",
+  "push": "2026-08-24",
+  "created": "2026-08-24",
+  "stars": 0
+ },
+ "stack-ajit/AI_risk_manager": {
+  "d": "ML chargeback risk detector and evidence responder that scores authorisations in real time and optimizes on rupee cost, not accuracy \u2014 saves \u20b927.6L net on held-out test data. Built for Razorpay Buildathon Track 02.",
+  "push": "2026-08-24",
+  "created": "2026-08-24",
+  "stars": 0
+ },
+ "Keerthi-vassan/paymedic": {
+  "d": "Bounded, auditable AI agent that classifies failed-payment root causes and executes gated recovery actions \u2014 Razorpay AI Buildathon",
+  "push": "2026-08-24",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "StealBird/RazorPay-ai_risk_manager": {
+  "d": "A repository made for Razorpay AI buildathon 2026",
+  "push": "2026-08-24",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "Shreyash-Jena/Razorpay_buildathon": {
+  "d": "",
+  "push": "2026-08-24",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "SuprathikJoshua/Recoup": {
+  "d": "AI-powered recovery engine for failed UPI Autopay/NACH payments \u2014 classifies failure root cause, executes smart retries, and tracks measured \u20b9 recovered with full audit trail. Built for Razorpay AI Buildathon 2026.",
+  "push": "2026-08-24",
+  "created": "2026-08-24",
+  "stars": 0
+ },
+ "Adarsh-Me/Agent-Audit": {
+  "d": "Can AI shopping agents actually see, choose, and buy from your catalog? 640 controlled LLM trials, CI-backed metrics, human-gated remediation, and a bounded Razorpay test-mode agent checkout.",
+  "push": "2026-08-24",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "sanyamm27/revenue-recovery-engine": {
+  "d": "AI-powered payment recovery engine built for Razorpay's AI Buildathon. Classifies why a payment failed, predicts recovery odds with two trained ML models, and decides whether to auto-act using expected-value economics \u2014 with a hardcoded safety gate that never auto-actions suspected fraud. FastAPI backend, React + Recharts dashboard.",
+  "push": "2026-08-24",
+  "created": "2026-08-24",
+  "stars": 0
+ },
+ "Nithin2511/DriftWatch-Continuous-merchant-drift-detection-for-Indian-payment-aggregators": {
+  "d": "Continuous post-onboarding merchant-drift detection for Indian payment aggregators \u2014 graded on lead time bought, not AUC. Razorpay AI Buildathon, Track 02.",
+  "push": "2026-08-24",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "vaibhav375/recovery-ledger": {
+  "d": "Autonomous revenue-recovery agent for Indian payments \u2014 incremental recovery measured against a randomised no-contact holdout, gated by a deterministic compliance kernel. Razorpay AI Buildathon, Track 03.",
+  "push": "2026-08-24",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "YuganshThacker/recoup": {
+  "d": "Bounded revenue recovery agent for subscription e-mandate dunning. Detects revenue at risk, diagnoses the failure, gates every money action through a compliance policy engine, and measures incremental recovery against a randomised holdout. Razorpay AI Buildathon, Track 03.",
+  "push": "2026-08-24",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "ROHIT12311926/razorai-commerce": {
+  "d": "AI-powered agentic commerce platform for Razorpay Buildathon",
+  "push": "2026-08-24",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "kuntalmanii/Razorpay-buildathon": {
+  "d": "",
+  "push": "2026-08-24",
+  "created": "2026-08-24",
+  "stars": 0
+ },
+ "Shikari-ai/recoup": {
+  "d": "Autonomous revenue recovery agent for Razorpay merchants: detect revenue at risk, diagnose the cause, run a bounded compliant recovery workflow. Razorpay AI Buildathon, Track 03.",
+  "push": "2026-08-24",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "VT765/tallyminds": {
+  "d": "AI-powered reconciliation agent that matches bank, payment gateway, and ledger records \u2014 flagging mismatches with explainable reasoning and measured accuracy. Built for Razorpay Buildathon 2026 (Track 4: AI Finance Controller).",
+  "push": "2026-08-24",
+  "created": "2026-08-24",
+  "stars": 0
+ },
+ "Suryaaa81/AgentReady": {
+  "d": "AI-powered Agentic Commerce Gateway for Razorpay AI Buildathon 2026",
+  "push": "2026-08-24",
+  "created": "2026-08-24",
+  "stars": 0
+ },
+ "Adithya-workspace/Revive-ai": {
+  "d": "  REVIVE AI \u2014 Autonomous Revenue Recovery Intelligence. An AI agent system that detects revenue at risk (failed payments, checkout abandonment, overdue receivables), diagnoses root cause, and executes bounded, policy-governed recovery actions with full audit trails. Built for Razorpay AI Buildathon \u2014 Track 03",
+  "push": "2026-08-24",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "JazR20/reckon": {
+  "d": "A reconciliation agent whose product is knowing when to refuse. Razorpay AI Buildathon 2026, Track 4: AI Finance Controller.",
+  "push": "2026-08-24",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "SarthakGusain680/razorpay-revenue-rescuer-": {
+  "d": "AI Revenue Recovery Agent - Razorpay Buildathon 2026",
+  "push": "2026-08-24",
+  "created": "2026-08-24",
+  "stars": 0
+ },
+ "rahuldem8124/razorpay_buildathon": {
+  "d": "",
+  "push": "2026-08-24",
+  "created": "2026-08-24",
+  "stars": 0
+ },
+ "aroraharshit779-cmyk/razorpay-buildathon": {
+  "d": "",
+  "push": "2026-08-24",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "Vignesh-Murugeshkumar/RazorPay-Buildathon": {
+  "d": "",
+  "push": "2026-08-24",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "IshanGain/razorpay-ai-risk-manager": {
+  "d": "Razorpay AI Risk Manager - Track 02 AI Buildathon 2026",
+  "push": "2026-08-24",
+  "created": "2026-08-24",
+  "stars": 0
+ },
+ "flare19/payment-reconciliation-agent-platform": {
+  "d": "Razorpay AI Buildathon Track 4 \u2014 AI Finance Controller: payment reconciliation engine",
+  "push": "2026-08-24",
+  "created": "2026-08-24",
+  "stars": 0
+ },
+ "aditya-13115/ringWatch": {
+  "d": "razorpay buildathon",
+  "push": "2026-08-24",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "modi-meet/Razorpay-buildathon": {
+  "d": "",
+  "push": "2026-08-24",
+  "created": "2026-08-20",
+  "stars": 0
+ },
+ "aviralgarg05/milaan": {
+  "d": "Bank-credit to settlement exact-cover reconciliation, to the paise, with refusal instead of guessing. Razorpay AI Buildathon 2026, Track 04.",
+  "push": "2026-08-24",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "Varunkumar-07/nexus-razorpay": {
+  "d": "N.E.X.U.S. - a dual-entry commerce engine where both humans and AI agents can shop, decide, and transact with a merchant, with every money action explainable, bounded, gated, and audited. Built for the Razorpay AI Buildathon (Track 01: AI Growth & Agentic Commerce).",
+  "push": "2026-08-24",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "Piyush-Singh-coder/Razorpay-Buildathon": {
+  "d": "",
+  "push": "2026-08-24",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "sris16/ai-finance-controller": {
+  "d": "AI-powered multi-source financial reconciliation and finance operations controller for the Razorpay AI Buildathon 2026.",
+  "push": "2026-08-24",
+  "created": "2026-08-24",
+  "stars": 0
+ },
+ "Rakshitha6851/recoverai": {
+  "d": "AI-powered failed payment recovery agent for the Razorpay AI Buildathon",
+  "push": "2026-08-24",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "bagichethan-decode/reconai": {
+  "d": "AI-powered multi-source payment reconciliation system for Razorpay AI Buildathon 2026.",
+  "push": "2026-08-24",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "shaan404/receivables-chaser": {
+  "d": "AI agent for B2B receivables recovery \u2014 hybrid rules engine + Claude judgment layer, built for the Razorpay AI Buildathon",
+  "push": "2026-08-24",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "ganga-300/razorpay_buildathon": {
+  "d": "",
+  "push": "2026-08-24",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "rani-07/return-risk-scorer": {
+  "d": "AI-powered return-risk scoring for merchants, built for Razorpay's AI Buildathon (AI Risk Manager track).",
+  "push": "2026-08-24",
+  "created": "2026-08-24",
+  "stars": 0
+ },
+ "JATINV11RAM/razorpay": {
+  "d": "India's first ACP-compliant agentic payment system built on Razorpay - Razorpay AI Buildathon 2026",
+  "push": "2026-08-24",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "alfred-HQbot/gstr2b-reconciliation-engine": {
+  "d": "AI Finance Controller \u2014 GSTR-2B & Ledger Reconciliation Engine | Razorpay AI Buildathon 2026 entry (Saksham)",
+  "push": "2026-08-24",
+  "created": "2026-08-24",
+  "stars": 0
+ },
+ "alfred-HQbot/agentic-storefront-builder": {
+  "d": "AI Growth & Agentic Commerce \u2014 Razorpay AI Buildathon 2026 entry (Vansh Choudhary)",
+  "push": "2026-08-24",
+  "created": "2026-08-24",
+  "stars": 0
+ },
+ "Sree-26/Recovery-Agent": {
+  "d": "AI agent for payment failure root-cause detection and bounded revenue recovery \u2014 Razorpay AI Buildathon 2026",
+  "push": "2026-08-24",
+  "created": "2026-08-24",
+  "stars": 0
+ },
+ "Thesika-3105/RecoverAI": {
+  "d": "RecoverAI \u2014 Recover revenue. Safely.  RecoverAI is a risk-aware AI revenue recovery platform built for Razorpay AI Buildathon Track 03. It closes the loop from revenue-risk detection and Gemini-powered diagnosis to deterministic policy enforcement, bounded recovery execution, measurable revenue recovery, and auditable decision-making.",
+  "push": "2026-08-24",
+  "created": "2026-08-24",
+  "stars": 0
+ },
+ "Jeeva-1405/Razorpay-Model": {
+  "d": "AI agent that reconciles payment ledgers against bank settlements \u2014 built for the Razorpay AI Buildathon",
+  "push": "2026-08-24",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "AMEER0801/AXIOM_Recover": {
+  "d": "AI agent that recovers at-risk revenue on Razorpay, with the ledger that proves the number \u2014 built for Razorpay AI Buildathon Track 3",
+  "push": "2026-08-24",
+  "created": "2026-08-22",
+  "stars": 1
+ },
+ "abhishekck31/RevenueRadar": {
+  "d": "Multi-agent system that detects payment failures, abandoned checkouts & overdue invoices \u2014 triages by rupee impact & dispatches specialized recovery agents with audit trail. Built for Razorpay AI Buildathon.",
+  "push": "2026-08-24",
+  "created": "2026-08-22",
+  "stars": 1
+ },
+ "harshpsi9194/Razorpay_Buildathon_Track1": {
+  "d": "",
+  "push": "2026-08-24",
+  "created": "2026-08-24",
+  "stars": 0
+ },
+ "SuryaSK-dev/razorpay-ai-finance-controller": {
+  "d": "AI Finance Controller - Multi-Source Reconciliation Engine with Integrated Tax Validation (Razorpay Buildathon Track 04)",
+  "push": "2026-08-24",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "josephsam-hub/razorpay_ai_buildathon_": {
+  "d": "Razorpay builder , Evidence-first AI Finance Controller for Razorpay AI Buildathon Track 04.",
+  "push": "2026-08-23",
+  "created": "2026-08-20",
+  "stars": 0
+ },
+ "SibgathKhan777/recon-ai-finance-controller": {
+  "d": "Reconciliation agent for the Razorpay AI Buildathon (Track 04: AI Finance Controller) \u2014 deterministic matcher, batch-drift detection, scored against ground truth.",
+  "push": "2026-08-23",
+  "created": "2026-08-20",
+  "stars": 0
+ },
+ "ashb155/razorbuild": {
+  "d": "Razorpay Buildathon",
+  "push": "2026-08-23",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "Devviratt/recoverai": {
+  "d": "RecoverAI \u2014 AI Revenue Recovery Agent built for Razorpay AI Buildathon 2026 (Track 03: AI Revenue Recovery)",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "Ishita214-bot/Ai-based-suspicios-msg-detector": {
+  "d": "AI-based SMS/email fraud detector with real-time Razorpay transaction verification \u2014 built for Razorpay AI Buildathon (Risk Track)",
+  "push": "2026-08-23",
+  "created": "2026-08-22",
+  "stars": 1
+ },
+ "9AVTAR/GROWTH-PILOT": {
+  "d": "\ud83d\ude80 AI agent that grows merchant revenue via win-back/upsell/cross-sell on Razorpay test-mode APIs \u2014 every money action is explainable, bounded, gated & audited. Built for Razorpay Buildathon (Track 01: Agentic Commerce).",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "parthpariwandh/ledgermatch-ai": {
+  "d": "LedgerMatch AI \u2013 Multi-Source Reconciliation Agent for Razorpay AI Buildathon 2026 (Track 4: AI Finance Controller). Hybrid rule + fuzzy + LLM agent that reconciles 100+ records across Razorpay settlements, bank statements & internal ledgers with measured match rate + honest exception reporting.",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "AribAsim/Recovery-Copilot": {
+  "d": "An AI agent for the Razorpay AI Buildathon (Track 03) that detects at-risk revenue from failed payments & abandoned checkouts, diagnoses root cause, and executes a bounded, confidence-gated recovery workflow. Features stopping rules, promise-to-pay tracking, and a full auditable trail of every money decision made. FastAPI + SQLite.",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "vuser02454/Razorpay_buildathon": {
+  "d": "",
+  "push": "2026-08-23",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "princemittalr/paybackai": {
+  "d": "Autonomous AI agent for payment failure recovery \u2014 built for Razorpay AI Buildathon",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "prem-cre/Razorpay-Buildathon-Finance-Controller": {
+  "d": "",
+  "push": "2026-08-23",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "uppalasrichaitanya/Vouch": {
+  "d": " AI finance controller that reconciles payment-gateway vs bank settlements \u2014 deterministic matcher + LLM reasoning with cited evidence, measured precision/recall against ground truth, honest exceptions, zero-setup replay demo. Built for the Razorpay AI Buildathon (Track 4). Executing the rename now:",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "Praneel7015/triage-recovery-agent": {
+  "d": "AI revenue recovery agent for failed Indian Autopay payments \u2014 Razorpay AI Buildathon 2026",
+  "push": "2026-08-23",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "BenyD/recoup": {
+  "d": "Cause-aware, bounded recovery of failed payments on Razorpay. Built for the Razorpay AI Buildathon 2026.",
+  "push": "2026-08-23",
+  "created": "2026-08-22",
+  "stars": 1
+ },
+ "kunalmamgai/Razorpay-Buildathon": {
+  "d": "",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "tfthushaar/razorpay_buildathon": {
+  "d": "",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "fahad2707/reclaim": {
+  "d": "RECLAIM \u2014 post-halt subscription revenue recovery agent (Razorpay Buildathon Track 03). Synthetic data only.",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "reet1512/razorpay-buildathon-application-ai-revenue": {
+  "d": "",
+  "push": "2026-08-23",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "viveksingh1401/reconai-finance-controller": {
+  "d": "AI Finance Controller - Multi-Source Payment Reconciliation Agent | Razorpay AI Buildathon 2026 Track 4",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "Gautham-Reddy-Rachamallu/razorpay-internship-hackathon": {
+  "d": "AI Revenue Recovery Orchestrator - Razorpay Buildathon prototype",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "NandaGunasri/recoverai-razorpay-buildathon-2026": {
+  "d": "",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "karnayanaBala/SellerPilot-AI": {
+  "d": "\"AI agent for merchant revenue growth & agentic checkout \u2014 Razorpay Buildathon 2026\"",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "Prince-Chakraborty/runwayguard-ai": {
+  "d": "AI treasury agent that forecasts cash shortfalls and acts, within strict guardrails, before they happen \u2014 built for the Razorpay AI Buildathon 2026.",
+  "push": "2026-08-23",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "Navya2057/AI-Revenue-Recovery-agent": {
+  "d": "AI Revenue Recovery agent for Razorpay AI Buildathon Track 03 \u2014 root cause diagnosis, real-data risk scoring, and bounded recovery actions on payment failures. Built on a real Kaggle credit card transactions dataset.\"",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "shalini355/Tally-AI": {
+  "d": "Tally is an autonomous AI finance controller that reconciles 60+ messy ERP and bank records . Built with a high-throughput two-stage pipeline (deterministic filter + calibrated LLM matching) and an honest, categorized exception engine . Created for the Razorpay AI Buildathon (Track 04)",
+  "push": "2026-08-23",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "musk104/Return-Risk-Scorer": {
+  "d": "Cost-aware return abuse detector for Razorpay Buildathon Track 02 \u2014 XGBoost model with SHAP explainability, tuned to false-positive vs. false-negative cost rather than accuracy. 73.9% recall / 28.7% precision, ROC-AUC 0.942 on held-out test set.",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "Praveen-ing/Razorpay-buildathon": {
+  "d": "",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "kaviyasvk/reconciliation-assistant": {
+  "d": "AI-powered reconciliation tool for Razorpay AI Buildathon 2026",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "user01-gif/RazorpayBuildathon": {
+  "d": "",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "dhruvkachhela/subrecover-agent": {
+  "d": "Autonomous recurring revenue and failed payment recovery agent for Razorpay Buildathon 2026.",
+  "push": "2026-08-23",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "Sivanandinisaravanakumar/rto-risk-agent": {
+  "d": "Autonomous RTO risk-scoring agent \u2014 explainable ML, guardrailed decisions, and COD-to-prepaid payment conversion tracking. Built for Razorpay AI Buildathon (Track 3: AI Risk Manager).",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "smit27ai/recoup": {
+  "d": "A recovery decisioning control plane: diagnose at-risk revenue, act under hard compliance gates, and prove the money was incremental. Razorpay AI Buildathon 2026, Track 3.",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "Aarti-panchal01/reconiq": {
+  "d": "Multi-rail Indian payment settlement reconciliation engine \u2014 Razorpay AI Buildathon, Track 04: AI Finance Controller",
+  "push": "2026-08-23",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "scrollingreel/Razorpay-Ai-Buildathon": {
+  "d": "",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "Akash-1271/agentpay": {
+  "d": "AgentPay \u2014 Razorpay Buildathon project",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "ShiruvatiNarasimha/razorpay_buildathon": {
+  "d": "",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "Sk0108/RazorPayBuildathon": {
+  "d": "",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "AryanTandon2019/sequencer": {
+  "d": "Reason-aware recovery agent for failed recurring payments. Razorpay AI Buildathon, Track 03.",
+  "push": "2026-08-23",
+  "created": "2026-08-20",
+  "stars": 0
+ },
+ "KTPhantom/sentinel-razorpay-buildathon": {
+  "d": "Risk Analyst Triage",
+  "push": "2026-08-23",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "PranshuSama/RazorPay_BuildaThon": {
+  "d": "",
+  "push": "2026-08-23",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "jayvardhan123-ai/recoverai": {
+  "d": "RecoverAI - AI-Powered Autonomous Revenue Recovery Platform (Razorpay AI Buildathon Track 3)",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "Adii-45/dunning-recovery": {
+  "d": "AI agent that diagnoses failed subscription payments and executes the right recovery strategy -- Razorpay AI Buildathon 2026, Track 03",
+  "push": "2026-08-23",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "NSharp-mahajan/Razorpay-Buildathon": {
+  "d": "Revenue Recovery Intelligence + Execution Agent",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "abhaywill/razorpay-ai-recovery-agent": {
+  "d": "An autonomous, policy-constrained AI agent for intelligent payment recovery. Built for Razorpay AI Buildathon Track 03.",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "N1CK99925/MoneyOS": {
+  "d": "Razorpay Buildathon",
+  "push": "2026-08-23",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "172-21019/razorpay-buildathon": {
+  "d": "",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "a09070025-beep/agentic-storefront": {
+  "d": "Agentic Storefront for Razorpay Buildathon - AI-powered negotiation & sales agent",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "kratos0718/refund-arbiter": {
+  "d": "Refund abuse triage that picks its operating point in rupees, not in F1, and abstains to a human when it isn't sure. Razorpay AI Buildathon, Track 02.",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "Daksha1611/bounded-recovery-engine": {
+  "d": "Bounded Recovery Engine \u2014 a payment-recovery agent that is structurally incapable of taking a wrong money action (Razorpay AI Buildathon, Track 03)",
+  "push": "2026-08-23",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "SaxenaLakshya/AI-Risk-Manager": {
+  "d": "ML + LLM order return-risk scorer with cost-weighted evaluation, built for RazorPay Buildathon Track 02 (AI Risk Manager).",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "MrBurber/KinGraph": {
+  "d": "Defense-only AI agent that clusters merchant accounts by shared device/IP/address and behavioral-embedding similarity to flag fraud rings \u2014 while telling them apart from real households sharing an address. Built for Razorpay AI Buildathon, Track 02.",
+  "push": "2026-08-23",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "Rashmitha-karipe/agentcart": {
+  "d": "AI-Native Agentic Commerce Platform built for the Razorpay AI Buildathon",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "Anita-webdev/spikeguard-fraud-detector": {
+  "d": "Real-time C++ Transaction Fraud-Spike Detector for Razorpay AI Builder Buildathon",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "VeerGetGit/RazorPay_agentic_checkout": {
+  "d": " AI agent for conversational UPI checkout \u2014 Razorpay AI Buildathon 2026",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "vansh-shriv/Razorpay-Buildathon": {
+  "d": "",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "tanishkgupta365/recoverai-razorpay-buildathon": {
+  "d": "Explainable AI revenue recovery agent for failed payments \u2014 predicts recoverability, prioritizes expected value, recommends safe next actions, and escalates high-risk cases with human-in-the-loop guardrails. Built for Razorpay AI Builder Internship 2026.",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "YeshwanthRajSelvaraj/VERITY-Agentic-Commerce-Razorpay": {
+  "d": "VERITY: Autonomous Bounded Agentic Commerce on Razorpay Rails | Razorpay AI Builder Internship 2026 Buildathon (Track 1)",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "csdeepak/razorpay_buildathon": {
+  "d": "",
+  "push": "2026-08-23",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "aniket-gawande/Razorpay-AI_REVENUE_RECOVERY": {
+  "d": "BUILDATHON ",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "NextMutant/razorpay_buildathon": {
+  "d": "",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "prathamamritkar/revive": {
+  "d": "Razorpay Buildathon 2026",
+  "push": "2026-08-23",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "srijan2607/fraud-pulse": {
+  "d": "Chargeback risk manager for card-not-present fraud: detects coordinated payment campaigns, prices the fix in rupees before anyone acts, and requires human approval. Razorpay AI Buildathon \u2014 AI Risk Manager track.",
+  "push": "2026-08-23",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "GaneshIjjurouthu-0852/razorpay-buildathon-2026": {
+  "d": "fraud-risk-detector",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "SVIGHNESH/recoup": {
+  "d": "Recoup \u2014 AI revenue recovery agent for failed UPI autopay mandates: Hinglish negotiation, promise-to-pay ledger, RBI-style compliance, audit trail. Razorpay Buildathon Track 03.",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "BURNOUTAlGO/Agentic_commerce": {
+  "d": "An autonomous AI agent for commerce on Razorpay \u2014 reasons through orders live, recovers failed payments with auto-discounts, and logs a full audit trail. Built for Razorpay Buildathon.",
+  "push": "2026-08-22",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "DeoreKashish/Finwise-ai": {
+  "d": "AI Finance Controller for Razorpay Buildathon - Hybrid AI + Fallback Recovery",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "nehabhatt1201/razorpay-checkout-recovery-agent": {
+  "d": "AI agent that detects, diagnoses, and recovers failed or abandoned Razorpay checkouts (Buildathon Track 3)",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "prem-cre/Razorpay-Buildathon-Risk-Manager": {
+  "d": "",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "bunnysunny24/revive-ai": {
+  "d": "revive-ai-razorpay-buildathon. AI-powered revenue recovery system for failed payments, with ML risk scoring, policy-gated recovery workflows, Razorpay test-mode execution, audit trails, and measured recovered revenue.",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "pronov06/Razorpay-AI-Buildathon-ringguard-ai": {
+  "d": "Live Application",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "aaravwalia/backstop": {
+  "d": "Bounded recovery for failed payments - Razorpay AI Buildathon, Track 03",
+  "push": "2026-08-22",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "HimanshuKatwal04/Razorpay-AI-Buildathon": {
+  "d": "",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "Manojkumar1710/razorpay-ai-revenue-recovery": {
+  "d": "AI decision engine for recovering failed payments \u2014 built for Razorpay's AI Buildathon, Track 3: AI Revenue Recovery.",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "PRERITARYA/pariksheai": {
+  "d": "AI Risk Manager , payment confirmation verifier for the Razorpay Buildathon",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "AnushkaGhosh710/AI-Revenue-Recovery": {
+  "d": "An AI powered responsive AI Revenue Recovery system built for the Razorpay AI Buildathon 2026.",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "Sayeed-06/ledger-control": {
+  "d": "Three-way reconciliation agent for Indian payment ops - deterministic tiers + validator-gated LLM adjudication. Razorpay AI Buildathon Track 04.",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "rithikaredddy/recoverai": {
+  "d": "AI Revenue Recovery agent for Razorpay AI Buildathon (Track 3)",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "srikrishna0603/razorpay-buildathon": {
+  "d": "",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "Seraphina-Jackson/reconcile-guard-ai": {
+  "d": "A Project that i built to showcase my talent on RazorPay Buildathon :) ",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "IMRIKRUPA/payrecover-ai": {
+  "d": "AI-powered revenue recovery system for the Razorpay AI Buildathon",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "Vivek-736/BUILDATHON_TRACK_THREE": {
+  "d": "AI-powered revenue recovery for modern merchants. Detect payment failures, diagnose revenue at risk, execute bounded recovery workflows, and measure money recovered.",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "srijavarma02/razorpay-buildathon": {
+  "d": "",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "Thouseef68/razorpay-fraud-detector": {
+  "d": "Two-layer fraud detection system for Razorpay AI Buildathon (Track: AI Risk Manager) \u2014 a cost-optimized Random Forest classifier plus a time-windowed spike detector, with honest precision/recall/false-positive-cost trade-offs on real transaction data.",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "benny-daniel6/Revenue-guard": {
+  "d": "An AI Revenue Recovery Agent \u2014 Razorpay AI Buildathon Submission",
+  "push": "2026-08-22",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "Harshit-0018/ReconLoop": {
+  "d": "Deterministic AI agent that reconciles order ledgers against payment settlement reports \u2014 measured match rate, validated accuracy, honest exceptions. Razorpay AI Buildathon 2026.",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "Kartik-369/rexon": {
+  "d": "An AI-driven dunning & revenue recovery engine where models suggest, but deterministic guardrails decide. Built for Razorpay AI Buildathon 2026",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "Abhi120320/vault-guard": {
+  "d": "AI agent that detects payment failures, diagnoses root cause via LLM, and executes bounded, auditable recovery actions, built for the Razorpay AI Buildathon 2026 (Track 3: AI Revenue Recovery).",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 2
+ },
+ "eshakar/recon-agent": {
+  "d": "AI Finance Controller Run the books and the cash position -Track-4 _RazorPay_buildathon",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "sandhya-verma13/Razorpay-buildathon": {
+  "d": "",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "gagan771/RAZORPAY-BUILD": {
+  "d": "ArthaOS merchant money-case control plane for the Razorpay AI Buildathon",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 1
+ },
+ "Ganesh-Mahtha/razorpay-ai-revenue-recovery": {
+  "d": "AI-powered revenue recovery system for merchants \u2014 Razorpay AI Buildathon 2026",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "aathiamirtha16062006-del/poise": {
+  "d": "\"A relationship-aware AI revenue recovery agent that knows when to stop. Razorpay AI Buildathon 2026.\"",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "Sitaramaraju88/Return-Risk-Scorer": {
+  "d": "Return-risk scorer for e-commerce orders \u2014 Razorpay Buildathon, AI Risk Manager track\"",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "soumyadip-giri/ai-revenue-recovery": {
+  "d": "AI Revenue Recovery \u2014 Razorpay Buildathon Track 03. Detects failed payments, abandoned checkouts, overdue invoices; recovers revenue using ML-driven interventions with RBI/TRAI compliance.",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "prawinkumar24/payment-recovery-agent": {
+  "d": "AI agent that reviews failed payments and recommends recovery actions (retry/remind/escalate) with a full audit trail \u2014 built for the Razorpay AI Buildathon.",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "RahulAditya22/razorpay-fraud-detector": {
+  "d": "Fraud-spike detector for Razorpay AI Buildathon",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "pv8925844-jpg/agentgate-razorpay": {
+  "d": "Autonomous B2B Commerce & Deterministic Guardrail Engine for Razorpay AI Buildathon",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "girinath01/Razorpay-buildathon": {
+  "d": "",
+  "push": "2026-08-22",
+  "created": "2026-08-12",
+  "stars": 0
+ },
+ "heyansh-dev/vasuli-razorpay-buildathon": {
+  "d": "This repo is being created for the purpose of buildathon - a hackathon organized by the Razorpay group.",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "rohansirohi121-pixel/razorpay-ai-risk-manager": {
+  "d": "For the Razorpay AI Buildathon (AI Risk Manager track), I set out to solve a problem most fraud systems get wrong.",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "Divyanshupay/avalon-ai-sales-agent": {
+  "d": "AI-powered conversational sales agent for Razorpay Buildathon 2026",
+  "push": "2026-08-22",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "santusht06/razorpay-buildathon": {
+  "d": "",
+  "push": "2026-08-22",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "bellapunainika/VasooliAI": {
+  "d": "Autonomous revenue recovery agent for Indian SMBs \u2014 diagnoses why payments fail, picks the right bounded intervention, and logs every decision to an audit trail. Built for Razorpay AI Buildathon (Revenue Recovery track).",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "manimimohit-glitch/voice-recovery-agent": {
+  "d": "VoicePay Recovery - Hinglish AI Voice Agent for Failed Payment Recovery (Razorpay AI Buildathon Track 3)",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "Ovais-Maker/razorpay-buildathon-recoup": {
+  "d": "Bounded revenue recovery agent - Razorpay Buildathon 2026, Track 3. Rs 1.08 Cr incremental recovery across 10k at-risk cases, zero compliance violations.",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "sreechandhana54/recovr-ai-revenue-recovery": {
+  "d": "AI Revenue Recovery Agent \u2014 built for the Razorpay AI Buildathon (Track 3)",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "navya9347/ai-personal-shopper": {
+  "d": "\"An AI-powered Personal Shopper prototype built for the Razorpay AI Buildathon 2026. Automatically matches user style queries with inventory tags and prepares transaction totals for payment integration.\"",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "Sudhanshu1582001/razorpay-recovery-agent": {
+  "d": "AI-powered payment failure recovery agent built for Razorpay Buildathon",
+  "push": "2026-08-22",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "manoj-cse6/shopgenie-ai": {
+  "d": "ShopGenie is an AI-powered personalized shopping and commerce agent built for the Razorpay Buildathon 2026. It understands customer needs, recommends relevant products, provides personalized shopping assistance, and aims to make the checkout and payment experience simple and seamless using Razorpay.",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 1
+ },
+ "dekstopbreached/Fit-MindAI-Razorpay-Buildathon": {
+  "d": "FitMind AI -An adaptive AI-powered fitness coach that creates personalized workout & nutrition plans, analyzes progress, and evolves recommendations with real-time Razorpay-powered premium coaching.",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "komallbarhate/AI-Risk-Manager": {
+  "d": "Return-abuse risk scorer for e-commerce \u2014 LightGBM + TreeSHAP + rule-based defense layer. Built for Razorpay AI Buildathon",
+  "push": "2026-08-22",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "adityamahto16/recover-ai": {
+  "d": "AI Powered autonomous revenue recovery agent for the Razorpay AI buildathon",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "nirmitbhardwaj2510/razorpay-finance-controller": {
+  "d": "AI Finance Controller \u2014 multi-source reconciliation agent, Razorpay AI Buildathon",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "JainSahab45/RAZORPAY-Buildathon": {
+  "d": "",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "Chinmay0608/razorpay-buildathon-receivables-chaser": {
+  "d": "Autonomous invoice chasing system for minimizing revenue at risk. Built with Spring Boot, React, and Kafka for the Razorpay Buildathon (Track 03)",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "Juhamim/SentinelMesh": {
+  "d": " Sentinel Mesh Tagline: See the loss pattern before the loss becomes visible.  Track: Razorpay Buildathon \u2014 Track 02: AI Risk Manager  Product Vision  Sentinel Mesh is an AI-powered merchant loss prevention system that combines individual transaction intelligence with collective network intelligence.  Traditional fraud systems primarily ask:",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "shubhambhattog/recoup": {
+  "d": "A bounded revenue-recovery agent for Razorpay merchants - recovers more than naive retries, and can't misbehave with money. Razorpay AI Buildathon \u00b7 Track 03.",
+  "push": "2026-08-21",
+  "created": "2026-08-20",
+  "stars": 0
+ },
+ "Bindhusree345/Spikewatch-fraud-detector-": {
+  "d": "Window-level fraud spike detector for merchants \u2014 explainable z-score ensemble with honest precision/recall on a held-out test set. Built for Razorpay AI Buildathon, Track 02 (AI Risk Manager).",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "poreddynarendra2006-debug/cash-application-agent": {
+  "d": "Matches incoming bank credits to open invoices automatically. Handles TDS, lump sums, partial payments and mangled payer names. Optimises auto-match rate subject to >=99% precision. Razorpay AI Buildathon Track 04.",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "Ravi-Ratna-66/RazorPay-Buildathon": {
+  "d": "",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 1
+ },
+ "yash112005/razorpay-agentic-checkout": {
+  "d": "AI-powered conversational checkout agent \u2014 customers order via WhatsApp,  AI parses intent, validates against bounded rules, and completes payment  via Razorpay (test-mode), with full audit trail. Built for Razorpay AI  Buildathon 2026 \u2014 Track 01: AI Growth & Agentic Commerce.",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "vaishbhagat/razorpay-buildathon": {
+  "d": "",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "dipanshugaur28-afk/growthpilot-ai": {
+  "d": "AI-powered autonomous commerce growth agent for the Razorpay AI Buildathon.",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "rahulannaldas0406/razorpay-ai-project": {
+  "d": "AutoReview AI \u2013 An automated Python code reviewer and algorithmic optimizer built with Streamlit and Google Gemini for the Razorpay AI Buildathon.",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "siddheshpanditt/Razorpay-Buildathon": {
+  "d": "",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "suhaan07/razorpay_buildathon": {
+  "d": "",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "kirangunaga992/recoup": {
+  "d": "Bounded revenue recovery agent \u2014 Razorpay AI Buildathon Track 3",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "SHIVANSH3SRIVASTAVA/revenue-recovery-agent": {
+  "d": "AI agent that recovers failed subscription payments \u2014 built for Razorpay Buildathon, Track 03",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "tar7nic/PaisaBack": {
+  "d": "Built for the Razorpay Buildathon (Track 3: AI Revenue Recovery). PaisaBack detects failed UPI mandates and subscription payments, diagnoses why they failed, and autonomously runs the right recovery play \u2014 retry, reminder, or a Hinglish nudge \u2014 for each customer, backed by ML-driven user segmentation and a full audit trail of every decision made.",
+  "push": "2026-08-21",
+  "created": "2026-08-20",
+  "stars": 0
+ },
+ "vishnu1901-2006/SpikeSentinel-API": {
+  "d": "SpikeSentinel is an AI-driven transaction screening system built for the Razorpay AI Buildathon. It stops merchants from losing money to fraud spikes by evaluating transaction payloads in real time.",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "Darshangowdac2005/RazorShield": {
+  "d": "AI Payment Fraud Risk Manager (Track 02) for Razorpay AI Buildathon. Hybrid ML+rules scoring, explainable decisions, batch analysis, fallback paths.",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "LordCenk/merchant-risk-engine": {
+  "d": "For Razorpay Buildathon",
+  "push": "2026-08-21",
+  "created": "2026-04-08",
+  "stars": 0
+ },
+ "iamaanahmad/ReconGraph": {
+  "d": "ReconGraph is a deterministic AI finance-controller prototype. It turns orders, payments, refunds, settlements, and webhook deliveries into an explainable reconciliation graph, while deliberately abstaining when evidence is tied or insufficient.",
+  "push": "2026-08-21",
+  "created": "2026-08-20",
+  "stars": 0
+ },
+ "NitheeshP19/AI-Revenue-recovery-Engine": {
+  "d": "An autonomous, agentic AI microservice architecture that intercepts failed payments at the edge, reasons about root causes using XGBoost and Groq (Llama-3), and executes real-time recovery strategies. Built with Go, Python, React, and Kubernetes to maximize Razorpay merchant GMV with fully explainable, audit-ready AI. Built for the Buildathon.",
+  "push": "2026-08-21",
+  "created": "2026-08-20",
+  "stars": 0
+ },
+ "Thesilentprogramer/Razorpay_Buildathon": {
+  "d": "",
+  "push": "2026-08-20",
+  "created": "2026-08-20",
+  "stars": 0
+ },
+ "DhruvGarg2023/Razorpay-Buildathon": {
+  "d": "",
+  "push": "2026-08-20",
+  "created": "2026-08-20",
+  "stars": 0
+ },
+ "RaghavDokania/reclaim-agent": {
+  "d": "Diagnoses failed payments, runs a bounded recovery action, and reports money recovered with a full audit trail \u2014 built for Razorpay's AI Buildathon.",
+  "push": "2026-08-20",
+  "created": "2026-08-20",
+  "stars": 0
+ },
+ "shreelakshmi680-dot/razor-recover-ai": {
+  "d": "Autonomous AI Revenue Recovery Engine with Deterministic Guardrails (Razorpay AI Buildathon)",
+  "push": "2026-08-20",
+  "created": "2026-08-20",
+  "stars": 0
+ },
+ "Pawnityagi18/razorpay-agentic-commerce": {
+  "d": "Razorpay AI Buildathon Demo (Track: AI Growth & Agentic Commerce)",
+  "push": "2026-08-20",
+  "created": "2026-08-20",
+  "stars": 0
+ },
+ "tnikithakl77/finsight-ai": {
+  "d": "FinSight AI \u2014 Autonomous AI Finance Controller for the Razorpay AI Builder Internship 2026",
+  "push": "2026-08-24",
+  "created": "2026-08-24",
+  "stars": 0
+ },
+ "iamshkzahid/recoveriq": {
+  "d": "RecoverIQ \u2014 AI-Powered Autonomous Revenue Recovery Engine | Razorpay AI Builder Internship 2026 | Track 3",
+  "push": "2026-08-24",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "coldsmoke07/sentinelpay-ai-risk-manager": {
+  "d": "Explainable human-in-the-loop AI payment risk manager for Razorpay AI Builder Internship 2026",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "jyoti707/razorpay-ai-builder-internship": {
+  "d": "",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "Afreenbaig-02/ai-payment-risk-detector": {
+  "d": "Concept repo for Razorpay AI Builder Internship project.",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "DeepakChouhan18/ai-revenue-recovery": {
+  "d": "AI-powered payment revenue recovery system \u2014 ML + Decision Engine + RAG + LLM pipeline. Built for Razorpay AI Builder Internship 2026, Track 3.",
+  "push": "2026-08-23",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "gauravkmishra09/nova-agentic-commerce-assistant": {
+  "d": "AI agent for e-commerce that answers product questions via RAG and takes real actions (order lookup, refund drafting) via tool calling \u2014 built for Razorpay AI Builder Internship 2026, Track 1.",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "AbhijitDoesCoding/Reclaim-AI": {
+  "d": "An autonomous B2B revenue recovery agent that negotiates bounded installment plans and executes payments via Razorpay. Built for the Razorpay AI Builder Internship.",
+  "push": "2026-08-22",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "kaviya200644/paypilot-ai": {
+  "d": "AI-powered Agentic Commerce Assistant for Razorpay AI Builder Internship 2026",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "krishRajawat/sentinelpay-fraud-spike-detector": {
+  "d": "AI-powered fraud-spike detector for transactional risk \u2014 built for Razorpay AI Builder Internship 2026",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "aaradhya1205/recon-copilot": {
+  "d": "AI-assisted multi-source settlement reconciliation for Razorpay merchants \u2014 Razorpay AI Builder Internship 2026, Track 4",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "aroravocado/Recoverai": {
+  "d": "AI agent that recovers lost revenue from failed payments & subscriptions. Smart diagnosis + bounded recovery actions. Built for Razorpay AI Builder Internship 2026 \u2013 Track 3.",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "ellampirai/Razorpay-AI-Builder-Internship-": {
+  "d": "Project Objectives Detect unusual spikes and patterns in financial transactions in real time. Identify potentially fraudulent transactions using AI/ML-based anomaly detection. Generate a risk score for transactions, users, or accounts. Reduce false positives by considering transaction history and behavioral patterns. ",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "Shivampal157/risklens": {
+  "d": "Real-time payment risk desk \u2014 Razorpay AI Builder Internship 2026, Track 2: AI Risk Manager",
+  "push": "2026-08-21",
+  "created": "2026-08-20",
+  "stars": 0
+ },
+ "priyanshisavita224-glitch/AI-Voice-Commerce-Agent": {
+  "d": "AI Voice Commerce Agent for Vernacular Sellers - Razorpay AI Builder Internship 2026. Voice-based AI to take orders and generate Razorpay payment links in Hindi/regional languages.",
+  "push": "2026-08-20",
+  "created": "2026-08-20",
+  "stars": 0
+ },
+ "Nikesh2007-pro/autorecover-ai-agent": {
+  "d": "Autonomous AI agent built for the Razorpay AI Builder Internship. Uses the Gemini API to analyze failed transactions in real-time and execute dynamic cart recovery workflows.agentic-ai  fintech  gemini-api  cart-recovery  streamlit  ",
+  "push": "2026-08-20",
+  "created": "2026-08-20",
+  "stars": 0
+ },
+ "adarsh7979s/RazorPay": {
+  "d": "Real-time transaction risk & fraud scoring engine built with XGBoost, SHAP explainability, FastAPI, and Streamlit. Built for Razorpay AI Builder Internship 2026 (AI Risk Manager Track).",
+  "push": "2026-08-20",
+  "created": "2026-08-20",
+  "stars": 0
+ },
+ "sindhu834/RazorAgent": {
+  "d": "AI Growth Assistant for Razorpay Merchants - Automated reconciliation, payment retries, and 24/7 support agent. Built for Razorpay AI Builder Internship 2026",
+  "push": "2026-08-20",
+  "created": "2026-08-20",
+  "stars": 0
+ },
+ "darshanpingale13/razorpay-agentic-commerce": {
+  "d": "",
+  "push": "2026-08-24",
+  "created": "2026-08-24",
+  "stars": 0
+ },
+ "Vyoum/Track-01-AI-Growth-Agentic-Commerce-Merchant": {
+  "d": "The project focuses on the agent that will increase the e commerce markets revenue and will eventually result in greater payments through razorpay ",
+  "push": "2026-08-24",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "rajat9para/RazorX-Give-AI-the-Power-to-Transact.-Keep-the-Control.": {
+  "d": "RazorX is an agentic commerce layer that lets AI buyers discover, compare, negotiate and purchase from AI-ready merchants through Razorpay, while deterministic policies ensure every money action remains explainable, bounded and gated.",
+  "push": "2026-08-24",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "techyfatcat/Raze": {
+  "d": "Raze is a plug-and-play AI commerce layer that enables AI agents to discover products, guide customers, execute Razorpay payments, recover failed transactions, and help merchants grow revenue.",
+  "push": "2026-08-24",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "NavaNithi07/Nazara": {
+  "d": "Nazara is an AI agentic commerce platform built on Razorpay test-mode APIs. A conversational shopping agent (text, voice, image) drives discovery-to-checkout, while a merchant AI growth agent handles upsell, cross-sell, and campaigns. Every money action is permission-gated, risk-checked, explainable, and logged in a full audit trail for safety.",
+  "push": "2026-08-24",
+  "created": "2026-08-24",
+  "stars": 0
+ },
+ "Sansyuh06/agentpolicy": {
+  "d": "Merchant-Side Financial Policy Layer for Agentic Commerce - Track 01 Razorpay Hackathon",
+  "push": "2026-08-24",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "Sasank1236/razorpay-agentic-commerce": {
+  "d": "",
+  "push": "2026-08-24",
+  "created": "2026-08-24",
+  "stars": 0
+ },
+ "MallaKoushik/AI-Agentic-Commerce": {
+  "d": "Agentic AI system that autonomously recovers lost revenue from failed payments, abandoned carts, and missed upsell moments \u2014 with server-enforced policy guardrails. Built for Razorpay's AI Growth & Agentic Commerce track.",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "Sagarpatidar79/razorpay-agentic-checkout": {
+  "d": "Autonomous Agentic Checkout & Conversational Commerce Engine for Dynamic Payment Routing.",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "DSingh0304/payagent-core": {
+  "d": "An AI-Native commerce protocol enabling autonomous agents to browse, checkout, and transact securely using Razorpay's Official MCP Server, UPI Reserve Pay (SBMD), and LangGraph human-in-the-loop gates",
+  "push": "2026-08-23",
+  "created": "2026-08-21",
+  "stars": 1
+ },
+ "mohdfarahidali987-sketch/AgentPay": {
+  "d": "AI-powered agentic commerce platform with intelligent product discovery, spending guardrails, audit trails, and Razorpay payments.",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "singhaastha88385/ai-checkout-assistant": {
+  "d": "An AI-powered chat assistant embedded in checkout that answers customer questions in real time to reduce cart abandonment \u2014 built for Razorpay's AI Growth & Agentic Commerce track",
+  "push": "2026-08-23",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "Ritish-06/Razorgrowth-AI": {
+  "d": "RazorGrowth AI is an AI-powered agentic commerce platform that helps merchants grow revenue through intelligent recommendations, upselling, cross-selling, and AI-driven campaigns while making products discoverable and transactable by AI buyers. Built with React, Node.js, PostgreSQL, and Razorpay Test Mode.",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "vrushank-srikar/Razorpay-AI-Builder-AI-Growth-Agentic-Commerce": {
+  "d": "",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "Denisa1315/loopcart": {
+  "d": "a two-sided AI agentic commerce platform with safe, policy-gated Razorpay payments and merchant-approved cross-selling.",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "GarineSaiAjay/commerceos": {
+  "d": "a full agentic commerce operating layer: a system that understands a merchant's catalog, predicts buyer intent, constructs and optimizes a cart, obtains bounded authorization, executes the Razorpay transaction, verifies the result asynchronously, and learns from outcomes \u2014 all wrapped in a cryptographically auditable decision trail.",
+  "push": "2026-08-23",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "Shashank101-aiml/agentic-commerce-growth": {
+  "d": "an agent that grows revenue for a merchant on Razorpay test-mode APIs, or that makes a merchant transactable by an AI buyer end to end.",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "nabir7482-sudo/Razorpay-agentic-commerce-governance-engine": {
+  "d": "",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 2
+ },
+ "niharikakodi36-netizen/flowcart-ai-agentic-commerce": {
+  "d": "AI-powered agentic commerce platform for intelligent product discovery, contextual upselling, and safe Razorpay Test Mode transactions.",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "kdahal7/razoragent-commerce": {
+  "d": "Enables merchants to become discoverable and transactable by AI Buyer Agents via NPCI ACP/UAP protocol standards while growing revenue via conversational in-app checkout, bounded spending guardrails, and real-time explainable audit trails over Razorpay APIs.",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "Alok0527/agentic-commerce-checkout": {
+  "d": "Conversational checkout agent on Razorpay test-mode APIs \u2014 bounded, gated, and audited money actions with graceful failure handling",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "MohamedIdhries/paypilot-ai": {
+  "d": "AI-powered autonomous commerce agent for intelligent product discovery, recommendations, and Razorpay payments.",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 1
+ },
+ "samarthkumble/razorpay-agentic-commerce": {
+  "d": "",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "BhanuPrakashPandey0843/PayPilot-AI": {
+  "d": "PayPilot AI is an AI-powered agentic commerce platform that helps merchants grow revenue through conversational shopping, smart recommendations, personalized offers, and seamless Razorpay checkout. It enables AI-driven buying while keeping every payment action secure, explainable, bounded, and auditable.",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "Venkatesh200510/-razorgrow-ai": {
+  "d": "AI-powered agentic commerce platform that helps merchants grow revenue through personalized product recommendations, intelligent upselling, Razorpay payments, abandoned-checkout recovery, and real-time revenue analytics.",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "sandy040406/artisan-engine": {
+  "d": "AI-Native Multi-Tenant E-Commerce SaaS for Independent Artisans \u2014 built with FastAPI, React, PostgreSQL, Redis, FastMCP AI Agents, Razorpay & Docker/Kubernetes.",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "Dhruvb014/ai-commerce-agent": {
+  "d": "AI-powered conversational shopping agent with Razorpay checkout",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "vasanth13p/razorpay-ai-growth-agent": {
+  "d": "Razorpay AI Growth Agent \u2013 Autonomous AI Commerce & Revenue Optimization Platform",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "HemantXCode/payagent-agentic-commerce": {
+  "d": "Autonomous AI commerce & checkout engine with Gemini negotiation, deterministic Pydantic guardrails, and Razorpay Test Mode integration",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 1
+ },
+ "SuyashSharma365/razoragent": {
+  "d": "AI-powered agentic commerce platform that enables AI buyers to discover products, make intelligent purchase decisions, and execute bounded payments through Razorpay test APIs.",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "Harshitkumar63/AgentPay-AI": {
+  "d": "*AI-powered agentic commerce platform that enables AI-driven product discovery, personalized upselling & cross-selling, and secure Razorpay Test Mode checkout with policy gates, approval workflows, audit",
+  "push": "2026-08-22",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "anishannaparthi/recovery-agent": {
+  "d": "An autonomous AI agent that recovers abandoned e-commerce carts \u2014 it decides which incentive to offer per customer segment using a self-improving bandit algorithm, creates Razorpay payment links, and learns from real conversion outcomes with zero manual rule-setting.",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "biru-codeastromer/maryada": {
+  "d": "Maryada, the trust layer for agentic commerce. Mandates, a deterministic policy engine, and a tamper-evident audit chain between AI agents and real money. Built on Razorpay test-mode rails.",
+  "push": "2026-08-21",
+  "created": "2026-08-20",
+  "stars": 1
+ },
+ "abhinaytiwari542-max/vriddhi": {
+  "d": "AI Growth & Agentic Commerce for Razorpay merchants \u2014 opportunity detection, policy-guarded approvals, agentic checkout. Next.js + Gemini + Prisma.",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "Saku2025/ai-commerce-agent": {
+  "d": "AI-powered shopping agent with product recommendations, intelligent upselling, cart management, safe Razorpay checkout, order processing, audit logs, and merchant analytics.",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "padma-teja/razorpay-ai-commerce-agent": {
+  "d": "AI-powered agentic commerce platform with product recommendations, cross-selling, secure Razorpay checkout, audit trails, and merchant analytics.",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "sania252004/Cartwright-Autonomous-Shopping-Agent": {
+  "d": "Cartwright transforms traditional 12-step e-commerce browsing into a zero-friction autonomous conversation. Built for Track 1: AI Growth & Agentic Commerce (Razorpay AI Builder 2026), the agent uses multi-turn Google GenAI tool calling to autonomously search live inventory, evaluate product specifications, maximize discount coupon yields, and execu",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "Mayank0377/generative-commerce-agent": {
+  "d": "Agentic Commerce platform leveraging Gemini AI and Razorpay for seamless, conversational checkouts.",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "ksallauddin81-oss/commercepilot-ai": {
+  "d": "AI-powered agentic commerce platform that helps customers discover products through natural conversation, provides explainable recommendations, and enables secure Razorpay-powered checkout with human approval.",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "shaik033arifa/ai-smart-shopping-assistant": {
+  "d": "AI-powered smart shopping assistant with agentic commerce and Razorpay integration",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "prudhvi08299/agentic-commerce-ai": {
+  "d": "AI-powered conversational shopping assistant with agentic product recommendations, cart management, and Razorpay test checkout.",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "PavanvermaAKSU/AI-Powered-Business-Political-Management": {
+  "d": "We solve the gap between AI recommendations and real-world commerce. Our 24\u00d77 AI Commerce Agent can understand customer needs, find compatible products, create orders, and initiate Razorpay payments while enforcing spending limits, human approval, auditability, and safe payment-failure recovery.",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "pnblesson/razorpay-ai-commerce-agent": {
+  "d": "AI-powered commerce assistant demonstrating agentic product discovery, recommendations, tool calling, cart management, and sandbox checkout.",
+  "push": "2026-08-21",
+  "created": "2026-08-20",
+  "stars": 0
+ },
+ "nanditasarkar28/paypilot-ai": {
+  "d": "AI Purchase Agent for Agentic Commerce with Razorpay",
+  "push": "2026-08-20",
+  "created": "2026-08-20",
+  "stars": 0
+ },
+ "pranavsutar22/agentic-commerce-razorpay": {
+  "d": "",
+  "push": "2026-08-20",
+  "created": "2026-08-20",
+  "stars": 0
+ },
+ "its-aryansingh/razorpay-uap-mandate-agent": {
+  "d": "Single-agent commerce architecture with strict mandate verification",
+  "push": "2026-08-20",
+  "created": "2026-08-20",
+  "stars": 0
+ },
+ "Rahul668877/agentic-commerce-redesign": {
+  "d": "Agentic commerce concierge \u2014 a merchant-embedded shopping assistant powered by Razorpay. UI/UX reference build with generative in-conversation UI.",
+  "push": "2026-08-15",
+  "created": "2026-08-15",
+  "stars": 0
+ },
+ "Sarthakwankahde/agentic-ai-ecommerce-platform": {
+  "d": "E-Commerce AI Platform is a production-ready backend designed for the next generation of intelligent e-commerce applications. Built with Java, Spring Boot, and PostgreSQL, the platform provides authentication, role-based authorization, product management, cart, wishlist, order processing,Razorpay payment and automated email notifications.",
+  "push": "2026-08-17",
+  "created": "2026-07-07",
+  "stars": 0
+ },
+ "debugWithKajalchpal/upskillcampus": {
+  "d": "MotoMart is an AI-powered automotive spare parts e-commerce platform built with HTML, CSS, JavaScript, Node.js, Express.js, and MySQL. The platform features secure authentication, product management, shopping cart, Razorpay payments, order tracking, admin dashboard, and an AI-driven Carbon Footprint Agent powered by Google AI Studio to promote sust",
+  "push": "2026-06-18",
+  "created": "2026-06-18",
+  "stars": 0
+ },
+ "gautammanak1/agent.fetch": {
+  "d": "AI-powered shopping agent built with Fetch.ai uAgents \u2014 conversational e-commerce with Supabase, Razorpay payments, and order tracking",
+  "push": "2026-04-03",
+  "created": "2025-10-02",
+  "stars": 0
+ },
+ "luckysolanki902/maddycustom-production": {
+  "d": "Full-stack e-commerce platform for vehicle customization. 118 API routes, multi-provider payment failover, AI chatbot (OpenAI Agents), server-side Meta CAPI, custom funnel analytics. Next.js 15, MongoDB, AWS.",
+  "push": "2026-03-12",
+  "created": "2024-10-20",
+  "stars": 0
+ },
+ "iamgiridharan/AI-Revenue-Recovery-Agent": {
+  "d": "AI-powered revenue recovery agent that detects failed-payment risks, recommends recovery actions, and tracks recovered revenue using ML, LLMs, and Razorpay Test APIs.",
+  "push": "2026-08-24",
+  "created": "2026-08-24",
+  "stars": 0
+ },
+ "Ankitp2005/Razorpay-revenue-recovery-agent": {
+  "d": "",
+  "push": "2026-08-24",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "sriramvarun0636/Vasool": {
+  "d": "A revenue-recovery agent for Razorpay, and the verification harness that proves it's safe to deploy",
+  "push": "2026-08-24",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "sakhi-RKS/recoverai": {
+  "d": "AI-powered revenue recovery agent built for the Razorpay hackathon.",
+  "push": "2026-08-24",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "NishigandhaChoudhury/Razorpay-Recovery-Agent": {
+  "d": "Built AI Agent for Revenue Recovery",
+  "push": "2026-08-24",
+  "created": "2026-08-24",
+  "stars": 0
+ },
+ "MohammedMutee/wapas": {
+  "d": "Revenue recovery agent for Razorpay merchants \u2014 detect, diagnose, recover, and prove it in rupees against a randomised control arm.",
+  "push": "2026-08-24",
+  "created": "2026-08-24",
+  "stars": 0
+ },
+ "modiviveks/razorpay-ai-revenue-recovery-agent": {
+  "d": "Safe, auditable Razorpay payment-failure recovery agent with verified revenue attribution.",
+  "push": "2026-08-23",
+  "created": "2026-08-20",
+  "stars": 0
+ },
+ "SYNTHOS7/Reven": {
+  "d": "AI-powered revenue recovery agent that detects failed Razorpay payments, diagnoses failure causes, recommends safe recovery actions, and tracks verified recoveries in real time.",
+  "push": "2026-08-23",
+  "created": "2026-08-20",
+  "stars": 1
+ },
+ "ASTHAGUPTA-co/Razorpay-revenue-recovery-agent": {
+  "d": "",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "vinay-potnuri/razorpay_rie_recovery_engine": {
+  "d": "Autonomous AI Revenue Recovery Engine for Razorpay recurring subscriptions. Powered by Gemini 3.7 + ML optimal retry scheduling, WhatsApp 1-click UPI intent, multilingual voice PTP agent, and deterministic fail-closed RBI compliance guardrails.",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 1
+ },
+ "Ahan-aura/razorpay-revenue-recovery-agent": {
+  "d": "",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "agniv-dutta/Drishti": {
+  "d": "Drishti: AI Revenue Recovery Agent for Indian fintech.  Multi-channel orchestration (retry\u2192SMS\u2192call\u2192offer\u2192escalate)  recovers 55-70% of failed payments. LLM-powered strategy selection,  AutoML risk scoring, full audit compliance. Open-source, Razorpay-agnostic.",
+  "push": "2026-08-23",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "Yashj-Codes/revenueguard": {
+  "d": "Agentic revenue recovery for Razorpay. The LLM proposes; a deterministic policy engine disposes. Measured net-of-control lift, compliant escalation, hard stopping rules, hash-chained audit trail. Test mode only.",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "GitWizardHub/razorpay-recoverai": {
+  "d": "Bounded AI checkout-recovery agent with controlled experimentation and incremental revenue attribution.",
+  "push": "2026-08-23",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "BHUVANESWAR-B/recoveriq": {
+  "d": "Autonomous AI Revenue Recovery Agent for Razorpay",
+  "push": "2026-08-22",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "Shivamkr-123/AI-Revenue-Recovery-Agent.": {
+  "d": "RecoverAI is an AI-powered revenue recovery platform built for Razorpay\u2019s AI Revenue Recovery Track. It uses Google Gemini to detect payment failures, diagnose issues, and recommend recovery actions. A Spring Boot Policy Engine ensures all financial actions are bounded, approved.",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "rehannxx/revenue-recovery-agent_razorpayhackathon": {
+  "d": "",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "coderpromaxFire/ai-revenue-recovery-agent-RAZORPAY-PROJECT-": {
+  "d": "",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 1
+ },
+ "AyishathNahda/razorpay-revenue-recovery-agent": {
+  "d": "",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "yashdave18/Recover-AI": {
+  "d": "Autonomous AI agent that detects revenue leaking through failed payments, scores recovery likelihood, and recovers it via Razorpay",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "Ganga-2508/AI-Recovery": {
+  "d": "AI-powered revenue recovery agent for failed payment recovery using Razorpay test mode.",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "rohithraj33521-ui/Recover0": {
+  "d": "AI-powered revenue recovery agent for Indian businesses - Razorpay AI",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "Adityashinde0101/recoverai": {
+  "d": "RecoverAI is an autonomous payment-failure recovery agent that diagnoses Razorpay failures, applies bounded recovery actions, and tracks recovered revenue through an auditable dashboard.",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "hemantch01/RazorVasooli.Ai": {
+  "d": "RazorVasooli.Ai is an AI revenue recovery agent built natively on Razorpay. for Razorpay Hackathon",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "NishanthAnand21/Razorpay-AI-Revenue-Recovery": {
+  "d": "An agent that detects revenue at risk, determines the right intervention, and executes a bounded recovery workflow: from payment failures and checkout abandonment to overdue receivables.",
+  "push": "2026-08-20",
+  "created": "2026-08-20",
+  "stars": 0
+ },
+ "BEASTSHRIRAM/revenue-recovery-ai": {
+  "d": "AI agent that recovers failed subscription payments \u2014 LangGraph + Grok, Next.js dashboard, Razorpay integration",
+  "push": "2026-08-20",
+  "created": "2026-08-20",
+  "stars": 0
+ },
+ "AkshatGupta-CSA/DisputeZero": {
+  "d": "The Unified Revenue Retention Agent handles at-risk revenue for Razorpay merchants. It intercepts events like a failed recurring charge and active chargebacks. The agent autonomously gathers evidence, reasons using an LLM, and executes recovery or defense , reducing the manual processes to a 5-second loop.",
+  "push": "2026-08-20",
+  "created": "2026-08-20",
+  "stars": 0
+ },
+ "itz-joo2005/smart-retry-agent": {
+  "d": "An AI that recovers failed payments smarter than blind retries. It diagnoses why a payment failed, picks the best recovery action using a self-learning bandit, and lets you interrogate its reasoning live via chat. Built for Razorpay's Revenue Recovery track.",
+  "push": "2026-08-20",
+  "created": "2026-08-20",
+  "stars": 0
+ },
+ "KarnailSingh87/RazorRecover-AI": {
+  "d": "RazorRecover AI - Autonomous Revenue Recovery Agent & Merchant Operations Platform for Razorpay",
+  "push": "2026-08-20",
+  "created": "2026-08-20",
+  "stars": 0
+ },
+ "RookieCoder12/razorpay_ai-risk-manager": {
+  "d": "",
+  "push": "2026-08-24",
+  "created": "2026-08-24",
+  "stars": 0
+ },
+ "ayushkr80/razorpay-ai-risk-manager": {
+  "d": "",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "jevishaaaa/Razorpay-AI-risk-manager": {
+  "d": "",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "nishant-deshwal05/shadow-ai-risk-manager": {
+  "d": "SHADOW is an autonomous agentic AI risk operations center for Razorpay gateways. It replaces rigid static rules with real-time behavioral telemetry and Gemini-driven chain-of-thought reasoning to instantly detect zero-day fraud, eliminate false positives, and generate instant forensic compliance audit logs",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "sandysunny99/razorpay-ai-risk-manager": {
+  "d": "",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "Aariguru/-Razorpay-AI-Risk-Manager": {
+  "d": "AI-powered Risk Management platform for payment transactions, featuring real-time risk scoring, fraud detection, analyst review workflows, investigation agents, and an interactive RiskOps dashboard. Built with FastAPI, React, TypeScript, Python, and SQLite/PostgreSQL.",
+  "push": "2026-08-23",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "CandyButcher27/disputeshield": {
+  "d": "ML-powered chargeback triage for Razorpay merchants: calibrated win probability, expected-value decisions, and cited evidence packets. AI Risk Manager track.",
+  "push": "2026-08-23",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "BeastAyyG/razorpay-ai-risk-manager": {
+  "d": "",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "zaidhasann/clarity": {
+  "d": "AI compliance-transparency layer for payment platform merchants \u2014 predicts account-freeze risk before it happens and auto-drafts evidence-backed appeal letters. Built for Razorpay's AI Risk Manager track",
+  "push": "2026-08-22",
+  "created": "2026-08-22",
+  "stars": 0
+ },
+ "Sowmiya550/Razorpay-AI-Risk-Manager": {
+  "d": "",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "piyush621-pareek/AI-Risk-Manager": {
+  "d": "Razorpay Project",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "kutty69/Razorpay": {
+  "d": "Razorpay ChargebackDefender AI \u2014 Autonomous Multi-Agent Forensic Dispute & Risk Manager",
+  "push": "2026-08-21",
+  "created": "2026-08-21",
+  "stars": 0
+ },
+ "YHQZ1/Vouch-Evidence-Grade-Settlement-Reconciliation": {
+  "d": "Vouch is an AI finance controller that reconciles Razorpay settlements across gateway reports, bank statements, and ledgers. It deterministically verifies amounts, fees, refunds, and tax, escalating only ambiguous cases to a bounded investigation agent. Every decision stays explainable, auditable, and abstains when evidence is insufficient.",
+  "push": "2026-08-24",
+  "created": "2026-08-23",
+  "stars": 0
+ },
+ "shansree-z/Finance-Controller-Multi-Source-Reconciliation-Agent": {
+  "d": "Multi-source reconciliation agent for Razorpay payouts vs. bank statements. Uses Azure AI Foundry for string extraction and deterministic Python gates for financial verification.",
+  "push": "2026-08-22",
+  "created": "2026-08-21",
+  "stars": 0
+ }
+}
