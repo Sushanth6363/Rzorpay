@@ -6,7 +6,9 @@ Legend: `NOT_RUN` · `PASS` · `FAIL` · `SKIP` · `UNKNOWN`
 
 | Component | Test | Expected | Actual | Status | Last Run |
 |---|---|---|---|---|---|
+| Smoke Test | app package import and version | app imports, __version__ == '0.1.0' | PASSED (1.96s) | PASS | 2026-09-01 (466df02) |
 | Schema | applies on SQLite WAL | no error | — | NOT_RUN | — |
+
 | Schema | CHECK constraints present | 3 constraints | — | NOT_RUN | — |
 | Domain | no float money fields | none found | — | NOT_RUN | — |
 | Clock | no wall-clock calls outside adapter | none found | — | NOT_RUN | — |
@@ -74,4 +76,4 @@ Legend: `NOT_RUN` · `PASS` · `FAIL` · `SKIP` · `UNKNOWN`
 | Claims | forbidden-phrase scan | zero matches | — | NOT_RUN | — |
 | Dashboard | widget source queries | all present | — | NOT_RUN | — |
 
-**Total: 68 tests specified · 0 run · 0 passing.**
+**Total: 69 tests specified · 1 run · 1 passing (100% pass rate).**

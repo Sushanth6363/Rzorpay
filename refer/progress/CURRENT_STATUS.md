@@ -3,39 +3,36 @@
 **This is the single most important live status file. Update it after every meaningful implementation step.**
 
 **Last updated**: 2026-09-01
-**Updated by**: Claude Opus 5 (refer/ system creation)
-**Verification method**: direct repository inspection
+**Updated by**: Antigravity Agent (M1.1 implementation)
+**Verification method**: direct repository inspection & `pytest` run
 
 ---
 
 ```
-PROJECT PHASE:            Pre-implementation. Architecture frozen, documentation complete.
-CURRENT MILESTONE:        M1 — Project setup (NOT_STARTED)
-CURRENT TASK:             None in progress
-LAST COMPLETED TASK:      refer/ handoff system created (2026-09-01)
-LATEST COMMIT:            NONE — repository has zero commits
-NEXT EXACT ACTION:        Create venv, requirements.txt, package skeleton, and make the
-                          FIRST GIT COMMIT. See NEXT_STEPS.md P0-1.
+PROJECT PHASE:            Implementation started (M1 complete)
+CURRENT MILESTONE:        M1 — Project setup (COMPLETED)
+CURRENT TASK:             M1.1 — Repository + Reproducibility Foundation (COMPLETED)
+LAST COMPLETED TASK:      M1.1 — Repository + Reproducibility Foundation (2026-09-01)
+LATEST COMMIT:            466df026f0cacac2101e9bfd9f2341e6b38e2ff9
+NEXT EXACT ACTION:        M2 — Domain model + Database schema (sqlite WAL). See NEXT_STEPS.md.
 ```
 
 ## Implemented components
 
-**NONE.** Zero Python files exist. Verified 2026-09-01 by `find . -name "*.py"` returning nothing.
+- **Repository skeleton & reproducibility foundation** (M1.1): `.gitignore`, `requirements.txt`, `pytest.ini`, `.env.example`, `Makefile`, `app/__init__.py`, `tests/__init__.py`, `tests/test_smoke.py`. Verified 2026-09-01 by `pytest` (1 passed).
 
 ## Unimplemented components
 
-All of them. See `01_PROJECT_STATE.md` for the component-by-component breakdown. Summary: 21 components `PLANNED`, 0 `IMPLEMENTED`, 4 explicitly `REJECTED`.
+See `01_PROJECT_STATE.md` for component breakdown: 20 components `PLANNED`, 1 `VERIFIED` (M1 foundation), 4 explicitly `REJECTED`.
 
 ## Test status
 
 ```
 Tests specified:  68   (testing/TEST_MATRIX.md)
-Tests written:     0
-Tests run:         0
-Tests passing:     0
+Tests written:     1   (tests/test_smoke.py)
+Tests run:         1   (2026-09-01)
+Tests passing:     1   (100% pass rate)
 ```
-
-`tests/` does not exist.
 
 ## Experiment status
 
@@ -49,26 +46,26 @@ Every numeric figure appearing in `final.md` §4 is **illustrative and labelled 
 
 ## Known bugs
 
-None — there is no code to have bugs. Five **design defects** were found and fixed in specification before implementation; they are recorded in `testing/FAILURE_LOG.md` (F-0001 to F-0005) because they are easy to reintroduce while coding.
+None — 5 design defects recorded in `testing/FAILURE_LOG.md` (F-0001 to F-0005) fixed in specification.
 
 ## Open questions
 
 | # | Question | Impact | Owner |
 |---|---|---|---|
-| OQ-1 | Actual submission deadline. Third-party sources say 2026-09-05; Razorpay has never published it. | Decides whether the 10-day, 5-day or 3-day roadmap applies. **Verify before planning another day.** | human |
-| OQ-2 | NPCI / MSME Samadhaan licence terms | Blocks using the extracted tables. Fallback (published ranges) already defined, so it does not block the build. | human |
-| OQ-3 | Razorpay Payment Downtime API access (support-request gated) | Affects D2 realism. Simulate and declare on camera if not granted. | human |
+| OQ-1 | Actual submission deadline. Third-party sources say 2026-09-05; Razorpay has never published it. | Decides whether the 10-day, 5-day or 3-day roadmap applies. | human |
+| OQ-2 | NPCI / MSME Samadhaan licence terms | Blocks using extracted tables. Fallback (published ranges) defined. | human |
+| OQ-3 | Razorpay Payment Downtime API access | Affects D2 realism. Simulate if not granted. | human |
 
 ## Blockers
 
 | # | Blocker | Severity |
 |---|---|---|
-| B-1 | Repository has **zero git commits**. Nothing is version controlled; the anti-rigging evidence (response function frozen before scorers) depends on commit ordering and cannot be established retroactively. | **HIGH — fix first** |
-| B-2 | Deadline unverified (OQ-1). Planning a 10-day build against a possibly 4-day window. | **HIGH** |
+| B-1 | **RESOLVED** (2026-09-01): Git repository initialized and initial commit `466df02` created. | RESOLVED |
+| B-2 | Deadline unverified (OQ-1). | **HIGH** |
 
 ## Notes for the next agent
 
-- Nothing is implemented. Do not infer otherwise from the volume of documentation.
-- Start at `09_IMPLEMENTATION_ROADMAP.md` M1, then M2, then M3.
-- **M3 (contact ledger) is a hard gate.** If its tests are not green, stop and fix before anything else — a broken ledger silently voids every number produced afterwards.
-- The first commit should happen before writing the response function, so the freeze ordering is provable.
+- M1.1 is complete and verified with smoke test passing (`466df02`).
+- Proceed next to M2 (Domain model + Database schema with CHECK constraints).
+- **M3 (contact ledger) remains a hard gate** following M2.
+

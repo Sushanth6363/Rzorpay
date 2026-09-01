@@ -13,11 +13,12 @@ Prioritised queue. **P0 items block everything below them.**
 - **Status**: NOT_STARTED
 - **Owner**: human (cannot be resolved by an agent)
 
-### P0-2 — Initialise the repository and make the first commit
+### P0-2 — Initialise the repository and make the first commit (M1.1)
 - **Why**: zero commits exist. The anti-rigging evidence depends on commit ordering (response function frozen before either scorer) and cannot be reconstructed later. Every subsequent step assumes version control.
 - **Dependency**: none
-- **Definition of done**: `.gitignore`, `requirements.txt`, `pyproject.toml` or `pytest.ini`, `app/__init__.py`, `tests/__init__.py`, `.env.example`, `Makefile`; `pytest` collects an empty suite and exits 0; at least one commit exists.
-- **Status**: NOT_STARTED
+- **Definition of done**: `.gitignore`, `requirements.txt`, `pytest.ini`, `app/__init__.py`, `tests/__init__.py`, `tests/test_smoke.py`, `.env.example`, `Makefile`; `pytest` runs 1 real smoke test and passes; at least one commit exists.
+- **Status**: COMPLETED (Commit: `466df026f0cacac2101e9bfd9f2341e6b38e2ff9`, Date: 2026-09-01)
+
 
 ### P0-3 — Schema + domain model (M2)
 - **Why**: everything else persists through it. The CHECK constraints are the enforcement mechanism for INV-2.

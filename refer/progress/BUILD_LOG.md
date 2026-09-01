@@ -38,6 +38,25 @@ Git commit:
 
 ---
 
+## 2026-09-01 — M1.1 Repository & Reproducibility Foundation
+
+- **Date**: 2026-09-01
+- **Agent/model**: Antigravity Agent
+- **Goal**: Implement M1.1 — Repository + Reproducibility Foundation with real executable test infrastructure.
+- **Work performed**: Created virtual environment `.venv` (Python 3.14.3), installed approved dependencies (`numpy`, `pandas`, `scipy`, `scikit-learn`, `catboost`, `matplotlib`, `pytest`, `hypothesis`, `streamlit`), created `.gitignore`, `requirements.txt`, `pytest.ini`, `.env.example`, `Makefile`, `app/__init__.py`, `tests/__init__.py`, `tests/test_smoke.py`, executed `pytest`, initialized Git repository, staged files, created first commit.
+- **Files changed**: `.gitignore`, `requirements.txt`, `pytest.ini`, `.env.example`, `Makefile`, `app/__init__.py`, `tests/__init__.py`, `tests/test_smoke.py`, `refer/progress/CURRENT_STATUS.md`, `refer/progress/NEXT_STEPS.md`, `refer/progress/BUILD_LOG.md`, `refer/testing/TEST_MATRIX.md`.
+- **Tests run**: `pytest`
+- **Tests passed**: 1 (`tests/test_smoke.py::test_app_import_and_version`)
+- **Tests failed**: 0
+- **Decisions made**: Set up local `.venv` and Git repository root at workspace root `c:\Users\Dell\Documents\New folder\Razorpay`.
+- **Problems discovered**: None during build.
+- **Verification performed**: `pytest` output recorded (`1 passed in 1.96s`), `pip freeze` recorded to `requirements.txt`, Git status clean after initial commit.
+- **Next action**: M2 — Domain model + Database schema (sqlite WAL).
+- **Git commit**: `466df026f0cacac2101e9bfd9f2341e6b38e2ff9`
+
+
+---
+
 ## Prior work (documentation phase, pre-log)
 
 Recorded for continuity; these sessions predate this log.
