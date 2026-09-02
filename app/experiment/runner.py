@@ -27,6 +27,17 @@ from app.domain.models import (
 from app.experiment.assignment import ExperimentAssigner
 from app.experiment.policies import ExperimentPolicyController
 
+# Customer-facing outbound channels. RECOMMEND_RETRY is deliberately EXCLUDED: it is a
+# recommendation to the payment infrastructure, not a message to a person (ADR-0006), and
+# counting it as a "contact" would understate the engine's contact efficiency.
+OUTBOUND_CONTACT_ACTIONS = frozenset({
+    ActionType.WHATSAPP_LINK,
+    ActionType.SMS_LINK,
+    ActionType.EMAIL_LINK,
+    ActionType.IVR_CALL,
+    ActionType.AGENT_DIAL,
+})
+
 
 class ExperimentRunner:
     """Executes batch experiments across arms and computes statistical metrics."""
@@ -156,6 +167,9 @@ class ExperimentRunner:
                 self_cured_count=0,
                 total_cost_paise=0,
                 net_value_paise=0,
+                outbound_contacts=0,
+                contacted_customers=0,
+                total_customers=0,
             )
 
         successes = 0
@@ -164,8 +178,22 @@ class ExperimentRunner:
         self_cured_count = 0
         total_cost_paise = 0
         abstentions = 0
+        outbound_contacts = 0
+        all_customers = set()
+        contacted = set()
 
         for r in results:
+            all_customers.add(r.customer_id)
+            # An outbound contact is counted only when a customer-facing action was
+            # actually executed - not merely decided. A decision suppressed by policy or
+            # by an exhausted budget reaches no customer and must not be counted.
+            if (
+                r.decision.selected_action in OUTBOUND_CONTACT_ACTIONS
+                and r.execution_result is not None
+            ):
+                outbound_contacts += 1
+                contacted.add(r.customer_id)
+
             if r.attribution.payment_outcome == PaymentOutcome.PAYMENT_SUCCESS:
                 successes += 1
 
@@ -196,6 +224,9 @@ class ExperimentRunner:
             net_value_paise=net_val,
             contact_cap_breaches=0,
             abstention_count=abstentions,
+            outbound_contacts=outbound_contacts,
+            contacted_customers=len(contacted),
+            total_customers=len(all_customers),
         )
 
     def _calculate_statistical_comparison(

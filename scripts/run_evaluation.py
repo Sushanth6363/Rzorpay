@@ -217,6 +217,25 @@ def render_markdown(report: Dict[str, Any]) -> str:
             f"{m['self_cured_count']} | {m.get('abstention_count', 0)} |"
         )
     lines.append("")
+    lines.append("## Contact efficiency")
+    lines.append("")
+    lines.append("> Recovery rate alone cannot show what this engine is for. Every safety control")
+    lines.append("> suppresses a contact, so on that metric more safety can only ever look worse.")
+    lines.append("> The claim is *comparable recovery for materially fewer customer contacts* —")
+    lines.append("> which is what this table measures.")
+    lines.append("")
+    lines.append("| Arm | Outbound contacts | Contacts / customer | Recovery per contact | Contact rate |")
+    lines.append("|---|---:|---:|---:|---:|")
+    for arm, m in report["arm_metrics"].items():
+        lines.append(
+            f"| {arm} | {m.get('outbound_contacts', 0)} | {m.get('contacts_per_customer', 0):.2f} | "
+            f"{rupees(int(m.get('recovery_per_contact_paise', 0)))} | {m.get('contact_rate', 0):.1%} |"
+        )
+    lines.append("")
+    lines.append("An outbound contact is a customer-facing message that was actually executed. "
+                 "`RECOMMEND_RETRY` is excluded: it is a recommendation to the payment "
+                 "infrastructure, not a message to a person.")
+    lines.append("")
     lines.append("## Primary comparison — PRE-REGISTERED")
     lines.append("")
     lines.append(f"**{primary['comparison_id']}** · metric: incremental recovery rate · unit of analysis: opportunity")

@@ -629,6 +629,30 @@ class ArmMetrics:
     contact_cap_breaches: int = 0
     abstention_count: int = 0
 
+    # --- CONTACT EFFICIENCY -------------------------------------------------
+    # The engine's thesis is "one customer, one message" - comparable recovery
+    # for materially fewer customer contacts. Measured on recovery rate ALONE,
+    # every safety feature can only ever look worse, because each one suppresses
+    # a contact. These fields are what make the trade-off visible.
+    outbound_contacts: int = 0          # customer-facing messages actually sent
+    contacted_customers: int = 0        # distinct customers contacted at least once
+    total_customers: int = 0            # distinct customers in the arm
+
+    @property
+    def contacts_per_customer(self) -> float:
+        """Average outbound contacts per distinct customer. Lower is better."""
+        return self.outbound_contacts / self.total_customers if self.total_customers else 0.0
+
+    @property
+    def recovery_per_contact_paise(self) -> float:
+        """Attributed recovery earned per outbound contact. Higher is better."""
+        return self.attributed_recovered_paise / self.outbound_contacts if self.outbound_contacts else 0.0
+
+    @property
+    def contact_rate(self) -> float:
+        """Share of opportunities that resulted in an outbound contact."""
+        return self.outbound_contacts / self.total_opportunities if self.total_opportunities else 0.0
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "arm": self.arm.value,
@@ -642,6 +666,12 @@ class ArmMetrics:
             "net_value_paise": self.net_value_paise,
             "contact_cap_breaches": self.contact_cap_breaches,
             "abstention_count": self.abstention_count,
+            "outbound_contacts": self.outbound_contacts,
+            "contacted_customers": self.contacted_customers,
+            "total_customers": self.total_customers,
+            "contacts_per_customer": round(self.contacts_per_customer, 4),
+            "recovery_per_contact_paise": round(self.recovery_per_contact_paise, 2),
+            "contact_rate": round(self.contact_rate, 4),
         }
 
 

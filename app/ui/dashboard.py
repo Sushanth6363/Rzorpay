@@ -362,13 +362,25 @@ def section_experiment() -> None:
             "Attributed": m.attributed_recovered_paise / 100,
             "Self-cures": m.self_cured_count,
             "Abstentions": getattr(m, "abstention_count", 0),
+            "Contacts": getattr(m, "outbound_contacts", 0),
+            "Per customer": getattr(m, "contacts_per_customer", 0.0),
+            "Recovery / contact": getattr(m, "recovery_per_contact_paise", 0.0) / 100,
         } for name, m in summary.arm_metrics.items()]),
         use_container_width=True, hide_index=True,
         column_config={
             "Recovery rate": st.column_config.NumberColumn(format="%.2f%%"),
             "Gross": st.column_config.NumberColumn(format="₹%.0f"),
             "Attributed": st.column_config.NumberColumn(format="₹%.0f"),
+            "Per customer": st.column_config.NumberColumn(format="%.2f"),
+            "Recovery / contact": st.column_config.NumberColumn(format="₹%.0f"),
         },
+    )
+    st.markdown(
+        '<div class="note"><b>Recovery rate alone cannot show what this engine is for.</b> '
+        'Every safety control suppresses a contact, so on that metric more safety can only ever '
+        'look worse. The claim is comparable recovery for materially fewer contacts — read '
+        '<b>Contacts</b> and <b>Recovery / contact</b> alongside the rate, never the rate alone.</div>',
+        unsafe_allow_html=True,
     )
 
     st.markdown("##### Secondary comparisons · Holm-Bonferroni corrected")
