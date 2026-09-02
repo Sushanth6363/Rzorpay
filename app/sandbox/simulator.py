@@ -7,6 +7,7 @@ INVARIANTS:
 4. Ambiguous execution: Supports simulating transport timeouts yielding EXECUTION_UNKNOWN.
 """
 
+import hashlib
 import random
 from typing import Any, Dict, Optional
 from app.clock import Clock, SystemClock
@@ -20,6 +21,22 @@ from app.domain.models import (
     SandboxActionRequest,
     SandboxExecutionResult,
 )
+
+
+def _substream(random_seed, *parts) -> random.Random:
+    """Deterministic per-opportunity RNG substream.
+
+    CRITICAL (07_EXPERIMENT_METHODOLOGY): seeding on random_seed ALONE makes every
+    opportunity within a seed draw the identical number, collapsing the effective
+    sample size from N opportunities to N seeds and making reported confidence
+    intervals far too narrow. Keying the stream on (seed, opportunity, action) gives
+    each opportunity an independent draw while remaining fully reproducible, and
+    supplies common random numbers across arms: the same opportunity given the same
+    action draws the same outcome in every arm, so arms cannot differ by luck.
+    """
+    key = "|".join([str(random_seed if random_seed is not None else 42), *[str(p) for p in parts]])
+    digest = hashlib.sha256(key.encode()).hexdigest()
+    return random.Random(int(digest[:16], 16))
 
 
 class SandboxSimulator:
@@ -42,7 +59,7 @@ class SandboxSimulator:
         # Handle NO_ACTION explicit counterfactual baseline
         if request.action_type == ActionType.NO_ACTION:
             # Deterministic natural recovery decision based on seed
-            rng = random.Random(random_seed if random_seed is not None else 42)
+            rng = _substream(random_seed, request.opportunity_id, "NO_ACTION")
             # 15% natural recovery rate for NO_ACTION
             outcome = force_outcome or (
                 PaymentOutcome.SELF_CURED if rng.random() < 0.15 else PaymentOutcome.NO_PAYMENT
@@ -123,7 +140,7 @@ class SandboxSimulator:
             )
 
         # Standard simulated execution
-        rng = random.Random(random_seed if random_seed is not None else hash(request.action_id) % 1000000)
+        rng = _substream(random_seed, request.opportunity_id, request.action_type.value)
 
         # Channel base success rates for simulation
         success_probabilities = {

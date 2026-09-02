@@ -4,6 +4,7 @@ Standardized contract verification for experimentation, incremental recovery mea
 and feedback loop integrity.
 """
 
+from app.db.dal import TenantScopedDB
 import pytest
 from app.domain.enums import ActionType, ExperimentArm, PaymentOutcome, StatisticalStatus
 from app.experiment.assignment import ExperimentAssigner
@@ -121,16 +122,43 @@ def test_m7_e06_gateway_outage_excluded_from_unsafe_treatment():
 
 
 def test_m7_e07_contact_budget_limits_treatment_execution():
-    """M7-E07: Exhausted contact budget prevents intervention execution across treatment arms."""
+    """M7-E07: Exhausted contact budget prevents intervention execution across treatment arms.
+
+    The budget must be exhausted by DISTINCT opportunities for the same customer. Replaying
+    one opportunity cannot exhaust it: identical (opportunity, action) pairs share an
+    idempotency key and by design consume exactly one slot (INV-2, ADR-0003). That is the
+    contact ledger working, not a budget that failed to bind.
+    """
     controller = ExperimentPolicyController()
-    raw = {"merchant_id": "m1", "customer_id": "c_budget_exhausted", "event_id": "e7", "amount_paise": 100000}
 
-    # First consumption to exhaust budget
-    for _ in range(5):
-        controller.execute_arm_policy(raw_event=raw, arm=ExperimentArm.A5, random_seed=42)
+    def event(event_id: str) -> dict:
+        return {
+            "merchant_id": "m1",
+            "customer_id": "c_budget_exhausted",
+            "event_id": event_id,
+            "amount_paise": 100000,
+        }
 
-    # Next attempt should be constrained by contact budget
-    result = controller.execute_arm_policy(raw_event=raw, arm=ExperimentArm.A5, random_seed=42)
+    # Distinct opportunities for one customer -> distinct idempotency keys -> real consumption.
+    for i in range(6):
+        controller.execute_arm_policy(
+            raw_event=event(f"e7_{i}"), arm=ExperimentArm.A5, random_seed=42
+        )
+
+    # The shared per-customer budget must now be exhausted.
+    orch = controller._orchestrator_for(ExperimentArm.A5)
+    dal = TenantScopedDB(conn=orch.conn, merchant_id="m1", clock=orch.clock)
+    budget = dal.get_contact_budget("c_budget_exhausted")
+    assert budget.is_cap_exhausted(), (
+        f"precondition failed: budget not exhausted "
+        f"(reserved={budget.reserved_count}, consumed={budget.consumed_count}, cap={budget.cap})"
+    )
+    assert budget.reserved_count + budget.consumed_count <= budget.cap  # INV-2
+
+    # A further distinct opportunity must not produce an outbound contact.
+    result = controller.execute_arm_policy(
+        raw_event=event("e7_final"), arm=ExperimentArm.A5, random_seed=42
+    )
     assert result.decision.selected_action in (ActionType.NO_ACTION, ActionType.RECOMMEND_RETRY)
 
 

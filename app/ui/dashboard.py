@@ -304,18 +304,15 @@ def render_dashboard():
             st.markdown("### Interactive Invariant Verification Trigger")
             if st.button("⚡ Test Point-in-Time Feature Leakage Error (INV-7)"):
                 try:
-                    fb = FeatureBuilder()
-                    invalid_raw = {
-                        "merchant_id": "m1",
-                        "customer_id": "c1",
-                        "event_id": "e1",
-                        "amount_paise": 100000,
-                        "gross_recovered_paise": 100000,  # POST-DECISION FIELD LEAKAGE
-                    }
-                    fb.extract_features(invalid_raw)
+                    FeatureBuilder.validate_point_in_time_safety(
+                        observed_at="2026-09-01T10:00:00Z",
+                        decision_timestamp="2026-09-01T10:00:00Z",
+                        extra_fields={"outcome": "SUCCESS_RECOVERED"},  # POST-DECISION LEAKAGE
+                    )
                     st.error("Error: Feature leakage check failed to raise!")
                 except PointInTimeLeakageError as e:
                     st.success(f"✅ INV-7 Enforcement Verified! Raised `PointInTimeLeakageError`: {e}")
+
 
     # =========================================================================
     # TAB 4: RETRAINING DATASET INSPECTOR

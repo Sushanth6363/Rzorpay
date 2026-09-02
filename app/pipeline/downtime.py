@@ -55,3 +55,20 @@ class SimulatedDowntimeProvider(DowntimeProvider):
     def get_provenance(self) -> DataProvenance:
         """Return provenance mode."""
         return DataProvenance.SIMULATED_EXTERNAL_STATE
+
+
+class NullDowntimeProvider(DowntimeProvider):
+    """Downtime signal DISABLED. Always reports the gateway as healthy.
+
+    Used by experiment arms that must run WITHOUT the downtime signal (A1, A2ns, A2),
+    so that A3 vs A2 isolates the contribution of downtime-signal consumption alone
+    (ADR-0011, 07_EXPERIMENT_METHODOLOGY).
+
+    This is not a claim that no outage occurred - it is the absence of the signal.
+    """
+
+    def is_gateway_down(self, gateway_name: str, method=None, timestamp=None) -> bool:
+        return False
+
+    def get_provenance(self) -> DataProvenance:
+        return DataProvenance.SIMULATED_EXTERNAL_STATE

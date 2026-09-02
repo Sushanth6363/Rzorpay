@@ -30,7 +30,14 @@ class HardSafetyFilter:
         # Check downtime status
         gateway_name = opportunity.context_data.get("gateway", "razorpay")
         method = opportunity.context_data.get("method")
+        # INV-4 SAFETY FLOOR: a GATEWAY_FAILURE diagnosis suppresses on its own. This is a
+        # safety property and is NEVER relaxed to make an experiment measurable.
         is_downtime = diagnosis.diagnosis_code == DiagnosisCode.GATEWAY_FAILURE
+
+        # ADDITIONAL CAPABILITY (D2, ADR-0011): the downtime SIGNAL reveals outages the error
+        # code does not. Its value shows on failures reported with an ordinary code that
+        # nonetheless occur inside an outage window - an arm without the signal is blind to
+        # those and acts; an arm with it suppresses. That difference is the A3 vs A2 measurement.
         if downtime_provider and downtime_provider.is_gateway_down(gateway_name, method, diagnosis.observed_at):
             is_downtime = True
 

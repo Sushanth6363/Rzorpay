@@ -32,9 +32,18 @@ class RecoveryPipeline:
         db: Optional[TenantScopedDB] = None,
         clock: Optional[Clock] = None,
         downtime_provider: Optional[DowntimeProvider] = None,
+        stage0_enabled: bool = True,
+        shared_ledger_enabled: bool = True,
     ) -> None:
         self.db = db
         self.clock = clock or SystemClock()
+        # stage0_enabled=False makes the pipeline skip the validation GATE, so the
+        # A2 vs A2ns comparison isolates the Stage 0 contribution (ADR-0011).
+        # Stage 0 still RUNS and is still recorded; only its power to reject is removed.
+        self.stage0_enabled = stage0_enabled
+        # When False, the shared per-customer budget is not consulted: independent agents
+        # have no cross-stream view, so the shared cap cannot suppress a candidate (D1 seam).
+        self.shared_ledger_enabled = shared_ledger_enabled
         self.downtime_provider = downtime_provider or SimulatedDowntimeProvider()
         self.stage0_evaluator = Stage0Evaluator(clock=self.clock)
         self.stage1_diagnoser = Stage1Diagnoser(downtime_provider=self.downtime_provider, clock=self.clock)
@@ -97,7 +106,12 @@ class RecoveryPipeline:
         context_data = opportunity.context_data or {}
 
         # Fetch contact budget from DB if available and not passed
-        if contact_budget is None and self.db and self.db.merchant_id == opportunity.merchant_id:
+        if (
+            self.shared_ledger_enabled
+            and contact_budget is None
+            and self.db
+            and self.db.merchant_id == opportunity.merchant_id
+        ):
             contact_budget = self.db.get_contact_budget(opportunity.customer_id)
 
         # If context_data specifies explicit simulated budget exhaustion
@@ -132,7 +146,7 @@ class RecoveryPipeline:
 
         # 5. Hard Safety Eligibility Filtering
         # If Stage 0 declared opportunity NOT_RECOVERABLE, all non-counterfactual candidates are SAFETY_REJECTED
-        if not stage0_result.is_recoverable:
+        if self.stage0_enabled and not stage0_result.is_recoverable:
             filtered_candidates = []
             for c in raw_candidates:
                 if c.is_counterfactual:

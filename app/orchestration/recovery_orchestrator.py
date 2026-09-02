@@ -47,11 +47,26 @@ class RecoveryOrchestrator:
         downtime_provider: Optional[DowntimeProvider] = None,
         ai_engine: Optional[AIRecoveryDecisionEngine] = None,
         simulator: Optional[SandboxSimulator] = None,
+        stage0_enabled: bool = True,
+        shared_ledger_enabled: bool = True,
     ) -> None:
         self.clock = clock or SystemClock()
         self.conn = db_conn or init_db(":memory:")
         self.downtime_provider = downtime_provider
-        self.pipeline = RecoveryPipeline(clock=self.clock, downtime_provider=self.downtime_provider)
+        # stage0_enabled and downtime_provider are the experiment-arm seams (ADR-0011):
+        # arms must differ by real capability, never by label alone.
+        self.stage0_enabled = stage0_enabled
+        # shared_ledger_enabled=False models INDEPENDENT per-stream agents: each acts without
+        # a shared per-customer contact budget, so nothing arbitrates across streams and the
+        # cap cannot bind. This is the A2ns vs A1 seam (D1). Turning it off does not disable
+        # the ledger's bookkeeping - it removes the SHARED budget's power to suppress.
+        self.shared_ledger_enabled = shared_ledger_enabled
+        self.pipeline = RecoveryPipeline(
+            clock=self.clock,
+            downtime_provider=self.downtime_provider,
+            stage0_enabled=stage0_enabled,
+            shared_ledger_enabled=shared_ledger_enabled,
+        )
         self.ai_engine = ai_engine or AIRecoveryDecisionEngine()
         self.simulator = simulator or SandboxSimulator(clock=self.clock)
         self.attribution_engine = AttributionEngine(clock=self.clock)
@@ -150,8 +165,16 @@ class RecoveryOrchestrator:
         # 5. Handle Action Intervention -> Atomic Reservation
         idempotency_key = f"idemp_{opportunity_id}_{selected_action.value}"
 
+        # D1 seam: with a SHARED ledger, every stream reserves against one per-customer
+        # budget, so the cap arbitrates across streams. Without it, each independent agent
+        # reserves against its own budget row and nothing arbitrates - which is precisely
+        # the behaviour of N agents that cannot see each other.
+        budget_key = (
+            customer_id if self.shared_ledger_enabled else f"{customer_id}::{opportunity_id}"
+        )
+
         ledger_entry: Optional[ContactLedgerEntry] = ledger_engine.reserve_contact(
-            customer_id=customer_id,
+            customer_id=budget_key,
             opportunity_id=opportunity_id,
             action_type=selected_action,
             intervention_idempotency_key=idempotency_key,
