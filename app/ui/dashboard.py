@@ -10,6 +10,12 @@ INVARIANTS:
    always visually separated from natural self-cure (attributed = 0).
 """
 
+import sys
+import os
+
+# Ensure repository root is in sys.path for Streamlit Cloud deployment
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+
 from typing import Any, Dict, List
 
 import pandas as pd
