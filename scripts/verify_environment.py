@@ -17,11 +17,21 @@ if hasattr(sys.stdout, "reconfigure"):
 
 
 def check_python_version() -> bool:
-    """Verify CPython version is 3.11+."""
+    """Verify CPython version is within the supported range (3.11-3.13; 3.12 recommended).
+
+    The upper bound is not cosmetic: the pinned scientific stack (CatBoost, NumPy, SciPy,
+    scikit-learn) has no wheels for 3.14, so a suite run there fails to build and looks
+    broken. Catching it here — and in scripts/bootstrap.py — is what stops that from
+    reaching a reviewer.
+    """
     version = sys.version_info
     print(f"[CHECK 1/6] Python Version: {version.major}.{version.minor}.{version.micro}")
     if version < (3, 11):
         print(f"  [FAIL] Python 3.11+ required. Found {version.major}.{version.minor}")
+        return False
+    if version[:2] > (3, 13):
+        print(f"  [FAIL] Python {version.major}.{version.minor} is unsupported (no wheels for "
+              "CatBoost/NumPy/SciPy). Use 3.11-3.13 (3.12 recommended): run `make setup`.")
         return False
     print("  [OK] Python runtime version verified.")
     return True

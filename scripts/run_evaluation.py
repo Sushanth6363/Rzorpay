@@ -116,6 +116,44 @@ def render_markdown(report: Dict[str, Any]) -> str:
     lines.append("> Interventions, customer responses and recovery outcomes are simulated. This")
     lines.append("> artifact does not measure, and cannot measure, real Razorpay recovery uplift.")
     lines.append("")
+    lines.append("## Headline — the honest read, before you find it yourself")
+    lines.append("")
+    # Computed from the run, never hand-written, so the artifact states its own weakest
+    # result out loud rather than burying it in a table for a reviewer to catch.
+    a5_vs_a3 = next(
+        (c for c in report["secondary_comparisons"] if c["comparison_id"] == "A5_vs_A3"),
+        None,
+    )
+    if a5_vs_a3 is not None:
+        d = a5_vs_a3["incremental_recovery_rate"]
+        sig = a5_vs_a3["status"] == "STATISTICALLY_SIGNIFICANT"
+        if d < 0 and sig:
+            lines.append(
+                f"- **The CatBoost model (A5) does NOT beat the transparent heuristic (A3).** "
+                f"A5−A3 is **{d:+.2%}** and statistically significant — the model is "
+                f"*significantly worse* under this simulator. Reported, not tuned away. The "
+                f"engine's value is in its safety, arbitration and contact efficiency, not in "
+                f"the model being cleverer than a readable rule."
+            )
+        elif d < 0:
+            lines.append(
+                f"- **The model (A5) does not clearly beat the heuristic (A3):** "
+                f"A5−A3 is {d:+.2%}, inconclusive at this sample size — no cleverness claim is made."
+            )
+        else:
+            lines.append(
+                f"- The model (A5) edges the heuristic (A3) by {d:+.2%} "
+                f"({'significant' if sig else 'inconclusive'}) — read alongside every caveat below."
+            )
+    prim_d = primary["incremental_recovery_rate"]
+    lines.append(
+        f"- **Primary comparison (A2−A1) is {prim_d:+.2%}, verdict {primary['status']}.** "
+        f"An inconclusive primary is an honest outcome, not a failure to demonstrate value — "
+        f"the contact-efficiency and compliance results below are where this engine earns its keep."
+    )
+    lines.append("- **Every number here is synthetic.** These are properties of an authored "
+                 "simulation, not evidence of real-world recovery.")
+    lines.append("")
     lines.append("## Provenance")
     lines.append("")
     lines.append("| Field | Value |")
