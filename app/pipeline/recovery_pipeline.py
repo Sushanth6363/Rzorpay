@@ -19,6 +19,7 @@ from app.domain.models import (
 from app.pipeline.candidate_generator import CandidateGenerator
 from app.pipeline.dataset_adapter import DatasetAdapter
 from app.pipeline.downtime import DowntimeProvider, SimulatedDowntimeProvider
+from app.pipeline.escalation import EscalationPolicy
 from app.pipeline.safety_filter import HardSafetyFilter
 from app.pipeline.stage0 import Stage0Evaluator
 from app.pipeline.stage1 import Stage1Diagnoser
@@ -34,6 +35,7 @@ class RecoveryPipeline:
         downtime_provider: Optional[DowntimeProvider] = None,
         stage0_enabled: bool = True,
         shared_ledger_enabled: bool = True,
+        escalation_policy: Optional[EscalationPolicy] = None,
     ) -> None:
         self.db = db
         self.clock = clock or SystemClock()
@@ -49,6 +51,9 @@ class RecoveryPipeline:
         self.stage1_diagnoser = Stage1Diagnoser(downtime_provider=self.downtime_provider, clock=self.clock)
         self.candidate_generator = CandidateGenerator()
         self.safety_filter = HardSafetyFilter()
+        # Compliant escalation runs AFTER the hard safety filter and only ever subtracts,
+        # so a SAFETY_REJECTED candidate can never be revived by the escalation ceiling.
+        self.escalation_policy = escalation_policy or EscalationPolicy()
 
     def process_canonical_event(
         self,
@@ -171,6 +176,34 @@ class RecoveryPipeline:
                 downtime_provider=self.downtime_provider,
             )
 
+        # 5b. Compliant Escalation Ceiling (ADR-0015)
+        # Intensity may rise at most ONE rung above the last CONFIRMED contact, and never
+        # inside the quiet period. Applied here - after hard safety, before scoring - so
+        # the model chooses among what policy permits rather than the reverse.
+        #
+        # The history key mirrors the reservation key exactly: with a shared ledger the
+        # ladder is per customer, so a second stream inherits the first stream's rung.
+        # Without one, independent agents have no shared memory and each starts at the
+        # quietest rung - which is the honest depiction of N uncoordinated agents, and is
+        # precisely how a customer ends up receiving four first-touch messages.
+        escalation_assessment = None
+        if self.db and self.db.merchant_id == opportunity.merchant_id:
+            history_key = (
+                opportunity.customer_id
+                if self.shared_ledger_enabled
+                else f"{opportunity.customer_id}::{opportunity.opportunity_id}"
+            )
+            try:
+                history = self.db.get_customer_ledger_history(history_key)
+            except Exception:
+                history = []
+            filtered_candidates, escalation_assessment = self.escalation_policy.apply(
+                candidates=filtered_candidates,
+                history=history,
+                decision_timestamp=eval_time,
+                event_type_value=opportunity.event_type.value,
+            )
+
         # 6. Feature Snapshot Construction (Point-in-Time Safe)
         feature_snapshot = {
             "merchant_id": opportunity.merchant_id,
@@ -199,6 +232,7 @@ class RecoveryPipeline:
             feature_snapshot=feature_snapshot,
             provenance=provenance,
             is_contact_reserved=False,  # EXPLICIT INVARIANT CHECK
+            escalation=escalation_assessment,
         )
 
     def process_raw_event(

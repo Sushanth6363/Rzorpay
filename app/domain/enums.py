@@ -154,6 +154,10 @@ class SafetyRejectReason(str, Enum):
     POLICY_PROHIBITION = "POLICY_PROHIBITION"
     MISSING_EVIDENCE = "MISSING_EVIDENCE"
     EXECUTION_OWNERSHIP_VIOLATION = "EXECUTION_OWNERSHIP_VIOLATION"
+    # Compliant escalation (ADR-0015): intensity may rise by at most one rung per
+    # confirmed contact, and never inside the quiet period.
+    ESCALATION_CEILING = "ESCALATION_CEILING"
+    ESCALATION_COOLDOWN = "ESCALATION_COOLDOWN"
 
 
 class DataProvenance(str, Enum):

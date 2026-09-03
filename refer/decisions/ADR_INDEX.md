@@ -20,6 +20,8 @@ Every significant decision is recorded as an ADR. **An ADR is mandatory before**
 | [0012](ADR-0012-adapter-boundary-and-canonical-event.md) | Provider-neutral adapter boundary & `CanonicalEvent` contract (Razorpay Test Mode + Simulator) | PROPOSED | 2026-09-01 | ingestion, adapters, domain |
 | [0013](ADR-0013-webhook-verification-and-idempotency.md) | Webhook HMAC SHA256 verification, idempotency, and tenant mapping | PROPOSED | 2026-09-01 | webhooks, security, ledger |
 | [0014](ADR-0014-streamlit-judge-sandbox-architecture.md) | Streamlit Public Live Demo & Judge Interactive Sandbox (Live, Sandbox, Red-Team modes) | PROPOSED | 2026-09-01 | UI, judge sandbox, deployment |
+| [0015](ADR-0015-compliant-escalation-ladder.md) | Compliant escalation: one rung, on evidence, after a quiet period | ACCEPTED | 2026-09-03 | policy, actions, pipeline, audit |
+| [0016](ADR-0016-tds-derivation-over-declared-flag.md) | TDS position derived from the invoice, never read off a flag | ACCEPTED | 2026-09-03 | Stage 0, attribution, money reporting |
 
 ## Open decisions
 

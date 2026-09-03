@@ -154,8 +154,16 @@ class ExperimentPolicyController:
         arm: ExperimentArm,
         random_seed: int = 42,
         force_sandbox_outcome: Optional[PaymentOutcome] = None,
+        decision_timestamp: Optional[str] = None,
     ) -> EndToEndRecoveryResult:
-        """Execute closed-loop orchestration under the exact capabilities mandated by the arm."""
+        """Execute closed-loop orchestration under the exact capabilities mandated by the arm.
+
+        `decision_timestamp` gives the batch a TIME AXIS. Without one, every decision in a
+        run happens at wall-clock now, microseconds apart, and any quiet-period rule is
+        permanently active - which would make compliant escalation untestable and would
+        silently freeze the intensity ladder. Callers that model elapsed time pass it; the
+        default remains the clock, matching production.
+        """
         orch = self._orchestrator_for(arm)
 
         if arm == ExperimentArm.CONTROL:
@@ -175,4 +183,5 @@ class ExperimentPolicyController:
             force_sandbox_outcome=force_sandbox_outcome,
             random_seed=random_seed,
             arm=arm.value,
+            decision_timestamp=decision_timestamp or raw_event.get("decision_timestamp"),
         )

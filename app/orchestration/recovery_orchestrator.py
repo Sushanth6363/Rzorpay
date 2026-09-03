@@ -12,7 +12,7 @@ INVARIANTS:
 import sqlite3
 from typing import Any, Dict, Optional
 from app.attribution.attribution_engine import AttributionEngine
-from app.clock import Clock, SystemClock
+from app.clock import Clock, FakeClock, SystemClock
 from app.db.dal import TenantScopedDB
 from app.db.init import init_db
 from app.domain.enums import (
@@ -89,8 +89,18 @@ class RecoveryOrchestrator:
         merch_id = merchant_id or raw_event.get("merchant_id", "default_merchant")
 
         # 1. Scoped DAL & Ledger Engine for Merchant Tenant
-        ledger_engine = ContactLedgerEngine(conn=self.conn, merchant_id=merch_id, clock=self.clock)
-        dal = TenantScopedDB(conn=self.conn, merchant_id=merch_id, clock=self.clock)
+        #
+        # CLOCK RESOLUTION. When the caller supplies a decision timestamp, that IS this
+        # decision's "now". Stamping the ledger from the wall clock instead would put a
+        # contact's resolved_at in a different epoch from the decision that caused it, and
+        # every rule that reasons over elapsed time would read nonsense - the escalation
+        # quiet period above all, which would then be permanently active and silently
+        # freeze the intensity ladder. In a replay or backtest the audit trail must sit on
+        # the batch's own time axis. With no timestamp supplied, behaviour is unchanged.
+        call_clock: Clock = FakeClock(eval_time) if decision_timestamp else self.clock
+
+        ledger_engine = ContactLedgerEngine(conn=self.conn, merchant_id=merch_id, clock=call_clock)
+        dal = TenantScopedDB(conn=self.conn, merchant_id=merch_id, clock=call_clock)
         self.pipeline.db = dal
 
         # 2. Run M4 Pipeline -> Context
@@ -99,7 +109,15 @@ class RecoveryOrchestrator:
             decision_timestamp=eval_time,
         )
 
+        # Money at risk is the invoice face amount UNLESS Stage 0 derived that part of the
+        # shortfall is statutory withholding. Chasing - and later reporting as recovered -
+        # the exchequer's share would inflate every money figure in the batch by an amount
+        # that was never collectable. The restatement can only ever reduce.
         amount_at_risk_paise = context.opportunity.amount.amount_paise
+        restated = context.stage0_result.recoverable_amount_paise
+        if restated is not None and 0 <= restated < amount_at_risk_paise:
+            amount_at_risk_paise = restated
+
         customer_id = context.opportunity.customer_id
         opportunity_id = context.opportunity.opportunity_id
 
@@ -160,6 +178,8 @@ class RecoveryOrchestrator:
                 attribution=attribution,
                 observation=observation,
                 trace_id=trace_id,
+                event_type=context.opportunity.event_type,
+                escalation=context.escalation,
             )
 
         # 5. Handle Action Intervention -> Atomic Reservation
@@ -227,6 +247,8 @@ class RecoveryOrchestrator:
                 attribution=attribution,
                 observation=observation,
                 trace_id=trace_id,
+                event_type=context.opportunity.event_type,
+                escalation=context.escalation,
             )
 
         # 6. Record Execution Attempt
@@ -310,4 +332,6 @@ class RecoveryOrchestrator:
             attribution=attribution,
             observation=observation,
             trace_id=trace_id,
+            event_type=context.opportunity.event_type,
+            escalation=context.escalation,
         )

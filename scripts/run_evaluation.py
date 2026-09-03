@@ -26,7 +26,6 @@ import argparse
 import hashlib
 import json
 import platform
-import random
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -37,99 +36,23 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from app.domain.enums import EventType  # noqa: E402
 from app.experiment.runner import ExperimentRunner  # noqa: E402
 
-# --- Batch generation parameters (authored; see docs/EXPERIMENT_METHODOLOGY.md) -------------
-FAILURE_REASONS = [
-    "INSUFFICIENT_FUNDS",
-    "PAYMENT_METHOD_FAILURE",
-    "AUTHENTICATION_FAILURE",
-    "EXPIRED_METHOD",
-    "GATEWAY_FAILURE",
-]
-# Amount bands in integer paise. Right-skewed, as real recovery populations are.
-AMOUNT_BANDS_PAISE = [
-    (50_000, 200_000),      # Rs 500 - Rs 2,000
-    (200_000, 1_000_000),   # Rs 2,000 - Rs 10,000
-    (1_000_000, 5_000_000),  # Rs 10,000 - Rs 50,000
-]
-AMOUNT_BAND_WEIGHTS = [0.55, 0.35, 0.10]
-MERCHANTS = ["merch_alpha", "merch_beta"]
-
-# Batch composition. Declared here and echoed into the report, because an ablation can
-# only measure a capability if the batch contains cases that capability acts on.
-PHANTOM_SHARE = 0.15    # already-paid: Stage 0 gate should decline to chase these
-OUTAGE_SHARE = 0.15     # inside a gateway outage: downtime signal should suppress
-OUTAGE_GATEWAY = "razorpay_outage_sim"
-
-
-def parse_seeds(spec: str) -> List[int]:
-    """Parse '21-40' or '21,22,23' into a seed list."""
-    spec = spec.strip()
-    if "-" in spec and "," not in spec:
-        lo, hi = spec.split("-", 1)
-        return list(range(int(lo), int(hi) + 1))
-    return [int(s) for s in spec.split(",") if s.strip()]
-
-
-def generate_batch(
-    num_events: int,
-    batch_seed: int,
-    reference_timestamp: str,
-) -> List[Dict[str, Any]]:
-    """Generate a deterministic synthetic opportunity batch.
-
-    Determinism: one RNG substream per event, keyed by (batch_seed, index), so generation
-    is order-independent and reproducible across processes and calendar days.
-    """
-    events: List[Dict[str, Any]] = []
-    for i in range(num_events):
-        stream = hashlib.sha256(f"{batch_seed}|evt_{i}".encode()).hexdigest()
-        rng = random.Random(int(stream[:16], 16))
-
-        merchant_id = MERCHANTS[rng.randrange(len(MERCHANTS))]
-        band = rng.choices(AMOUNT_BANDS_PAISE, weights=AMOUNT_BAND_WEIGHTS, k=1)[0]
-        amount_paise = rng.randrange(band[0], band[1])  # int paise, never float
-
-        event: Dict[str, Any] = {
-            "merchant_id": merchant_id,
-            "customer_id": f"cust_{i % max(1, num_events // 3):04d}",
-            "event_id": f"evt_{i:05d}",
-            "event_type": EventType.FAILED_PAYMENT.value,
-            "amount_paise": amount_paise,
-            "currency": "INR",
-            "occurred_at": reference_timestamp,
-            "failure_reason": FAILURE_REASONS[rng.randrange(len(FAILURE_REASONS))],
-            "gateway": "razorpay",
-        }
-
-        # The batch MUST contain the cases each ablation is meant to catch, or the
-        # comparison measures nothing. Composition is fixed and declared in the report.
-        draw = rng.random()
-        if draw < PHANTOM_SHARE:
-            # Already paid before any decision. Only an arm with the Stage 0 GATE
-            # active declines to chase this -> makes A2 vs A2ns measurable.
-            event["is_paid"] = True
-            event["paid_at"] = reference_timestamp
-            event["payment_status"] = "SUCCESS"
-            event["batch_case"] = "PHANTOM_ALREADY_PAID"
-        elif draw < PHANTOM_SHARE + OUTAGE_SHARE:
-            # Failure occurring inside a gateway outage window, but reported with an
-            # ORDINARY failure code. This is the only case where the downtime signal is
-            # worth anything: if the error already said GATEWAY_FAILURE, any scorer that
-            # respects the diagnosis reaches the same decision without the signal, and
-            # A3 vs A2 measures zero. The signal earns its place precisely when the
-            # outage is NOT evident from the error code (the narrow form of D2:
-            # detection is not the gap - consuming it at the recovery layer is).
-            event["failure_reason"] = "INSUFFICIENT_FUNDS"
-            event["gateway"] = OUTAGE_GATEWAY
-            event["batch_case"] = "OUTAGE_MASKED_AS_ORDINARY_FAILURE"
-        else:
-            event["batch_case"] = "GENUINE_FAILURE"
-
-        events.append(event)
-    return events
+# Batch generation lives in `app/experiment/batch.py` so the CLI runner and the judge
+# dashboard draw from ONE generator. Two generators drift, and the moment they do, the
+# numbers on screen stop describing the numbers in results/report.json.
+from app.experiment.batch import (  # noqa: E402
+    BATCH_WINDOW_DAYS,
+    OUTAGE_SHARE,
+    PHANTOM_SHARE,
+    STREAM_WEIGHTS,
+    TDS_NET_SETTLED_SHARE,
+    TDS_PARTIAL_SHARE,
+    _case_counts,
+    _stream_counts,
+    generate_batch,
+    parse_seeds,
+)
 
 
 def canonical_hash(obj: Any) -> str:
@@ -217,6 +140,83 @@ def render_markdown(report: Dict[str, Any]) -> str:
             f"{m['self_cured_count']} | {m.get('abstention_count', 0)} |"
         )
     lines.append("")
+    lines.append("## Money — Rs recovered vs Rs at risk, and cost per recovery")
+    lines.append("")
+    lines.append("> Rupees recovered without the denominator it was recovered FROM is not a")
+    lines.append("> recovery claim. Both are reported here, per arm, alongside what each")
+    lines.append("> recovery cost to obtain.")
+    lines.append("")
+    lines.append("| Arm | Rs at risk | Rs recovered (attributed) | Value recovery rate | Total channel cost | **Cost per recovery** |")
+    lines.append("|---|---:|---:|---:|---:|---:|")
+    for arm, m in report["arm_metrics"].items():
+        lines.append(
+            f"| {arm} | {rupees(m.get('total_at_risk_paise', 0))} | "
+            f"{rupees(m['attributed_recovered_paise'])} | "
+            f"{m.get('value_recovery_rate', 0):.2%} | {rupees(m['total_cost_paise'])} | "
+            f"**{m.get('cost_per_recovery_paise', 0):.2f} paise** |"
+        )
+    lines.append("")
+    lines.append("`Rs at risk` is the amount as it stood AT THE DECISION. For a B2B receivable "
+                 "settled net of statutory withholding, that is the derived recoverable "
+                 "balance, not the invoice face value — the engine never counts the "
+                 "exchequer's share as money it could have collected. See "
+                 "`app/pipeline/tds.py`.")
+    lines.append("")
+    lines.append("**What `cost per recovery` covers, and what it does not.** It is the marginal")
+    lines.append("channel cost of the messages sent, per successful recovery, from the schedule in")
+    lines.append("`app/scoring/costs.py` (email Rs 0.05, SMS Rs 0.15, WhatsApp Rs 0.25, IVR Rs 1.00,")
+    lines.append("agent dial Rs 15.00). It excludes staff time, platform cost, and the cost that")
+    lines.append("actually constrains recovery outreach in practice — customer goodwill, which has")
+    lines.append("no rupee price here. Read the figure as *channel spend per recovery*, not as a")
+    lines.append("fully-loaded cost of recovery, and read the contact-efficiency table below")
+    lines.append("alongside it: contacts per customer is the budget that genuinely binds.")
+    lines.append("")
+    lines.append("## Stream coverage")
+    lines.append("")
+    lines.append("> Track 3 names three sources: payment failures, checkout abandonment, and")
+    lines.append("> overdue receivables. A batch drawn from one stream cannot demonstrate a")
+    lines.append("> unified engine. This is the count that shows the batch was mixed.")
+    lines.append("")
+    streams = report["arm_metrics"].get("A5", {}).get("stream_counts", {})
+    if streams:
+        lines.append("| Stream | Opportunities (arm A5) | Share |")
+        lines.append("|---|---:|---:|")
+        stream_total = sum(streams.values()) or 1
+        for name, count in sorted(streams.items(), key=lambda kv: -kv[1]):
+            lines.append(f"| {name} | {count} | {count / stream_total:.1%} |")
+        lines.append("")
+    lines.append("## Compliant escalation")
+    lines.append("")
+    lines.append("> Intensity rises by at most ONE rung, only on a CONFIRMED prior contact,")
+    lines.append("> only after the quiet period, and never past the top of the ladder. The")
+    lines.append("> engine never opens a relationship with a phone call. Escalation is a value")
+    lines.append("> control layered UNDER safety controls — it can only ever remove a")
+    lines.append("> candidate, never revive one the safety filter rejected.")
+    lines.append("")
+    lines.append("Ladder: `EMAIL_LINK -> SMS_LINK -> WHATSAPP_LINK -> IVR_CALL -> AGENT_DIAL`")
+    lines.append("")
+    lines.append("| Arm | Decisions where the ceiling suppressed a candidate | Contacts earned by escalation |")
+    lines.append("|---|---:|---:|")
+    for arm, m in report["arm_metrics"].items():
+        lines.append(
+            f"| {arm} | {m.get('escalation_suppressed_count', 0)} | "
+            f"{m.get('earned_escalations', 0)} |"
+        )
+    lines.append("")
+    no_escalation = [
+        arm for arm, m in report["arm_metrics"].items()
+        if m.get("outbound_contacts", 0) > 0 and m.get("earned_escalations", 0) == 0
+    ]
+    if no_escalation:
+        lines.append(
+            f"**{', '.join(no_escalation)} sent contacts but earned no escalation at all.** "
+            "That is not a bug, it is the finding. An arm without a shared contact ledger "
+            "has no record that this customer was already reached, so it can never satisfy "
+            "the evidence test the ladder requires. It does not escalate — it repeats the "
+            "first touch. Compliant escalation is not a feature you can add to "
+            "uncoordinated agents; it presupposes the shared memory they lack."
+        )
+        lines.append("")
     lines.append("## Contact efficiency")
     lines.append("")
     lines.append("> Recovery rate alone cannot show what this engine is for. Every safety control")
@@ -261,6 +261,20 @@ def render_markdown(report: Dict[str, Any]) -> str:
             f"| {c['comparison_id']} | {c['incremental_recovery_rate']:+.4f} | "
             f"[{ci[0]:.4f}, {ci[1]:.4f}] | {c['p_value']:.4f} | {c['status']} |"
         )
+    lines.append("")
+    lines.append("## Track 3 requirements — where each clause is answered")
+    lines.append("")
+    lines.append("| Required | Where |")
+    lines.append("|---|---|")
+    lines.append("| detects revenue at risk | Stage 0 validation + Stage 1 diagnosis |")
+    lines.append("| determines the right intervention | candidate generation → EV ranking → arbitration |")
+    lines.append("| bounded recovery workflow | contact budget, atomic reservation, reconciliation ladder |")
+    lines.append("| payment failures / checkout abandonment / overdue receivables | Stream coverage table above |")
+    lines.append("| measured money recovered across a batch | Money table above; ≥200 cases required, this run covers more |")
+    lines.append("| compliant escalation | Compliant escalation table above; `app/pipeline/escalation.py` |")
+    lines.append("| stopping rules | contact cap, quiet period, escalation ceiling, outage suppression, abstention |")
+    lines.append("| audit trail | per-decision correlation trace, suppression reasons, escalation working |")
+    lines.append("| Rs recovered vs Rs at risk, recovery rate, cost per recovery | Money table above |")
     lines.append("")
     lines.append("## What this does not show")
     lines.append("")
@@ -327,7 +341,13 @@ def main() -> int:
             "phantom_already_paid_share": PHANTOM_SHARE,
             "gateway_outage_share": OUTAGE_SHARE,
             "genuine_failure_share": round(1.0 - PHANTOM_SHARE - OUTAGE_SHARE, 4),
+            "stream_weights": {k.value: v for k, v in STREAM_WEIGHTS.items()},
+            "batch_window_days": BATCH_WINDOW_DAYS,
+            "b2b_settled_net_of_tds_share": TDS_NET_SETTLED_SHARE,
+            "b2b_partial_with_tds_share": TDS_PARTIAL_SHARE,
         },
+        "batch_case_counts": _case_counts(events),
+        "batch_stream_counts": _stream_counts(events),
     }
     report["provenance"] = {
         "commit_hash": commit,

@@ -201,6 +201,11 @@ class Stage0Result:
     reason_code: Stage0Reason
     evidence: Dict[str, Any]
     evaluated_at: str
+    # Amount genuinely chaseable, where that is LESS than the opportunity's face amount.
+    # Set by the TDS derivation on a B2B receivable whose shortfall is partly statutory
+    # withholding: the engine must chase the excess only, never the exchequer's share.
+    # None means "no restatement" - the full amount stands.
+    recoverable_amount_paise: Optional[int] = None
 
     @property
     def is_recoverable(self) -> bool:
@@ -250,6 +255,10 @@ class RecoveryDecisionContext:
     feature_snapshot: Dict[str, Any]
     provenance: DataProvenance
     is_contact_reserved: bool = False
+    # Compliant-escalation working: the ladder, the ceiling this decision was allowed to
+    # reach, and why. Carried on the context so the audit trail shows the bound that was
+    # applied BEFORE scoring, not a rationalisation after it. None where not evaluated.
+    escalation: Optional[Any] = None
 
     def get_eligible_candidates(self) -> List[ActionCandidate]:
         """Return subset of candidates that passed hard safety filter."""
@@ -264,6 +273,7 @@ class RecoveryDecisionContext:
                 "reason_code": self.stage0_result.reason_code.value,
                 "evidence": self.stage0_result.evidence,
                 "evaluated_at": self.stage0_result.evaluated_at,
+                "recoverable_amount_paise": self.stage0_result.recoverable_amount_paise,
             },
             "diagnosis": {
                 "diagnosis_code": self.diagnosis.diagnosis_code.value,
@@ -286,6 +296,7 @@ class RecoveryDecisionContext:
             "feature_snapshot": self.feature_snapshot,
             "provenance": self.provenance.value,
             "is_contact_reserved": self.is_contact_reserved,
+            "escalation": self.escalation.to_dict() if self.escalation is not None else None,
         }
 
 
@@ -549,6 +560,17 @@ class EndToEndRecoveryResult:
     attribution: RecoveryAttribution
     observation: RecoveryObservation
     trace_id: str
+    # Which of the four unified streams this opportunity came from. Carried on the
+    # result so a batch can prove stream coverage rather than assert it.
+    event_type: EventType = EventType.FAILED_PAYMENT
+    # The escalation ceiling that bound this decision, and what it removed. Carried so a
+    # batch can report how often compliant escalation actually held intensity down -
+    # a control nobody can count is not an auditable control.
+    escalation: Optional[Any] = None
+
+    @property
+    def event_type_value(self) -> str:
+        return self.event_type.value
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -557,6 +579,8 @@ class EndToEndRecoveryResult:
             "merchant_id": self.merchant_id,
             "customer_id": self.customer_id,
             "event_id": self.event_id,
+            "event_type": self.event_type.value,
+            "escalation": self.escalation.to_dict() if self.escalation is not None else None,
             "decision": self.decision.to_dict(),
             "ledger_entry": self.ledger_entry.to_dict() if self.ledger_entry else None,
             "execution_result": self.execution_result.to_dict() if self.execution_result else None,
@@ -638,6 +662,41 @@ class ArmMetrics:
     contacted_customers: int = 0        # distinct customers contacted at least once
     total_customers: int = 0            # distinct customers in the arm
 
+    # --- MONEY AT RISK ------------------------------------------------------
+    # Track 3 requires the batch to be reported as "Rs recovered vs Rs at risk,
+    # recovery rate, and cost per recovery". Rupees recovered without the
+    # denominator it was recovered FROM is not a recovery claim, it is a number.
+    total_at_risk_paise: int = 0        # sum of amount_at_risk over every opportunity
+
+    # --- COMPLIANT ESCALATION (ADR-0015) ------------------------------------
+    # "Compliant escalation" is named in the Track 3 bar. These are the counts that
+    # make it auditable rather than merely claimed.
+    escalation_suppressed_count: int = 0   # decisions where the ceiling removed a candidate
+    earned_escalations: int = 0            # contacts sent ABOVE their stream's entry rung
+
+    # --- STREAM COVERAGE ----------------------------------------------------
+    # Opportunity count per EventType. The engine claims to unify four streams;
+    # this is the evidence that a batch actually exercised more than one.
+    stream_counts: Dict[str, int] = field(default_factory=dict)
+
+    @property
+    def value_recovery_rate(self) -> float:
+        """Share of rupees AT RISK that were recovered and attributed to an intervention.
+
+        Distinct from `recovery_rate`, which counts opportunities. A batch can recover
+        most cases while recovering little money, or the reverse; both are reported.
+        """
+        return self.attributed_recovered_paise / self.total_at_risk_paise if self.total_at_risk_paise else 0.0
+
+    @property
+    def cost_per_recovery_paise(self) -> float:
+        """Intervention spend per successful recovery. Lower is better.
+
+        Denominator is successful recoveries, not opportunities: this answers "what did
+        each recovery cost us", which is the figure the Track 3 floor names.
+        """
+        return self.total_cost_paise / self.successful_recoveries if self.successful_recoveries else 0.0
+
     @property
     def contacts_per_customer(self) -> float:
         """Average outbound contacts per distinct customer. Lower is better."""
@@ -672,6 +731,12 @@ class ArmMetrics:
             "contacts_per_customer": round(self.contacts_per_customer, 4),
             "recovery_per_contact_paise": round(self.recovery_per_contact_paise, 2),
             "contact_rate": round(self.contact_rate, 4),
+            "total_at_risk_paise": self.total_at_risk_paise,
+            "escalation_suppressed_count": self.escalation_suppressed_count,
+            "earned_escalations": self.earned_escalations,
+            "value_recovery_rate": round(self.value_recovery_rate, 6),
+            "cost_per_recovery_paise": round(self.cost_per_recovery_paise, 2),
+            "stream_counts": dict(self.stream_counts),
         }
 
 

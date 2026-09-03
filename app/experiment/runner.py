@@ -26,6 +26,7 @@ from app.domain.models import (
 )
 from app.experiment.assignment import ExperimentAssigner
 from app.experiment.policies import ExperimentPolicyController
+from app.pipeline.escalation import RUNG_OF, entry_rung_for_stream
 
 # Customer-facing outbound channels. RECOMMEND_RETRY is deliberately EXCLUDED: it is a
 # recommendation to the payment infrastructure, not a message to a person (ADR-0006), and
@@ -90,6 +91,7 @@ class ExperimentRunner:
                         raw_event=event,
                         arm=arm,
                         random_seed=seed,
+                        decision_timestamp=event.get("decision_timestamp"),
                     )
                     arm_results[arm].append(result)
 
@@ -170,6 +172,8 @@ class ExperimentRunner:
                 outbound_contacts=0,
                 contacted_customers=0,
                 total_customers=0,
+                total_at_risk_paise=0,
+                stream_counts={},
             )
 
         successes = 0
@@ -179,11 +183,28 @@ class ExperimentRunner:
         total_cost_paise = 0
         abstentions = 0
         outbound_contacts = 0
+        at_risk_paise = 0
+        escalation_suppressed = 0
+        earned_escalations = 0
+        stream_counts: Dict[str, int] = {}
         all_customers = set()
         contacted = set()
 
         for r in results:
             all_customers.add(r.customer_id)
+
+            # Rupees at risk is the denominator the Track 3 floor requires alongside
+            # rupees recovered. Taken from the attribution record, which carries the
+            # amount as it stood AT THE DECISION - not a later restatement.
+            at_risk_paise += r.attribution.amount_at_risk_paise
+
+            stream = r.event_type_value
+            stream_counts[stream] = stream_counts.get(stream, 0) + 1
+
+            # Compliant escalation, counted rather than asserted (ADR-0015).
+            if r.escalation is not None and r.escalation.suppressed_actions:
+                escalation_suppressed += 1
+
             # An outbound contact is counted only when a customer-facing action was
             # actually executed - not merely decided. A decision suppressed by policy or
             # by an exhausted budget reaches no customer and must not be counted.
@@ -193,6 +214,11 @@ class ExperimentRunner:
             ):
                 outbound_contacts += 1
                 contacted.add(r.customer_id)
+                # A contact above the stream's entry rung was EARNED by a confirmed prior
+                # contact plus an elapsed quiet period. It is the only way intensity rises.
+                rung = RUNG_OF.get(r.decision.selected_action)
+                if rung is not None and rung > entry_rung_for_stream(stream):
+                    earned_escalations += 1
 
             if r.attribution.payment_outcome == PaymentOutcome.PAYMENT_SUCCESS:
                 successes += 1
@@ -227,6 +253,10 @@ class ExperimentRunner:
             outbound_contacts=outbound_contacts,
             contacted_customers=len(contacted),
             total_customers=len(all_customers),
+            total_at_risk_paise=at_risk_paise,
+            stream_counts=stream_counts,
+            escalation_suppressed_count=escalation_suppressed,
+            earned_escalations=earned_escalations,
         )
 
     def _calculate_statistical_comparison(

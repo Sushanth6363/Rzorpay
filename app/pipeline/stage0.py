@@ -10,6 +10,23 @@ from typing import Any, Dict, Optional
 from app.clock import Clock, SystemClock
 from app.domain.enums import EventType, Stage0Decision, Stage0Reason
 from app.domain.models import CanonicalEvent, RecoveryOpportunity, Stage0Result
+from app.pipeline.tds import TdsDerivation, TdsPosition, derive_tds_position
+
+# Sentinel used where withholding cannot apply. UNDETERMINED never suppresses and never
+# restates an amount, so a non-receivable stream is left exactly as it was.
+NOT_APPLICABLE_TDS = TdsDerivation(
+    position=TdsPosition.UNDETERMINED,
+    gross_amount_paise=0,
+    amount_received_paise=0,
+    shortfall_paise=0,
+    section=None,
+    payee_type="N/A",
+    applied_rate_bps=0,
+    expected_tds_paise=0,
+    recoverable_amount_paise=0,
+    rate_source="not applicable to this stream",
+    explanation="Withholding does not apply to this event type and no section was supplied.",
+)
 
 
 class PointInTimeLeakageError(Exception):
@@ -73,12 +90,61 @@ class Stage0Evaluator:
                 evaluated_at=eval_time,
             )
 
-        # Check B: TDS / Withholding Tax Exclusion (Not recoverable customer debt)
-        if context.get("is_tds_withheld", False) or context.get("tax_exemption_reason") == "TDS_DEDUCTION":
+        # Check B: TDS / Withholding Tax Exclusion (not recoverable customer debt)
+        #
+        # DERIVED, NOT DECLARED. The withholding position is computed from the invoice's
+        # own facts - gross, section, payee constitution, PAN, amount actually remitted -
+        # by app.pipeline.tds. A shortfall that equals the statutory withholding is money
+        # the payer already remitted to the government on the payee's behalf: the customer
+        # owes nothing and contacting them is a demand for money the law required them to
+        # withhold. Where the shortfall EXCEEDS the withholding, only the excess is chased.
+        # Withholding applies to receivables, so the derivation runs only where it can
+        # mean something: a B2B invoice, or any event that explicitly carries a section.
+        # Running it universally would let a stray `amount_received_paise` on an unrelated
+        # stream suppress a legitimate recovery.
+        tds_applicable = (
+            opportunity.event_type == EventType.OVERDUE_B2B_INVOICE
+            or context.get("tds_section") is not None
+        )
+        tds_derivation = (
+            derive_tds_position(
+                gross_amount_paise=opportunity.amount.amount_paise,
+                context=context,
+            )
+            if tds_applicable
+            else NOT_APPLICABLE_TDS
+        )
+
+        if tds_derivation.position in (TdsPosition.STATUTORY_WITHHOLDING, TdsPosition.NO_SHORTFALL):
             return Stage0Result(
                 decision=Stage0Decision.NOT_RECOVERABLE,
                 reason_code=Stage0Reason.TDS_WITHHOLDING_EXCLUSION,
-                evidence={"tds_amount_paise": context.get("tds_amount_paise", 0)},
+                evidence={"tds_derivation": tds_derivation.to_dict()},
+                evaluated_at=eval_time,
+                recoverable_amount_paise=0,
+            )
+
+        # LEGACY PASSTHROUGH. Retained only for callers that supply a pre-computed boolean
+        # and none of the facts needed to derive a position. It fires ONLY where the
+        # derivation was unable to reach a conclusion: a flag may fill a silence, but it may
+        # never contradict the invoice's own numbers. Otherwise any caller could suppress
+        # any recovery by asserting a withholding the arithmetic does not support.
+        derivation_reached_a_conclusion = tds_derivation.position != TdsPosition.UNDETERMINED
+        if not derivation_reached_a_conclusion and (
+            context.get("is_tds_withheld", False)
+            or context.get("tax_exemption_reason") == "TDS_DEDUCTION"
+        ):
+            return Stage0Result(
+                decision=Stage0Decision.NOT_RECOVERABLE,
+                reason_code=Stage0Reason.TDS_WITHHOLDING_EXCLUSION,
+                evidence={
+                    "tds_amount_paise": context.get("tds_amount_paise", 0),
+                    "basis": "DECLARED_FLAG_NOT_DERIVED",
+                    "note": (
+                        "Suppressed on a caller-supplied flag because the facts needed to "
+                        "derive a withholding position were absent."
+                    ),
+                },
                 evaluated_at=eval_time,
             )
 
@@ -111,14 +177,27 @@ class Stage0Evaluator:
                 evaluated_at=eval_time,
             )
 
-        # Genuine recoverable opportunity passed all Stage 0 filters!
+        # Genuine recoverable opportunity passed all Stage 0 filters.
+        evidence: Dict[str, Any] = {
+            "event_type": opportunity.event_type.value,
+            "amount_paise": opportunity.amount.amount_paise,
+            "customer_id": opportunity.customer_id,
+        }
+
+        # PARTIAL_WITH_TDS: the invoice is genuinely in arrears, but part of the shortfall
+        # is the exchequer's. Restating the chaseable amount here is what stops the engine
+        # from demanding - and from later reporting as "recovered" - money it never could
+        # have collected. Any other derived position leaves the face amount untouched.
+        restated: Optional[int] = None
+        if tds_derivation.position != TdsPosition.UNDETERMINED:
+            evidence["tds_derivation"] = tds_derivation.to_dict()
+        if tds_derivation.position == TdsPosition.PARTIAL_WITH_TDS:
+            restated = tds_derivation.recoverable_amount_paise
+
         return Stage0Result(
             decision=Stage0Decision.VALID_RECOVERY,
             reason_code=Stage0Reason.GENUINE_RECOVERABLE,
-            evidence={
-                "event_type": opportunity.event_type.value,
-                "amount_paise": opportunity.amount.amount_paise,
-                "customer_id": opportunity.customer_id,
-            },
+            evidence=evidence,
             evaluated_at=eval_time,
+            recoverable_amount_paise=restated,
         )

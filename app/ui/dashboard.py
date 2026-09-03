@@ -16,6 +16,7 @@ import pandas as pd
 import streamlit as st
 
 from app.domain.enums import ActionType, EligibilityStatus, PaymentOutcome, StatisticalStatus
+from app.experiment.batch import generate_batch
 from app.experiment.runner import ExperimentRunner
 from app.sandbox.scenarios import GOLDEN_DEMO_SCENARIOS, DemoScenarioSpec, ScenarioRunner
 from app.scoring.feature_builder import FeatureBuilder, PointInTimeLeakageError
@@ -158,6 +159,34 @@ def run_invariant_checks() -> List[Dict[str, Any]]:
 # sections
 # ---------------------------------------------------------------------------
 
+def _escalation_stage(result: Any, n: int) -> str:
+    """Render the compliant-escalation ceiling as one pipeline stage.
+
+    Reads the escalation assessment off the executed decision — never scripted. Shows the
+    ceiling that bound this decision and, when it removed a candidate, why.
+    """
+    esc = getattr(result, "escalation", None)
+    if esc is None:
+        return stage(n, "Compliant escalation",
+                     "No escalation assessment on this path.", "")
+    ceiling = esc.allowed_max_rung
+    ladder = esc.ladder
+    ceiling_action = ladder[ceiling].replace("_", " ").title() if 0 <= ceiling < len(ladder) else "—"
+    if esc.suppressed_actions:
+        detail = (
+            f"Ceiling <b>{ceiling_action}</b>. "
+            f"Suppressed louder channels: "
+            f"{', '.join(a.replace('_', ' ').title() for a in esc.suppressed_actions)}."
+        )
+        state = "halt"
+    else:
+        detail = f"Ceiling <b>{ceiling_action}</b>. No louder channel was in play to suppress."
+        state = "active"
+    if esc.cooldown_active:
+        detail += " Quiet period active — intensity held."
+    return stage(n, "Compliant escalation", detail, state)
+
+
 def section_trace(seed: int, outage_toggle: bool, exhaust_toggle: bool) -> None:
     st.markdown("#### Why did the engine do this?")
     st.markdown(
@@ -259,13 +288,14 @@ def section_trace(seed: int, outage_toggle: bool, exhaust_toggle: bool) -> None:
             stage(5, "Scoring & arbitration",
                   f"Model <code>{d.model_version}</code> ranked candidates; "
                   f"<b>{d.selected_action.value.replace('_', ' ').title()}</b> selected.", "active"),
-            stage(6, "Contact reservation",
+            _escalation_stage(result, 6),
+            stage(7, "Contact reservation",
                   "Slot reserved atomically against the shared per-customer budget." if reserved
                   else ("No slot consumed — NO_ACTION consumes zero capacity."
                         if d.selected_action == ActionType.NO_ACTION
                         else "No reservation recorded on this scenario path."),
                   "active" if reserved else ""),
-            stage(7, "Execution & attribution",
+            stage(8, "Execution & attribution",
                   f"{result.attribution.payment_outcome.value.replace('_', ' ').title()} → "
                   f"attributed {rupees(attributed)}.", "active"),
         ])
@@ -313,18 +343,20 @@ def section_experiment() -> None:
     c1, c2, c3, c4 = st.columns([1, 1, 1, 1.4])
     seed_start = c1.number_input("First seed", value=21, min_value=1)
     seed_end = c2.number_input("Last seed", value=25, min_value=1)
-    opp_count = c3.number_input("Opportunities", value=10, min_value=5)
+    opp_count = c3.number_input("Opportunities", value=60, min_value=5)
     c4.write("")
     run = c4.button("Run benchmark", type="primary", use_container_width=True)
 
     if run:
-        events = [{
-            "merchant_id": "merchant_alpha",
-            "customer_id": f"cust_{i % 5}",
-            "event_id": f"evt_bench_{i}",
-            "amount_paise": (1000 + (i * 500)) * 100,
-            "gateway": "HDFC" if i % 2 == 0 else "RAZORPAY",
-        } for i in range(int(opp_count))]
+        # SAME generator the CLI evaluation uses (app/experiment/batch.py). A single
+        # source means the numbers here describe the same batch as results/report.json —
+        # mixed streams, a real time axis, and the phantom / outage / TDS cases the
+        # ablations act on. A bespoke dashboard batch would drift from the reported one.
+        events = generate_batch(
+            num_events=int(opp_count),
+            batch_seed=42,
+            reference_timestamp="2026-01-01T00:00:00+00:00",
+        )
         with st.spinner("Running arms over identical batch…"):
             st.session_state["summary"] = ExperimentRunner(
                 experiment_id="EXP_DASHBOARD"
@@ -351,30 +383,63 @@ def section_experiment() -> None:
     st.markdown(f'<div class="note">{p.explanation}</div>', unsafe_allow_html=True)
     st.write("")
 
-    st.markdown("##### Arms")
+    st.markdown("##### Money — ₹ recovered vs ₹ at risk, and cost per recovery")
     st.dataframe(
         pd.DataFrame([{
             "Arm": name,
-            "Opportunities": m.total_opportunities,
-            "Recoveries": m.successful_recoveries,
+            "₹ at risk": getattr(m, "total_at_risk_paise", 0) / 100,
+            "₹ recovered": m.attributed_recovered_paise / 100,
+            "Value recovery rate": getattr(m, "value_recovery_rate", 0.0) * 100,
             "Recovery rate": m.recovery_rate * 100,
-            "Gross": m.gross_recovered_paise / 100,
-            "Attributed": m.attributed_recovered_paise / 100,
-            "Self-cures": m.self_cured_count,
-            "Abstentions": getattr(m, "abstention_count", 0),
-            "Contacts": getattr(m, "outbound_contacts", 0),
-            "Per customer": getattr(m, "contacts_per_customer", 0.0),
-            "Recovery / contact": getattr(m, "recovery_per_contact_paise", 0.0) / 100,
+            "Cost / recovery (paise)": getattr(m, "cost_per_recovery_paise", 0.0),
         } for name, m in summary.arm_metrics.items()]),
         use_container_width=True, hide_index=True,
         column_config={
+            "₹ at risk": st.column_config.NumberColumn(format="₹%.0f"),
+            "₹ recovered": st.column_config.NumberColumn(format="₹%.0f"),
+            "Value recovery rate": st.column_config.NumberColumn(format="%.2f%%"),
             "Recovery rate": st.column_config.NumberColumn(format="%.2f%%"),
-            "Gross": st.column_config.NumberColumn(format="₹%.0f"),
-            "Attributed": st.column_config.NumberColumn(format="₹%.0f"),
+            "Cost / recovery (paise)": st.column_config.NumberColumn(format="%.2f"),
+        },
+    )
+    st.markdown(
+        '<div class="note"><b>₹ recovered without the denominator it was recovered FROM is not a '
+        'recovery claim.</b> Cost per recovery is marginal channel cost only — email ₹0.05 up to '
+        'agent-dial ₹15.00 — not staff time or goodwill. ₹ at risk is the amount as it stood at the '
+        'decision: for a B2B invoice settled net of statutory TDS, that is the derived recoverable '
+        'balance, never the invoice face value.</div>', unsafe_allow_html=True,
+    )
+
+    st.markdown("##### Contact efficiency & compliant escalation")
+    st.dataframe(
+        pd.DataFrame([{
+            "Arm": name,
+            "Recoveries": m.successful_recoveries,
+            "Contacts": getattr(m, "outbound_contacts", 0),
+            "Per customer": getattr(m, "contacts_per_customer", 0.0),
+            "Recovery / contact": getattr(m, "recovery_per_contact_paise", 0.0) / 100,
+            "Escalations earned": getattr(m, "earned_escalations", 0),
+            "Ceiling suppressions": getattr(m, "escalation_suppressed_count", 0),
+            "Abstentions": getattr(m, "abstention_count", 0),
+        } for name, m in summary.arm_metrics.items()]),
+        use_container_width=True, hide_index=True,
+        column_config={
             "Per customer": st.column_config.NumberColumn(format="%.2f"),
             "Recovery / contact": st.column_config.NumberColumn(format="₹%.0f"),
         },
     )
+    no_esc = [
+        n for n, m in summary.arm_metrics.items()
+        if getattr(m, "outbound_contacts", 0) > 0 and getattr(m, "earned_escalations", 0) == 0
+    ]
+    if no_esc:
+        st.markdown(
+            f'<div class="note"><b>{", ".join(no_esc)} sent contacts but earned zero escalations.</b> '
+            'Not a bug — the finding. An arm with no shared contact ledger cannot prove a customer '
+            'was already reached, so it can never satisfy the evidence the ladder requires: it '
+            'repeats the first touch instead of escalating. Compliant escalation presupposes the '
+            'shared memory uncoordinated agents lack.</div>', unsafe_allow_html=True,
+        )
     st.markdown(
         '<div class="note"><b>Recovery rate alone cannot show what this engine is for.</b> '
         'Every safety control suppresses a contact, so on that metric more safety can only ever '
@@ -382,6 +447,19 @@ def section_experiment() -> None:
         '<b>Contacts</b> and <b>Recovery / contact</b> alongside the rate, never the rate alone.</div>',
         unsafe_allow_html=True,
     )
+
+    streams = getattr(summary.arm_metrics.get("A5"), "stream_counts", {}) or {}
+    if streams:
+        st.markdown("##### Stream coverage — one engine, four streams")
+        total_s = sum(streams.values()) or 1
+        cols = st.columns(len(streams))
+        for col, (name, count) in zip(cols, sorted(streams.items(), key=lambda kv: -kv[1])):
+            col.metric(name.replace("_", " ").title(), count, f"{count / total_s:.0%}")
+        st.markdown(
+            '<div class="note">Track 3 names three sources: payment failures, checkout abandonment, '
+            'overdue receivables. A single-stream batch cannot demonstrate a <b>unified</b> engine. '
+            'This is the count that shows the batch was mixed.</div>', unsafe_allow_html=True,
+        )
 
     st.markdown("##### Secondary comparisons · Holm-Bonferroni corrected")
     st.dataframe(
