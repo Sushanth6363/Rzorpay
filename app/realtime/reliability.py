@@ -232,10 +232,15 @@ class BackgroundWorker:
         self,
         process_fn: Callable[[Dict[str, Any]], None],
         reconcile_fn: Optional[Callable[[str], bool]] = None,
+        followup_fn: Optional[Callable[[Dict[str, Any]], None]] = None,
         interval_seconds: int = SWEEP_INTERVAL_SECONDS,
     ) -> None:
         self.process_fn = process_fn
         self.reconcile_fn = reconcile_fn
+        # Follow-ups are the sequence half of recovery: an opportunity contacted N hours
+        # ago with no resolution re-enters the engine. Without this the system only ever
+        # makes one move per event and silence is never acted on.
+        self.followup_fn = followup_fn
         self.interval = interval_seconds
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
@@ -259,6 +264,16 @@ class BackgroundWorker:
                     self.process_fn(item)
                 if self.reconcile_fn is not None:
                     sweep_reconciliation(self.reconcile_fn)
+                if self.followup_fn is not None:
+                    from app.realtime import followup as _followup
+
+                    for due in _followup.due_followups():
+                        try:
+                            self.followup_fn(due)
+                        except Exception:
+                            logger.exception(
+                                "follow-up failed for %s", due.get("opportunity_id")
+                            )
             except Exception:
                 logger.exception("background worker iteration failed")
             self._stop.wait(self.interval)

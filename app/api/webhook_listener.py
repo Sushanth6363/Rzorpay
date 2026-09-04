@@ -48,7 +48,7 @@ from starlette.routing import Route
 from app.domain.enums import ActionType, LedgerStatus
 from app.integrations.razorpay_client import RazorpayIntegrationClient
 from app.orchestration.recovery_orchestrator import RecoveryOrchestrator
-from app.realtime import config, ingest, reliability
+from app.realtime import config, followup, ingest, reliability
 from app.realtime.downtime_live import LiveRazorpayDowntimeProvider
 from app.realtime.event_mapper import (
     DOWNTIME_EVENTS,
@@ -155,6 +155,39 @@ def _reconcile_stale(ledger_id: str) -> bool:
     )
 
 
+def _diagnosis_code(result: Any) -> Optional[str]:
+    """Diagnosis from the executed decision — drives follow-up timing and message copy."""
+    features = getattr(result.decision, "decision_features", None) or {}
+    if isinstance(features, dict) and features.get("diagnosis_code"):
+        return str(features["diagnosis_code"])
+    return None
+
+
+def _run_followup(item: Dict[str, Any]) -> None:
+    """A due follow-up: re-enter the FULL engine as a new opportunity for this customer.
+
+    A NEW event id is essential. Replaying the original would collide with its intervention
+    idempotency key and silently send nothing; as a new opportunity the escalation ladder
+    reads the customer's real contact history and advances exactly one rung.
+    """
+    from datetime import datetime, timezone
+
+    attempt = int(item.get("attempt", 0)) + 1
+    event = dict(item["event"])
+    origin = item.get("origin_event_id") or event.get("event_id", "")
+    event["event_id"] = f"{origin}#f{attempt}"
+    now = datetime.now(timezone.utc).isoformat()
+    event["occurred_at"] = now
+    event["observed_at"] = now
+
+    # Money may have arrived since this was scheduled.
+    if ingest.is_resolved(origin):
+        followup.cancel_for_entity(origin, "payment received before follow-up")
+        return
+
+    _process(event, f"followup:{event['event_id']}", "followup", attempt=attempt)
+
+
 def _verify(body: bytes, signature: str) -> tuple:
     """Return (ok, reason). Fails closed when no secret is configured."""
     if config.WEBHOOK_SECRET:
@@ -178,6 +211,7 @@ def _process(
     razorpay_event_id: str,
     event_name: str,
     is_retry: bool = False,
+    attempt: int = 0,
 ) -> None:
     """Run the engine and dispatch. Executes AFTER the response is sent."""
     try:
@@ -236,6 +270,24 @@ def _process(
     )
     if is_retry:
         reliability.mark_retry_succeeded(razorpay_event_id)
+
+    # Schedule the next reconsideration. The engine was purely event-driven: contact a
+    # customer once, have them ignore it, and nothing further happened. Recovery is a
+    # SEQUENCE over time, so silence plus elapsed time is itself a trigger. The delay is
+    # derived from WHY it failed and WHAT we did (app/realtime/followup.py) - chasing an
+    # abandoned cart a week late is pointless, and chasing an insufficient-funds failure
+    # tomorrow chases money that does not exist yet.
+    if action != ActionType.NO_ACTION:
+        followup.schedule(
+            opportunity_id=result.opportunity_id,
+            merchant_id=result.merchant_id,
+            customer_id=result.customer_id,
+            origin_event_id=str(raw_event.get("event_id", "")).split("#")[0],
+            event=raw_event,
+            diagnosis_code=_diagnosis_code(result),
+            last_action=action,
+            attempt=attempt,
+        )
 
 
 async def handle_razorpay_webhook(request: Request) -> JSONResponse:
@@ -297,6 +349,8 @@ async def handle_razorpay_webhook(request: Request) -> JSONResponse:
         entity_id = str(entity.get("id") or "")
         amount = entity.get("amount")
         ingest.record_resolution(entity_id, event_name, amount if isinstance(amount, int) else None)
+        # Stop chasing immediately. The engine must never pursue money it already has.
+        followup.cancel_for_entity(entity_id, f"resolved by {event_name}")
         ingest.record(
             razorpay_event_id=razorpay_event_id, razorpay_event=event_name,
             status="RESOLVED_PAID", payload=payload,
@@ -408,8 +462,11 @@ async def _lifespan(app_: Starlette):
     """Run the retry drain and reconciliation sweep for the life of the server."""
     global _worker
     reliability.ensure_schema()
+    followup.ensure_schema()
     _worker = reliability.BackgroundWorker(
-        process_fn=_retry_item, reconcile_fn=_reconcile_stale
+        process_fn=_retry_item,
+        reconcile_fn=_reconcile_stale,
+        followup_fn=_run_followup,
     )
     _worker.start()
     try:

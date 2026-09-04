@@ -146,23 +146,28 @@ def _build_event(row: Dict[str, str]) -> Dict[str, Any]:
     return event
 
 
-def _message_for(action: ActionType, name: str, amount_paise: int, link: str = "") -> tuple:
-    """Subject and body for the chosen action."""
-    rupees = f"Rs {amount_paise / 100:,.2f}"
-    subject = f"Complete your payment of {rupees}"
-    body = (
-        f"Hi {name or 'there'},\n\n"
-        f"We noticed a payment of {rupees} did not go through.\n"
-        f"You can complete it here: {link or '[payment link]'}\n\n"
-        f"This message was sent by the Unified Recovery Engine as a live demonstration.\n"
-        f"Chosen action: {action.value}\n"
+def _message_for(
+    action: ActionType,
+    name: str,
+    amount_paise: int,
+    link: str = "",
+    diagnosis_code: Optional[str] = None,
+) -> tuple:
+    """Copy whose TONE follows the escalation rung and whose ASK follows the diagnosis.
+
+    Previously every channel sent identical text, so a customer's fourth contact read
+    exactly like their first, only louder in medium. See app/dispatch/copy.py.
+    """
+    from app.dispatch.copy import build_message
+
+    message = build_message(
+        action=action,
+        amount_paise=amount_paise,
+        customer_name=name,
+        diagnosis_code=diagnosis_code,
+        payment_link=link,
     )
-    spoken = (
-        f"Hello. This is an automated call about a pending payment of "
-        f"{amount_paise // 100} rupees. Please check your email or messages "
-        f"for a secure payment link. Thank you."
-    )
-    return subject, body, spoken
+    return message.subject, message.body, message.spoken
 
 
 def run_csv(
@@ -240,7 +245,12 @@ def run_csv(
             continue
 
         result.dispatches = [
-            d.to_dict() for d in _dispatch(action, result, outcome.decision.decision_id)
+            d.to_dict()
+            for d in _dispatch(
+                action, result, outcome.decision.decision_id,
+                diagnosis_code=getattr(outcome, 'diagnosis_code', None)
+                or _diagnosis_of(outcome),
+            )
         ]
         results.append(result)
 
@@ -258,7 +268,21 @@ def _channel_for(action: ActionType) -> str:
     }.get(action, "NONE")
 
 
-def _dispatch(action: ActionType, row: RowResult, reference_id: str) -> List[channels.DispatchResult]:
+def _diagnosis_of(outcome: Any) -> Optional[str]:
+    """Read the diagnosis off the executed decision so copy matches the real reason."""
+    score = getattr(outcome.decision, 'selected_action_score', None)
+    features = getattr(outcome.decision, 'decision_features', None) or {}
+    if isinstance(features, dict) and features.get('diagnosis_code'):
+        return str(features['diagnosis_code'])
+    return None
+
+
+def _dispatch(
+    action: ActionType,
+    row: RowResult,
+    reference_id: str,
+    diagnosis_code: Optional[str] = None,
+) -> List[channels.DispatchResult]:
     """Send for real. Every attempt is reported, including the ones that could not run."""
     out: List[channels.DispatchResult] = []
 
@@ -283,7 +307,9 @@ def _dispatch(action: ActionType, row: RowResult, reference_id: str) -> List[cha
         out.append(rz)
         link = rz.extra.get("short_url", "")
 
-    subject, body, spoken = _message_for(action, row.customer_name, row.amount_paise, link)
+    subject, body, spoken = _message_for(
+        action, row.customer_name, row.amount_paise, link, diagnosis_code
+    )
 
     if action == ActionType.EMAIL_LINK:
         out.append(channels.send_email_smtp(row.email, subject, body))
