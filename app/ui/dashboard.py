@@ -494,6 +494,111 @@ def section_experiment() -> None:
     )
 
 
+def section_live_test() -> None:
+    """Judge harness: upload a CSV, the real engine decides, real messages go out."""
+    from app.dispatch import channels
+    from app.dispatch.csv_runner import MAX_ROWS, SAMPLE_CSV, parse_csv, run_csv
+
+    st.markdown("#### Test it on yourself")
+    st.markdown(
+        '<div class="note">Upload a CSV with <b>your own</b> email and phone. The real '
+        'decision engine runs — Stage 0, diagnosis, EV ranking, safety filter — and then '
+        'actually sends what it chose. This is the one screen where a decision leaves the '
+        'machine.</div>', unsafe_allow_html=True,
+    )
+    st.write("")
+
+    ready = channels.configured_channels()
+    cols = st.columns(len(ready))
+    for col, (name, ok) in zip(cols, ready.items()):
+        col.metric(name.replace("_", " ").title(), "Ready" if ok else "Not set")
+    if not any(ready.values()):
+        st.warning(
+            "No channel has credentials, so nothing can actually send. Dry run still shows "
+            "every decision. To send for real set: RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET "
+            "(Razorpay delivers SMS + email itself), SMTP_USER / SMTP_PASSWORD for email, "
+            "or TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN plus a TWILIO_*_FROM number for "
+            "SMS, WhatsApp and IVR calls."
+        )
+
+    st.download_button(
+        "Download a sample CSV", SAMPLE_CSV, file_name="recovery_test.csv", mime="text/csv"
+    )
+    uploaded = st.file_uploader("Upload CSV", type=["csv"])
+    if uploaded is None:
+        st.caption(
+            "Columns: customer_name, email, phone, amount_rupees, event_type, "
+            "failure_reason. Optional for B2B: invoice_status, amount_received_rupees, "
+            "tds_section."
+        )
+        return
+
+    rows, errors = parse_csv(uploaded.getvalue())
+    for err in errors:
+        st.error(err)
+    if not rows:
+        return
+
+    st.dataframe(
+        pd.DataFrame([
+            {"Row": r["_line"], "Name": r.get("customer_name", ""),
+             "Email": r.get("email", ""), "Phone": r.get("phone", ""),
+             "Amount": float(r["_amount_paise"]) / 100,
+             "Stream": (r.get("event_type") or "FAILED_PAYMENT").upper()}
+            for r in rows
+        ]),
+        use_container_width=True, hide_index=True,
+        column_config={"Amount": st.column_config.NumberColumn(format="₹%.2f")},
+    )
+
+    c1, c2 = st.columns([1, 1])
+    dry = c1.toggle("Dry run (decide, send nothing)", value=True)
+    confirm = c2.checkbox(
+        f"These {len(rows)} recipients are my own test contacts",
+        help=(
+            "Real messages will be delivered. The cap is "
+            f"{MAX_ROWS} rows — enough to test, not enough to broadcast."
+        ),
+    )
+
+    if not st.button(
+        "Run dry" if dry else "Run and SEND FOR REAL",
+        type="primary", disabled=not (dry or confirm),
+    ):
+        return
+    if not dry and not confirm:
+        return
+
+    with st.spinner("Running the engine…"):
+        results = run_csv(rows, dry_run=dry)
+
+    for r in results:
+        if r.error:
+            st.error(f"Row {r.row_number}: {r.error}")
+            continue
+        icon = "SENT" if r.any_sent else ("DRY" if dry else "HELD")
+        with st.expander(
+            f"[{icon}]  Row {r.row_number} · ₹{r.amount_paise / 100:,.0f} · "
+            f"{r.event_type} → {r.decided_action}",
+            expanded=True,
+        ):
+            st.markdown(f"**Why:** {r.reasoning}")
+            if r.dispatches:
+                st.dataframe(
+                    pd.DataFrame(r.dispatches), use_container_width=True, hide_index=True
+                )
+
+    st.markdown(
+        '<div class="note"><b>What is relaxed on this screen.</b> Two campaign-pacing '
+        'controls only: the 24h quiet period, and the per-customer contact cap. Both exist '
+        'to protect a merchant&#39;s customers during a live campaign, not a reviewer '
+        'testing on themselves. Stage 0, diagnosis, EV ranking, the hard safety filter and '
+        'the one-rung escalation ladder all run exactly as in production — put the same '
+        'email on three rows and watch it climb EMAIL → SMS → WHATSAPP.</div>',
+        unsafe_allow_html=True,
+    )
+
+
 def section_safety() -> None:
     st.markdown("#### Safety invariants")
     st.markdown(
@@ -613,13 +718,15 @@ def render_dashboard() -> None:
             "`make eval` → `results/report.json`"
         )
 
-    t_trace, t_exp, t_safety, t_about = st.tabs(
-        ["Decision trace", "Experiment", "Safety", "About"]
+    t_trace, t_exp, t_live, t_safety, t_about = st.tabs(
+        ["Decision trace", "Experiment", "Live test (CSV)", "Safety", "About"]
     )
     with t_trace:
         section_trace(int(seed), outage, exhaust)
     with t_exp:
         section_experiment()
+    with t_live:
+        section_live_test()
     with t_safety:
         section_safety()
     with t_about:
