@@ -22,6 +22,10 @@ Every significant decision is recorded as an ADR. **An ADR is mandatory before**
 | [0014](ADR-0014-streamlit-judge-sandbox-architecture.md) | Streamlit Public Live Demo & Judge Interactive Sandbox (Live, Sandbox, Red-Team modes) | PROPOSED | 2026-09-01 | UI, judge sandbox, deployment |
 | [0015](ADR-0015-compliant-escalation-ladder.md) | Compliant escalation: one rung, on evidence, after a quiet period | ACCEPTED | 2026-09-03 | policy, actions, pipeline, audit |
 | [0016](ADR-0016-tds-derivation-over-declared-flag.md) | TDS position derived from the invoice, never read off a flag | ACCEPTED | 2026-09-03 | Stage 0, attribution, money reporting |
+| [0017](ADR-0017-train-on-logged-outcomes.md) | S-learner trains on the engine's own logged outcomes | ACCEPTED | 2026-09-03 | AI/ML, experiment |
+| [0018](ADR-0018-realtime-webhook-ingestion.md) | Real-time webhook ingestion: durable, idempotent, fail-closed | ACCEPTED | 2026-09-04 | ingestion, security, downtime |
+| [0019](ADR-0019-production-reliability.md) | Retry, dead-letter, reconciliation sweep, replay guard | ACCEPTED | 2026-09-04 | reliability, observability, PII |
+| [0020](ADR-0020-context-dependent-dgp.md) | Context-dependent sandbox outcome model (prediction falsified) | ACCEPTED | 2026-09-04 | experiment, claims |
 
 ## Open decisions
 
