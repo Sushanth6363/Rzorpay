@@ -65,6 +65,32 @@ CREATE TABLE IF NOT EXISTS live_feed (
     payload_json       TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_live_feed_received ON live_feed(received_at DESC);
+
+-- Live gateway outages, driven by payment.downtime.* webhooks. Persisted rather than held
+-- in memory because the webhook thread WRITES and the decision path READS, and because an
+-- outage must survive a restart: forgetting an active outage means the engine resumes
+-- contacting customers about a gateway that is still down (INV-4).
+CREATE TABLE IF NOT EXISTS live_downtime (
+    downtime_id  TEXT PRIMARY KEY,
+    method       TEXT,
+    instrument   TEXT,
+    severity     TEXT,
+    status       TEXT NOT NULL,
+    began_at     TEXT,
+    resolved_at  TEXT,
+    updated_at   TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_live_downtime_status ON live_downtime(status);
+
+-- Entities Razorpay has told us were PAID. Stage 0's phantom-recovery check needs to know
+-- this, and in live traffic the resolution arrives as its OWN webhook, separately from the
+-- failure. Without persisting it the engine has no way to learn a customer already paid.
+CREATE TABLE IF NOT EXISTS live_resolutions (
+    entity_id    TEXT PRIMARY KEY,
+    event        TEXT,
+    amount_paise INTEGER,
+    resolved_at  TEXT NOT NULL
+);
 """
 
 
@@ -180,3 +206,102 @@ def counters() -> Dict[str, int]:
     ).fetchall():
         out[str(status)] = int(count)
     return out
+
+
+# --- Live downtime signal (payment.downtime.*) -------------------------------------------
+
+
+def upsert_downtime(
+    *,
+    downtime_id: str,
+    status: str,
+    method: Optional[str] = None,
+    instrument: Optional[str] = None,
+    severity: Optional[str] = None,
+    began_at: Optional[str] = None,
+) -> None:
+    """Record or advance one gateway outage. `status` is ACTIVE or RESOLVED."""
+    conn = get_conn()
+    now = _now()
+    resolved_at = now if status == "RESOLVED" else None
+    conn.execute(
+        """
+        INSERT INTO live_downtime (
+            downtime_id, method, instrument, severity, status, began_at, resolved_at, updated_at
+        ) VALUES (?,?,?,?,?,?,?,?)
+        ON CONFLICT(downtime_id) DO UPDATE SET
+            status      = excluded.status,
+            method      = COALESCE(excluded.method,     live_downtime.method),
+            instrument  = COALESCE(excluded.instrument, live_downtime.instrument),
+            severity    = COALESCE(excluded.severity,   live_downtime.severity),
+            began_at    = COALESCE(live_downtime.began_at, excluded.began_at),
+            resolved_at = excluded.resolved_at,
+            updated_at  = excluded.updated_at;
+        """,
+        (downtime_id, method, instrument, severity, status, began_at, resolved_at, now),
+    )
+    conn.commit()
+
+
+def active_outages() -> list:
+    """Every outage Razorpay has told us is currently in progress."""
+    conn = get_conn()
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        "SELECT * FROM live_downtime WHERE status = 'ACTIVE' ORDER BY updated_at DESC;"
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def is_down(gateway_name: str, method: Optional[str] = None) -> bool:
+    """True if any ACTIVE outage matches this gateway/instrument or payment method.
+
+    Matching is deliberately broad: Razorpay reports downtime against an instrument (an
+    issuing bank, a wallet) or a method (upi, card, netbanking), and the engine's event
+    carries whichever of those the payment used. A missed match means contacting customers
+    during a known outage, so ambiguity resolves toward suppression (INV-4).
+    """
+    rows = active_outages()
+    if not rows:
+        return False
+    g = (gateway_name or "").lower().strip()
+    m = (method or "").lower().strip()
+    for row in rows:
+        inst = (row.get("instrument") or "").lower().strip()
+        meth = (row.get("method") or "").lower().strip()
+        if g and inst and (g == inst or g in inst or inst in g):
+            return True
+        if m and meth and m == meth:
+            return True
+    return False
+
+
+# --- Resolutions (payment.captured, order.paid, invoice.paid, payment_link.paid) ----------
+
+
+def record_resolution(entity_id: str, event: str, amount_paise: Optional[int] = None) -> None:
+    """Remember that Razorpay reported this entity as paid."""
+    if not entity_id:
+        return
+    conn = get_conn()
+    conn.execute(
+        """
+        INSERT INTO live_resolutions (entity_id, event, amount_paise, resolved_at)
+        VALUES (?,?,?,?)
+        ON CONFLICT(entity_id) DO UPDATE SET
+            event = excluded.event, resolved_at = excluded.resolved_at;
+        """,
+        (entity_id, event, amount_paise, _now()),
+    )
+    conn.commit()
+
+
+def is_resolved(entity_id: str) -> bool:
+    """True if a paid-confirmation has been received for this entity."""
+    if not entity_id:
+        return False
+    conn = get_conn()
+    row = conn.execute(
+        "SELECT 1 FROM live_resolutions WHERE entity_id = ? LIMIT 1;", (entity_id,)
+    ).fetchone()
+    return row is not None

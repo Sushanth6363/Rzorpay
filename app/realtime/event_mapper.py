@@ -28,19 +28,35 @@ from app.domain.enums import EventType
 # Razorpay event name -> engine stream. Prefix matched longest-first, so `payment.failed`
 # resolves before the generic `payment.` family.
 EVENT_STREAM_MAP = {
+    # --- Recovery opportunities ---------------------------------------------------------
     "payment.failed": EventType.FAILED_PAYMENT,
-    "payment.dispute": None,                       # not a recovery opportunity
-    "order.paid": None,                            # already paid: nothing at risk
     "payment_link.expired": EventType.ABANDONED_CHECKOUT,
-    "payment_link.cancelled": None,
+    "payment_link.cancelled": EventType.ABANDONED_CHECKOUT,
     "checkout.abandoned": EventType.ABANDONED_CHECKOUT,
     "subscription.halted": EventType.FAILED_SUBSCRIPTION_RENEWAL,
     "subscription.pending": EventType.FAILED_SUBSCRIPTION_RENEWAL,
-    "subscription.charged": None,                  # succeeded
     "invoice.expired": EventType.OVERDUE_B2B_INVOICE,
     "invoice.partially_paid": EventType.OVERDUE_B2B_INVOICE,
-    "invoice.paid": None,                          # settled
 }
+
+# Money ARRIVED. These are not opportunities and must never be treated as one — chasing a
+# customer who has just paid is the phantom recovery Stage 0 exists to prevent. Enumerated
+# explicitly so they can never fall through to a family default.
+RESOLUTION_EVENTS = frozenset({
+    "payment.authorized", "payment.captured",
+    "order.paid", "invoice.paid",
+    "payment_link.paid", "payment_link.partially_paid",
+    "subscription.charged",
+})
+
+# Gateway health, not customer debt. These drive the downtime signal (INV-4, D2), not the
+# recovery pipeline. Mapping them to an opportunity would invent a failed payment out of an
+# infrastructure notice.
+DOWNTIME_EVENTS = frozenset({
+    "payment.downtime.started",
+    "payment.downtime.updated",
+    "payment.downtime.resolved",
+})
 
 # Which payload key holds the entity, per event family.
 ENTITY_KEYS = ("payment", "subscription", "invoice", "payment_link", "order")
@@ -49,17 +65,13 @@ ENTITY_KEYS = ("payment", "subscription", "invoice", "payment_link", "order")
 def resolve_stream(event_name: str) -> Optional[EventType]:
     """Map a Razorpay event name to an engine stream, or None if it is not recoverable."""
     name = (event_name or "").strip().lower()
-    if name in EVENT_STREAM_MAP:
-        return EVENT_STREAM_MAP[name]
-    # Fall back to the family prefix for events the table does not enumerate.
-    family = name.split(".")[0]
-    if family == "payment":
-        return EventType.FAILED_PAYMENT
-    if family == "subscription":
-        return EventType.FAILED_SUBSCRIPTION_RENEWAL
-    if family == "invoice":
-        return EventType.OVERDUE_B2B_INVOICE
-    return None
+    # EXPLICIT ONLY. A family-prefix fallback is unsafe here: `payment.captured` and
+    # `payment.authorized` are SUCCESSES, and a fallback on the `payment.` family turned
+    # them into FAILED_PAYMENT — the engine would have chased customers who had just paid,
+    # which is the exact phantom recovery Stage 0 exists to prevent. `payment.downtime.*`
+    # was likewise turned into a failed payment instead of a gateway-health signal.
+    # An unenumerated event is dropped, never guessed.
+    return EVENT_STREAM_MAP.get(name)
 
 
 def extract_entity(payload: Dict[str, Any]) -> Dict[str, Any]:

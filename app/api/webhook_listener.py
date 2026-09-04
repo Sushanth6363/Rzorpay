@@ -47,7 +47,13 @@ from app.domain.enums import ActionType
 from app.integrations.razorpay_client import RazorpayIntegrationClient
 from app.orchestration.recovery_orchestrator import RecoveryOrchestrator
 from app.realtime import config, ingest
-from app.realtime.event_mapper import map_webhook
+from app.realtime.downtime_live import LiveRazorpayDowntimeProvider
+from app.realtime.event_mapper import (
+    DOWNTIME_EVENTS,
+    RESOLUTION_EVENTS,
+    extract_entity,
+    map_webhook,
+)
 
 logger = logging.getLogger("recovery.webhook")
 
@@ -67,12 +73,41 @@ _LOCAL = threading.local()
 
 
 def get_orchestrator() -> RecoveryOrchestrator:
-    """Orchestrator for this thread, bound to the durable shared database."""
+    """Orchestrator for this thread, bound to the durable shared database.
+
+    Wired to the LIVE downtime provider: outages come from Razorpay's own
+    `payment.downtime.*` notifications, not from an authored fixture. INV-4 is unchanged —
+    only the source of "known outage" is real now.
+    """
     orch = getattr(_LOCAL, "orchestrator", None)
     if orch is None:
-        orch = RecoveryOrchestrator(db_conn=ingest.get_conn())
+        orch = RecoveryOrchestrator(
+            db_conn=ingest.get_conn(),
+            downtime_provider=LiveRazorpayDowntimeProvider(),
+        )
         _LOCAL.orchestrator = orch
     return orch
+
+
+def _handle_downtime(payload: Dict[str, Any], event_name: str) -> str:
+    """Apply a payment.downtime.* notification to the live outage store."""
+    entity = extract_entity(payload) or (payload.get("payload", {}).get("payment.downtime", {}) or {}).get("entity", {})
+    downtime_id = str(entity.get("id") or f"{event_name}:{payload.get('created_at')}")
+    # Razorpay reports the affected thing as an instrument (an issuing bank, a wallet) or a
+    # method (upi / card / netbanking). Both are stored; matching tries both.
+    instrument = entity.get("instrument") or {}
+    if isinstance(instrument, dict):
+        instrument = instrument.get("bank") or instrument.get("wallet") or instrument.get("issuer") or ""
+    status = "RESOLVED" if event_name.endswith(".resolved") else "ACTIVE"
+    ingest.upsert_downtime(
+        downtime_id=downtime_id,
+        status=status,
+        method=str(entity.get("method") or "") or None,
+        instrument=str(instrument or "") or None,
+        severity=str(entity.get("severity") or "") or None,
+        began_at=str(entity.get("begin") or "") or None,
+    )
+    return status
 
 
 def _verify(body: bytes, signature: str) -> tuple:
@@ -170,6 +205,34 @@ async def handle_razorpay_webhook(request: Request) -> JSONResponse:
             status_code=200,
         )
 
+    # --- Gateway health, not customer debt ----------------------------------------------
+    # Feeds the live downtime provider (INV-4). Never becomes a recovery opportunity: an
+    # infrastructure notice is not a failed payment.
+    if event_name in DOWNTIME_EVENTS:
+        state = _handle_downtime(payload, event_name)
+        ingest.record(
+            razorpay_event_id=razorpay_event_id, razorpay_event=event_name,
+            status=f"DOWNTIME_{state}", payload=payload,
+        )
+        return JSONResponse({"status": f"DOWNTIME_{state}"}, status_code=200)
+
+    # --- Money arrived ------------------------------------------------------------------
+    # Recorded so Stage 0 can refuse to chase this entity later. In live traffic the
+    # resolution is its OWN webhook, arriving separately from the failure, so without
+    # persisting it the engine has no way to learn the customer already paid.
+    if event_name in RESOLUTION_EVENTS:
+        entity = extract_entity(payload)
+        entity_id = str(entity.get("id") or "")
+        amount = entity.get("amount")
+        ingest.record_resolution(entity_id, event_name, amount if isinstance(amount, int) else None)
+        ingest.record(
+            razorpay_event_id=razorpay_event_id, razorpay_event=event_name,
+            status="RESOLVED_PAID", payload=payload,
+        )
+        return JSONResponse(
+            {"status": "RESOLVED_PAID", "entity_id": entity_id}, status_code=200
+        )
+
     raw_event = map_webhook(payload)
     if raw_event is None:
         ingest.record(
@@ -180,6 +243,15 @@ async def handle_razorpay_webhook(request: Request) -> JSONResponse:
             {"status": "IGNORED", "reason": "event does not represent revenue at risk"},
             status_code=200,
         )
+
+    # If a paid-confirmation for this entity already arrived, hand Stage 0 the evidence.
+    # Webhooks are not ordered: a `payment.captured` can land before the `payment.failed`
+    # for an earlier attempt on the same entity. Chasing someone who has already paid is
+    # the phantom recovery Stage 0 exists to prevent, so the check happens here rather than
+    # relying on the failure payload to somehow know.
+    if ingest.is_resolved(raw_event["event_id"]):
+        raw_event["is_paid"] = True
+        raw_event["payment_status"] = "SUCCESS"
 
     ingest.record(
         razorpay_event_id=razorpay_event_id, razorpay_event=event_name,

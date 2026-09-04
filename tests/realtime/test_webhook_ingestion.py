@@ -208,3 +208,92 @@ def test_a_delivery_advances_in_place_rather_than_duplicating(feed):
     # Fields from the first pass survive the second.
     assert row["event_type"] == "FAILED_PAYMENT"
     assert row["amount_paise"] == 5000
+
+
+# --- Live downtime signal: the D2 control with the simulation taken out -------------------
+
+
+def test_a_downtime_notification_marks_the_gateway_down(feed):
+    """INV-4's "known outage" now means Razorpay told us, not that a fixture said so."""
+    from app.realtime.downtime_live import LiveRazorpayDowntimeProvider
+
+    feed.upsert_downtime(downtime_id="down_1", status="ACTIVE", method="netbanking", instrument="HDFC")
+
+    provider = LiveRazorpayDowntimeProvider()
+    assert provider.is_gateway_down("HDFC") is True
+    assert provider.is_gateway_down("ICICI") is False
+
+
+def test_downtime_matches_on_payment_method_too(feed):
+    """Razorpay reports against an instrument OR a method; the event carries either."""
+    from app.realtime.downtime_live import LiveRazorpayDowntimeProvider
+
+    feed.upsert_downtime(downtime_id="down_upi", status="ACTIVE", method="upi", instrument=None)
+
+    assert LiveRazorpayDowntimeProvider().is_gateway_down("anything", method="upi") is True
+
+
+def test_resolving_an_outage_clears_the_signal(feed):
+    from app.realtime.downtime_live import LiveRazorpayDowntimeProvider
+
+    feed.upsert_downtime(downtime_id="down_2", status="ACTIVE", instrument="HDFC")
+    assert LiveRazorpayDowntimeProvider().is_gateway_down("HDFC") is True
+
+    feed.upsert_downtime(downtime_id="down_2", status="RESOLVED", instrument="HDFC")
+
+    assert LiveRazorpayDowntimeProvider().is_gateway_down("HDFC") is False
+
+
+def test_a_downtime_event_is_never_a_recovery_opportunity():
+    """An infrastructure notice is not a failed payment.
+
+    A `payment.` family fallback previously turned payment.downtime.started into a
+    FAILED_PAYMENT — inventing a customer debt out of a gateway health notice.
+    """
+    from app.realtime.event_mapper import DOWNTIME_EVENTS
+
+    for name in DOWNTIME_EVENTS:
+        assert resolve_stream(name) is None
+
+
+def test_the_live_provider_reports_real_provenance():
+    """The batch harness simulates outages; this one is told by the payment provider."""
+    from app.domain.enums import DataProvenance
+    from app.realtime.downtime_live import LiveRazorpayDowntimeProvider
+
+    assert LiveRazorpayDowntimeProvider().get_provenance() == DataProvenance.REAL_DATA
+
+
+def test_the_downtime_lookup_fails_safe_not_open(monkeypatch):
+    """A throwing lookup inside the decision path would take the whole pipeline down."""
+    from app.realtime import downtime_live
+
+    def boom(*a, **k):
+        raise RuntimeError("store unavailable")
+
+    monkeypatch.setattr(downtime_live.ingest, "is_down", boom)
+
+    assert downtime_live.LiveRazorpayDowntimeProvider().is_gateway_down("HDFC") is False
+
+
+# --- Resolutions: never chase someone who has already paid --------------------------------
+
+
+def test_a_success_event_is_never_treated_as_a_failure():
+    """`payment.captured` succeeded. The old family fallback mapped it to FAILED_PAYMENT,
+    which would have had the engine chase customers who had just paid — the exact phantom
+    recovery Stage 0 exists to prevent."""
+    from app.realtime.event_mapper import RESOLUTION_EVENTS
+
+    for name in RESOLUTION_EVENTS:
+        assert resolve_stream(name) is None
+
+
+def test_a_paid_entity_is_remembered_across_webhooks(feed):
+    """In live traffic the resolution is its own webhook, arriving separately from the
+    failure, so it must be persisted or the engine can never learn about it."""
+    assert feed.is_resolved("pay_x") is False
+
+    feed.record_resolution("pay_x", "payment.captured", 500000)
+
+    assert feed.is_resolved("pay_x") is True
