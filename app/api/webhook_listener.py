@@ -1,116 +1,240 @@
-"""Real-Time Razorpay Webhook Ingestion API Server for Unified Recovery Engine.
+"""Real-Time Razorpay Webhook Ingestion Server (ADR-0018).
 
-Provides an HTTP webhook listener (Starlette/Uvicorn) to receive live Razorpay webhooks,
-verify HMAC signatures, process events through the 5-stage CatBoost AI engine, and trigger
-real Razorpay payment recovery actions.
+Receives live Razorpay webhooks, verifies them, and runs each event through the Unified
+Recovery Engine against DURABLE shared state that the dashboard can observe.
+
+WHAT CHANGED FROM THE FIRST VERSION, AND WHY
+    1. SIGNATURE VERIFICATION NOW FAILS CLOSED. It previously skipped verification whenever
+       no secret was configured, so an unauthenticated POST to a public URL would run the
+       engine and mint Razorpay payment links. Absent configuration is now a refusal, not
+       an open door. `ALLOW_UNSIGNED_WEBHOOKS=1` re-opens it for local testing and says so
+       loudly on every request.
+    2. DURABLE SHARED STATE. The orchestrator used an in-memory database, so the dashboard
+       (a different process) could never see a single ingested event and everything was
+       lost on restart. One WAL-mode SQLite file is now shared by both.
+    3. IDEMPOTENT DELIVERY. Razorpay retries until it gets a 2xx. Without deduplication a
+       retry meant a second message to the same customer and a second slot off their
+       contact budget. Deliveries are now keyed on Razorpay's own event id.
+    4. FAST ACKNOWLEDGEMENT. Full orchestration plus an outbound API call ran inside the
+       request, so a slow dependency produced a timeout and therefore a retry - turning one
+       failure into duplicate contact attempts. The request now durably records the event,
+       acknowledges, and processes in the background.
+    5. NO SEED ON THE LIVE PATH. `random_seed=42` was hardcoded, so live exploration was
+       deterministic and every decision replayed the same draw. Live traffic gets no seed.
+    6. ALL FOUR STREAMS. The old mapping produced only FAILED_PAYMENT or ABANDONED_CHECKOUT,
+       making subscriptions and B2B receivables unreachable from real traffic.
+
+SAFETY POSTURE
+    Outbound dispatch is OFF by default. The engine decides, records, and builds a full
+    audit trail, but sends nothing until RECOVERY_DISPATCH_ENABLED is set - and refuses
+    live (non-test) credentials unless separately acknowledged. See app/realtime/config.py.
 """
 
+from __future__ import annotations
+
 import json
-from typing import Any, Dict
+import logging
+import threading
+from typing import Any, Dict, Optional
+
 from starlette.applications import Starlette
+from starlette.background import BackgroundTask
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
-from app.domain.enums import ActionType, DataProvenance
+from app.domain.enums import ActionType
 from app.integrations.razorpay_client import RazorpayIntegrationClient
 from app.orchestration.recovery_orchestrator import RecoveryOrchestrator
+from app.realtime import config, ingest
+from app.realtime.event_mapper import map_webhook
 
+logger = logging.getLogger("recovery.webhook")
 
 razorpay_client = RazorpayIntegrationClient()
-orchestrator = RecoveryOrchestrator()
+
+# Actions that put a message in front of a person. RECOMMEND_RETRY is excluded: it is a
+# recommendation to the payment infrastructure, not an outbound contact (ADR-0006).
+DISPATCHABLE = frozenset({
+    ActionType.WHATSAPP_LINK, ActionType.SMS_LINK, ActionType.EMAIL_LINK,
+})
+
+# One orchestrator per THREAD, because it holds a SQLite connection and those are
+# thread-bound. Starlette acknowledges on the event loop and processes in a worker thread,
+# so a process-wide singleton fails on the first background decision — the webhook returns
+# 202 and the recovery never happens. Per-thread instances share the same database file.
+_LOCAL = threading.local()
+
+
+def get_orchestrator() -> RecoveryOrchestrator:
+    """Orchestrator for this thread, bound to the durable shared database."""
+    orch = getattr(_LOCAL, "orchestrator", None)
+    if orch is None:
+        orch = RecoveryOrchestrator(db_conn=ingest.get_conn())
+        _LOCAL.orchestrator = orch
+    return orch
+
+
+def _verify(body: bytes, signature: str) -> tuple:
+    """Return (ok, reason). Fails closed when no secret is configured."""
+    if config.WEBHOOK_SECRET:
+        if razorpay_client.verify_webhook_signature(body, signature):
+            return True, "signature verified"
+        return False, "invalid signature"
+    if config.ALLOW_UNSIGNED_WEBHOOKS:
+        logger.warning(
+            "ACCEPTING UNSIGNED WEBHOOK - ALLOW_UNSIGNED_WEBHOOKS is on. "
+            "This endpoint will run the engine for anyone who can reach it."
+        )
+        return True, "UNSIGNED (testing mode)"
+    return False, (
+        "refused: RAZORPAY_WEBHOOK_SECRET is not configured. Set it, or set "
+        "ALLOW_UNSIGNED_WEBHOOKS=1 for local testing only."
+    )
+
+
+def _process(raw_event: Dict[str, Any], razorpay_event_id: str, event_name: str) -> None:
+    """Run the engine and dispatch. Executes AFTER the response is sent."""
+    try:
+        result = get_orchestrator().process_and_execute(
+            raw_event=raw_event,
+            arm="A5",
+            random_seed=None,  # live traffic is not a replay; no determinism seed
+        )
+    except Exception:
+        logger.exception("engine failed for %s", razorpay_event_id)
+        ingest.record(
+            razorpay_event_id=razorpay_event_id, razorpay_event=event_name,
+            status="ENGINE_ERROR", raw_event=raw_event,
+        )
+        return
+
+    decision = result.decision
+    action = decision.selected_action
+    dispatch_state, dispatch_detail = "NOT_APPLICABLE", None
+
+    if action in DISPATCHABLE:
+        allowed, reason = config.dispatch_permitted(razorpay_client.key_id)
+        if not allowed:
+            dispatch_state, dispatch_detail = "SUPPRESSED", reason
+        else:
+            try:
+                link = razorpay_client.create_payment_link(
+                    amount_paise=raw_event["amount_paise"],
+                    customer_name="Valued Customer",
+                    customer_email=str(raw_event.get("customer_id", "")),
+                    customer_contact="",
+                    description=f"Recovery for {raw_event['event_id']}",
+                    reference_id=decision.decision_id,
+                )
+                dispatch_state = "DISPATCHED"
+                dispatch_detail = str(link.get("short_url") or link.get("id") or "")
+            except Exception as exc:
+                logger.exception("dispatch failed for %s", razorpay_event_id)
+                dispatch_state, dispatch_detail = "DISPATCH_ERROR", str(exc)
+
+    ingest.record(
+        razorpay_event_id=razorpay_event_id, razorpay_event=event_name,
+        status="PROCESSED", raw_event=raw_event,
+        selected_action=action.value, decision_mode=decision.decision_mode.value,
+        dispatch_state=dispatch_state, dispatch_detail=dispatch_detail,
+        trace_id=result.trace_id,
+    )
 
 
 async def handle_razorpay_webhook(request: Request) -> JSONResponse:
-    """HTTP POST Webhook Handler for Razorpay Event Notifications."""
-    body_bytes = await request.body()
-    signature = request.headers.get("X-Razorpay-Signature", "")
-
-    # Verification check if webhook secret is active
-    if razorpay_client.webhook_secret and razorpay_client.webhook_secret != "mock_webhook_secret":
-        if not razorpay_client.verify_webhook_signature(body_bytes, signature):
-            return JSONResponse({"error": "Invalid Razorpay Webhook Signature"}, status_code=400)
+    """Verify, deduplicate, acknowledge, then process in the background."""
+    body = await request.body()
+    ok, reason = _verify(body, request.headers.get("X-Razorpay-Signature", ""))
+    if not ok:
+        return JSONResponse({"error": reason}, status_code=401)
 
     try:
-        payload = json.loads(body_bytes.decode("utf-8"))
-    except Exception as err:
-        return JSONResponse({"error": f"Invalid JSON payload: {str(err)}"}, status_code=400)
+        payload = json.loads(body.decode("utf-8"))
+    except Exception as exc:
+        return JSONResponse({"error": f"invalid JSON: {exc}"}, status_code=400)
 
-    event_name = payload.get("event", "payment.failed")
-    event_entity = payload.get("payload", {}).get("payment", {}).get("entity", {})
-    
-    # Map Razorpay webhook payload into raw engine format
-    merchant_id = payload.get("account_id", event_entity.get("merchant_id", "merch_razorpay_live"))
-    customer_id = event_entity.get("customer_id", event_entity.get("email", "cust_live_user"))
-    payment_id = event_entity.get("id", "pay_live_001")
-    amount_paise = event_entity.get("amount", 1500000)
-    failure_reason = event_entity.get("error_code", event_entity.get("error_description", "INSUFFICIENT_FUNDS"))
-    gateway = event_entity.get("bank", event_entity.get("wallet", "razorpay"))
-
-    raw_event = {
-        "merchant_id": merchant_id,
-        "customer_id": customer_id,
-        "event_id": payment_id,
-        "event_type": "FAILED_PAYMENT" if "payment" in event_name else "ABANDONED_CHECKOUT",
-        "amount_paise": amount_paise,
-        "currency": event_entity.get("currency", "INR"),
-        "occurred_at": event_entity.get("created_at", "2026-09-01T10:00:00+00:00"),
-        "failure_reason": str(failure_reason).upper(),
-        "gateway": str(gateway).lower(),
-    }
-
-    # Process through Unified Recovery Engine (5-Stage Pipeline + CatBoost S-Learner)
-    recovery_result = orchestrator.process_and_execute(
-        raw_event=raw_event,
-        arm="A5",
-        random_seed=42,
+    # Razorpay's own delivery id. Retries of the same event carry the same value, which is
+    # what makes acknowledging early safe.
+    razorpay_event_id = (
+        request.headers.get("X-Razorpay-Event-Id")
+        or str(payload.get("id") or "")
+        or f"{payload.get('event')}:{payload.get('created_at')}"
     )
+    event_name = str(payload.get("event", ""))
 
-    decision = recovery_result.decision
-    selected_action = decision.selected_action
-
-    # Generate Razorpay Payment Link for any active recovery intervention
-    payment_link_result: Dict[str, Any] = {}
-    if selected_action in (ActionType.RECOMMEND_RETRY, ActionType.WHATSAPP_LINK, ActionType.SMS_LINK, ActionType.EMAIL_LINK):
-        payment_link_result = razorpay_client.create_payment_link(
-            amount_paise=amount_paise,
-            customer_name="Valued Customer",
-            customer_email=str(event_entity.get("email", "customer@example.com")),
-            customer_contact=str(event_entity.get("contact", "+919876543210")),
-            description=f"Recovery link for failed payment {payment_id}",
-            reference_id=decision.decision_id,
+    if ingest.already_seen(razorpay_event_id):
+        # A retry. Acknowledge so Razorpay stops resending; do NOT act twice.
+        return JSONResponse(
+            {"status": "DUPLICATE_IGNORED", "razorpay_event_id": razorpay_event_id},
+            status_code=200,
         )
 
-    response_data = {
-        "status": "SUCCESS",
-        "razorpay_event": event_name,
-        "payment_id": payment_id,
-        "engine_decision": {
-            "decision_id": decision.decision_id,
-            "selected_action": selected_action.value,
-            "decision_mode": decision.decision_mode.value,
-            "baseline_probability": decision.baseline_probability,
-            "selected_action_score": decision.selected_action_score.to_dict() if decision.selected_action_score else None,
-        },
-        "payment_link_generated": payment_link_result,
-        "trace_id": recovery_result.trace_id,
-    }
+    raw_event = map_webhook(payload)
+    if raw_event is None:
+        ingest.record(
+            razorpay_event_id=razorpay_event_id, razorpay_event=event_name,
+            status="NOT_RECOVERABLE", payload=payload,
+        )
+        return JSONResponse(
+            {"status": "IGNORED", "reason": "event does not represent revenue at risk"},
+            status_code=200,
+        )
 
-    return JSONResponse(response_data, status_code=200)
+    ingest.record(
+        razorpay_event_id=razorpay_event_id, razorpay_event=event_name,
+        status="ACCEPTED", raw_event=raw_event,
+    )
+
+    return JSONResponse(
+        {
+            "status": "ACCEPTED",
+            "razorpay_event_id": razorpay_event_id,
+            "event_type": raw_event["event_type"],
+            "verification": reason,
+        },
+        status_code=202,
+        background=BackgroundTask(_process, raw_event, razorpay_event_id, event_name),
+    )
 
 
 async def health_check(request: Request) -> JSONResponse:
-    """Health check endpoint."""
-    return JSONResponse({"status": "HEALTHY", "engine": "Unified Recovery Engine v1.0.0"})
+    """Health plus the live safety posture, so it is never a guess what this server will do."""
+    return JSONResponse({
+        "status": "HEALTHY",
+        "engine": "Unified Recovery Engine v1.0.0",
+        "posture": config.describe(),
+        "feed_counts": ingest.counters(),
+    })
+
+
+async def live_feed(request: Request) -> JSONResponse:
+    """Recent decisions, for the dashboard and for eyeballing a live demo."""
+    try:
+        limit = min(int(request.query_params.get("limit", 50)), 500)
+    except ValueError:
+        limit = 50
+    return JSONResponse({"events": ingest.recent(limit)})
 
 
 routes = [
     Route("/health", endpoint=health_check, methods=["GET"]),
+    Route("/feed", endpoint=live_feed, methods=["GET"]),
     Route("/webhooks/razorpay", endpoint=handle_razorpay_webhook, methods=["POST"]),
 ]
 
-app = Starlette(debug=True, routes=routes)
+app = Starlette(debug=False, routes=routes)
+
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+
+    logging.basicConfig(level=logging.INFO)
+    posture = config.describe()
+    logger.info("Real-time recovery server starting")
+    logger.info("  database        : %s", posture["db_path"])
+    logger.info("  signature req'd : %s", posture["signature_required"])
+    logger.info("  dispatch enabled: %s", posture["dispatch_enabled"])
+    if not posture["dispatch_enabled"]:
+        logger.info("  DRY RUN - decisions are recorded, nothing is sent to anyone.")
+    uvicorn.run(app, host="127.0.0.1", port=8000)

@@ -47,3 +47,8 @@ catboost_info/
 
 # Experiment output / Cache
 results/
+
+# Real-time runtime database (regenerated; never committed)
+data/*.db
+data/*.db-wal
+data/*.db-shm
