@@ -16,6 +16,7 @@ import os
 # Ensure repository root is in sys.path for Streamlit Cloud deployment
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
+from datetime import datetime
 from typing import Any, Dict, List
 
 import pandas as pd
@@ -494,6 +495,55 @@ def section_experiment() -> None:
     )
 
 
+def section_handoff_report() -> None:
+    """Everyone the engine could not recover, as a spreadsheet a human can work from."""
+    from app.realtime import ingest
+    from app.reporting import unrecovered
+
+    st.write("")
+    st.markdown("##### Unrecovered handoff report")
+    st.markdown(
+        '<div class="note">The most important honest output of an automated recovery '
+        'engine is the list of people it could <b>not</b> recover. Every row here has been '
+        'contacted as far as policy allows, and carries what was already tried — so a '
+        'collections agent does not re-send the email the engine already sent three '
+        'times. Customers who paid are excluded by construction.</div>',
+        unsafe_allow_html=True,
+    )
+
+    try:
+        conn = ingest.get_conn()
+        rows = unrecovered.collect(conn)
+    except Exception as exc:
+        st.info(f"No recovery history yet ({exc}).")
+        return
+
+    if not rows:
+        st.success(
+            "Nothing to hand off. Every opportunity the engine pursued either resolved or "
+            "is still in progress."
+        )
+        return
+
+    summary = unrecovered.summarise(rows)
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Customers unrecovered", summary["customers"])
+    c2.metric("Still outstanding", rupees(summary["total_unrecovered_paise"]))
+    c3.metric("Contacts already spent", summary["contacts_spent"])
+
+    st.dataframe(
+        pd.DataFrame([r.to_dict() for r in rows]),
+        use_container_width=True, hide_index=True,
+    )
+    st.download_button(
+        "Download Excel handoff report",
+        data=unrecovered.build_workbook(rows),
+        file_name=f"unrecovered_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        type="primary",
+    )
+
+
 def section_live_test() -> None:
     """Judge harness: upload a CSV, the real engine decides, real messages go out."""
     from app.dispatch import channels
@@ -587,6 +637,8 @@ def section_live_test() -> None:
                 st.dataframe(
                     pd.DataFrame(r.dispatches), use_container_width=True, hide_index=True
                 )
+
+    section_handoff_report()
 
     st.markdown(
         '<div class="note"><b>What is relaxed on this screen.</b> Two campaign-pacing '
