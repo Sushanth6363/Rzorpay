@@ -32,9 +32,11 @@ SAFETY POSTURE
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import threading
+import time
 from typing import Any, Dict, Optional
 
 from starlette.applications import Starlette
@@ -43,10 +45,10 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
-from app.domain.enums import ActionType
+from app.domain.enums import ActionType, LedgerStatus
 from app.integrations.razorpay_client import RazorpayIntegrationClient
 from app.orchestration.recovery_orchestrator import RecoveryOrchestrator
-from app.realtime import config, ingest
+from app.realtime import config, ingest, reliability
 from app.realtime.downtime_live import LiveRazorpayDowntimeProvider
 from app.realtime.event_mapper import (
     DOWNTIME_EVENTS,
@@ -110,6 +112,49 @@ def _handle_downtime(payload: Dict[str, Any], event_name: str) -> str:
     return status
 
 
+
+def _is_stale(payload: Dict[str, Any]) -> tuple:
+    """Return (is_stale, age_seconds). Unparseable timestamps are NOT rejected.
+
+    Razorpay stamps `created_at` as epoch seconds. A missing or unreadable value is
+    accepted rather than refused: rejecting on absent evidence would drop legitimate
+    traffic, and the HMAC signature is the primary authenticity control. This bounds the
+    window in which a captured request stays usable; it is not the authentication itself.
+    """
+    created = payload.get("created_at")
+    if not isinstance(created, (int, float)) or created <= 0:
+        return False, None
+    age = int(time.time() - float(created))
+    return age > config.WEBHOOK_MAX_AGE_SECONDS, age
+
+
+def _retry_item(item: Dict[str, Any]) -> None:
+    """Re-run a previously failed event from the retry queue."""
+    try:
+        raw_event = json.loads(item["raw_event_json"])
+    except Exception:
+        return
+    _process(raw_event, item["razorpay_event_id"], item.get("razorpay_event") or "", is_retry=True)
+
+
+def _reconcile_stale(ledger_id: str) -> bool:
+    """Close a stale EXECUTION_UNKNOWN entry fail-closed (slot CONSUMED, not released)."""
+    from app.ledger.engine import ContactLedgerEngine
+
+    conn = ingest.get_conn()
+    row = conn.execute(
+        "SELECT merchant_id FROM contact_ledger WHERE ledger_id = ?;", (ledger_id,)
+    ).fetchone()
+    if not row:
+        return False
+    engine = ContactLedgerEngine(conn=conn, merchant_id=row[0])
+    return engine.reconcile(
+        ledger_id=ledger_id,
+        outcome=LedgerStatus.RECONCILED_UNRESOLVED,
+        metadata={"reason": "reconciliation sweep: unresolved past window"},
+    )
+
+
 def _verify(body: bytes, signature: str) -> tuple:
     """Return (ok, reason). Fails closed when no secret is configured."""
     if config.WEBHOOK_SECRET:
@@ -128,7 +173,12 @@ def _verify(body: bytes, signature: str) -> tuple:
     )
 
 
-def _process(raw_event: Dict[str, Any], razorpay_event_id: str, event_name: str) -> None:
+def _process(
+    raw_event: Dict[str, Any],
+    razorpay_event_id: str,
+    event_name: str,
+    is_retry: bool = False,
+) -> None:
     """Run the engine and dispatch. Executes AFTER the response is sent."""
     try:
         result = get_orchestrator().process_and_execute(
@@ -136,11 +186,20 @@ def _process(raw_event: Dict[str, Any], razorpay_event_id: str, event_name: str)
             arm="A5",
             random_seed=None,  # live traffic is not a replay; no determinism seed
         )
-    except Exception:
+    except Exception as exc:
         logger.exception("engine failed for %s", razorpay_event_id)
+        # Razorpay already received its 200, so it will NEVER redeliver this. Without a
+        # retry queue the opportunity is silently lost — revenue at risk becoming revenue
+        # gone, which is precisely what this product exists to prevent.
+        state = reliability.enqueue_retry(
+            razorpay_event_id=razorpay_event_id,
+            razorpay_event=event_name,
+            raw_event_json=json.dumps(raw_event, default=str),
+            error=str(exc),
+        )
         ingest.record(
             razorpay_event_id=razorpay_event_id, razorpay_event=event_name,
-            status="ENGINE_ERROR", raw_event=raw_event,
+            status=state, raw_event=raw_event,
         )
         return
 
@@ -175,6 +234,8 @@ def _process(raw_event: Dict[str, Any], razorpay_event_id: str, event_name: str)
         dispatch_state=dispatch_state, dispatch_detail=dispatch_detail,
         trace_id=result.trace_id,
     )
+    if is_retry:
+        reliability.mark_retry_succeeded(razorpay_event_id)
 
 
 async def handle_razorpay_webhook(request: Request) -> JSONResponse:
@@ -188,6 +249,17 @@ async def handle_razorpay_webhook(request: Request) -> JSONResponse:
         payload = json.loads(body.decode("utf-8"))
     except Exception as exc:
         return JSONResponse({"error": f"invalid JSON: {exc}"}, status_code=400)
+
+    # REPLAY PROTECTION. config advertised WEBHOOK_MAX_AGE_SECONDS and reported it on
+    # /health, but nothing enforced it — a captured body and its still-valid signature
+    # could be replayed indefinitely. A documented-but-absent control is worse than a
+    # missing one, because everything downstream assumes it is there.
+    stale, age = _is_stale(payload)
+    if stale:
+        return JSONResponse(
+            {"error": f"stale webhook: {age}s old, max {config.WEBHOOK_MAX_AGE_SECONDS}s"},
+            status_code=401,
+        )
 
     # Razorpay's own delivery id. Retries of the same event carry the same value, which is
     # what makes acknowledging early safe.
@@ -289,13 +361,64 @@ async def live_feed(request: Request) -> JSONResponse:
     return JSONResponse({"events": ingest.recent(limit)})
 
 
+
+async def metrics(request: Request) -> JSONResponse:
+    """Operational counters. What an on-call engineer needs to answer "is it working?".
+
+    Deliberately includes the numbers that reveal SILENT failure — dead letters and stale
+    unresolved contacts — because those are the states where the system looks healthy while
+    losing money.
+    """
+    feed = ingest.counters()
+    retries = reliability.retry_counters()
+    stale = len(reliability.stale_unknown_entries())
+    return JSONResponse({
+        "feed": feed,
+        "retry_queue": retries,
+        "dead_letters": retries.get("DEAD_LETTER", 0),
+        "stale_unresolved_contacts": stale,
+        "active_outages": len(ingest.active_outages()),
+        "posture": config.describe(),
+        "alerts": [
+            a for a in [
+                f"{retries.get('DEAD_LETTER', 0)} dead-lettered events need human action"
+                if retries.get("DEAD_LETTER") else None,
+                f"{stale} contacts unresolved past the reconciliation window"
+                if stale else None,
+                "DISPATCH IS LIVE" if config.DISPATCH_ENABLED else None,
+                "UNSIGNED WEBHOOKS ACCEPTED" if config.ALLOW_UNSIGNED_WEBHOOKS
+                and not config.WEBHOOK_SECRET else None,
+            ] if a
+        ],
+    })
+
+
 routes = [
     Route("/health", endpoint=health_check, methods=["GET"]),
     Route("/feed", endpoint=live_feed, methods=["GET"]),
+    Route("/metrics", endpoint=metrics, methods=["GET"]),
     Route("/webhooks/razorpay", endpoint=handle_razorpay_webhook, methods=["POST"]),
 ]
 
-app = Starlette(debug=False, routes=routes)
+_worker: Optional[reliability.BackgroundWorker] = None
+
+
+@contextlib.asynccontextmanager
+async def _lifespan(app_: Starlette):
+    """Run the retry drain and reconciliation sweep for the life of the server."""
+    global _worker
+    reliability.ensure_schema()
+    _worker = reliability.BackgroundWorker(
+        process_fn=_retry_item, reconcile_fn=_reconcile_stale
+    )
+    _worker.start()
+    try:
+        yield
+    finally:
+        _worker.stop()
+
+
+app = Starlette(debug=False, routes=routes, lifespan=_lifespan)
 
 
 if __name__ == "__main__":

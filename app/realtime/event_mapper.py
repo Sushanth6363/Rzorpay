@@ -20,6 +20,7 @@ wrong policy, which is worse than not acting.
 
 from __future__ import annotations
 
+import hashlib
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
@@ -93,6 +94,26 @@ def _iso(created_at: Any) -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+
+# PII MINIMISATION. Razorpay's entity often carries no customer_id, only an email or a
+# phone number. Using those raw as the customer key writes personal contact details into
+# every ledger row, audit record, log line and feed entry — and the engine only ever needs
+# a STABLE IDENTIFIER, never the address itself. Anything that looks like contact detail is
+# therefore hashed to a stable pseudonymous key. Dispatch resolves the real address at send
+# time from the payload; it is never persisted by the engine.
+def _customer_key(entity: Dict[str, Any], entity_id: str) -> str:
+    """Stable, non-identifying customer key."""
+    explicit = entity.get("customer_id")
+    if explicit:
+        return str(explicit)
+    for field in ("email", "contact"):
+        value = entity.get(field)
+        if value:
+            digest = hashlib.sha256(str(value).strip().lower().encode()).hexdigest()[:16]
+            return f"cust_h_{digest}"
+    return f"cust_{entity_id}"
+
+
 def map_webhook(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Convert a verified Razorpay webhook body into a raw engine event.
 
@@ -122,12 +143,7 @@ def map_webhook(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
     occurred_at = _iso(entity.get("created_at"))
 
-    customer_id = str(
-        entity.get("customer_id")
-        or entity.get("email")
-        or entity.get("contact")
-        or f"cust_{entity_id}"
-    )
+    customer_id = _customer_key(entity, entity_id)
 
     raw: Dict[str, Any] = {
         "merchant_id": str(payload.get("account_id") or "merch_razorpay_live"),
