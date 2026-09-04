@@ -11,6 +11,7 @@ import hashlib
 import random
 from typing import Any, Dict, Optional
 from app.clock import Clock, SystemClock
+from app.sandbox.outcome_model import success_probability
 from app.domain.enums import (
     ActionType,
     DataProvenance,
@@ -142,17 +143,15 @@ class SandboxSimulator:
         # Standard simulated execution
         rng = _substream(random_seed, request.opportunity_id, request.action_type.value)
 
-        # Channel base success rates for simulation
-        success_probabilities = {
-            ActionType.RECOMMEND_RETRY: 0.65,
-            ActionType.WHATSAPP_LINK: 0.55,
-            ActionType.SMS_LINK: 0.40,
-            ActionType.EMAIL_LINK: 0.30,
-            ActionType.IVR_CALL: 0.35,
-            ActionType.AGENT_DIAL: 0.70,
-        }
-
-        base_p = success_probabilities.get(request.action_type, 0.30)
+        # Outcome probability from the context-dependent model: base channel rate x
+        # diagnosis-channel interaction x amount effect. Base rates are unchanged from the
+        # context-free version, so that world is a special case of this one. See
+        # app/sandbox/outcome_model.py for the pre-registered derivation.
+        base_p = success_probability(
+            action=request.action_type,
+            diagnosis_code=request.diagnosis_code,
+            amount_paise=request.amount_paise,
+        )
         roll = rng.random()
 
         if force_outcome == PaymentOutcome.PAYMENT_SUCCESS or (force_outcome is None and roll < base_p):

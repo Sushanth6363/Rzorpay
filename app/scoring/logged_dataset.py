@@ -118,6 +118,7 @@ def generate_logged_training_data(
                     idempotency_key=(
                         f"train_{context.opportunity.opportunity_id}_{action.value}_{seed}"
                     ),
+                    diagnosis_code=context.diagnosis.diagnosis_code.value,
                 )
                 result = simulator.execute_action(request=request, random_seed=seed)
 

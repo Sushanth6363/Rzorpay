@@ -400,6 +400,9 @@ class SandboxActionRequest:
     amount_paise: int
     requested_at: str
     idempotency_key: str
+    # Failure context, so the sandbox outcome model can express diagnosis x channel
+    # interaction. None reproduces the previous context-free behaviour exactly.
+    diagnosis_code: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {

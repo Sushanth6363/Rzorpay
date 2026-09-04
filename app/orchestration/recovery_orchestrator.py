@@ -144,6 +144,7 @@ class RecoveryOrchestrator:
                 amount_paise=amount_at_risk_paise,
                 requested_at=eval_time,
                 idempotency_key=f"idemp_no_action_{opportunity_id}",
+                diagnosis_code=context.diagnosis.diagnosis_code.value,
             )
 
             exec_result = self.simulator.execute_action(
@@ -213,6 +214,7 @@ class RecoveryOrchestrator:
                 amount_paise=amount_at_risk_paise,
                 requested_at=eval_time,
                 idempotency_key=idempotency_key,
+                diagnosis_code=context.diagnosis.diagnosis_code.value,
             )
 
             exec_result = self.simulator.execute_action(
@@ -265,6 +267,7 @@ class RecoveryOrchestrator:
             amount_paise=amount_at_risk_paise,
             requested_at=eval_time,
             idempotency_key=idempotency_key,
+            diagnosis_code=context.diagnosis.diagnosis_code.value,
         )
 
         exec_result = self.simulator.execute_action(
