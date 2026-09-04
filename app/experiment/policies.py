@@ -28,7 +28,8 @@ from app.orchestration.recovery_orchestrator import RecoveryOrchestrator
 from app.pipeline.downtime import NullDowntimeProvider, SimulatedDowntimeProvider
 from app.scoring.engine import AIRecoveryDecisionEngine
 from app.scoring.heuristic import HeuristicScorer
-from app.scoring.dataset_generator import SyntheticDatasetGenerator
+from app.scoring.dataset_generator import SyntheticDatasetGenerator  # noqa: F401  (legacy; see ADR-0017)
+from app.scoring.logged_dataset import generate_logged_training_data
 from app.scoring.s_learner import CatBoostSLearner
 
 # Declarative arm configuration. This table IS the experiment design — a reviewer can
@@ -79,14 +80,26 @@ CATBOOST_TRAIN_SAMPLES = 400
 
 
 def _fitted_catboost() -> CatBoostSLearner:
-    """Return the single fitted S-Learner, training it on first use."""
+    """Return the single fitted S-Learner, training it on first use.
+
+    TRAINED ON THE ENGINE'S OWN LOGGED OUTCOMES (ADR-0017).
+
+    It previously trained on SyntheticDatasetGenerator, whose hand-authored probability
+    table disagrees with the sandbox the model is graded in — RECOMMEND_RETRY sits near the
+    bottom of that table (~0.27) and is the second-best action in the simulator (0.65). The
+    model learned that world faithfully and was then scored in a different one, while the
+    heuristic's baselines happened to match the grading world's ordering. "The AI loses" was
+    a train/serve mismatch, not a fact about the model.
+
+    Labels now come from replaying training opportunities through the real pipeline and
+    sandbox, on a batch seed and outcome seeds DISJOINT from evaluation's (ADR-0005). The
+    simulator's probabilities are untouched: this changes where the labels come from, never
+    what they are.
+    """
     global _CATBOOST_SINGLETON
     if _CATBOOST_SINGLETON is None:
         learner = CatBoostSLearner()
-        training_data = SyntheticDatasetGenerator.generate_training_data(
-            num_samples=CATBOOST_TRAIN_SAMPLES,
-            random_seed=CATBOOST_TRAIN_SEED,
-        )
+        training_data = generate_logged_training_data()
         learner.fit(training_data)
         _CATBOOST_SINGLETON = learner
     return _CATBOOST_SINGLETON
@@ -113,8 +126,9 @@ def build_orchestrator_for_arm(arm: ExperimentArm) -> RecoveryOrchestrator:
         # baselines the heuristic uses, which would make A5 vs A3 measure nothing (the two
         # scorers would return identical probabilities). Training is what makes the
         # comparison a real test of the model rather than of its cold-start table.
-        # Trained on INITIAL_TRAINING_SET only (seeds 1-10 -> fixed training seed 42),
-        # never on the evaluation seeds (21-60). See ADR-0005.
+        # Trained on outcomes logged from the engine's own sandbox (ADR-0017), using
+        # batch seed 7 and outcome seeds 1-10 — disjoint from evaluation's batch seed 42
+        # and seeds 21-40. See ADR-0005 for the seed-disjointness rule.
         learner: Any = _fitted_catboost()
         model_version = "v1.0.0-catboost"
     else:

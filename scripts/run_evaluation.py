@@ -124,7 +124,34 @@ def render_markdown(report: Dict[str, Any]) -> str:
         (c for c in report["secondary_comparisons"] if c["comparison_id"] == "A5_vs_A3"),
         None,
     )
-    if a5_vs_a3 is not None:
+    # ADR-0011 guard: two arms that produce identical metrics are not measuring anything,
+    # and a tie must be declared as a VOID ablation rather than passed off as parity.
+    arms = report["arm_metrics"]
+    a5_m, a3_m = arms.get("A5"), arms.get("A3")
+    degenerate = bool(
+        a5_m and a3_m
+        and a5_m["successful_recoveries"] == a3_m["successful_recoveries"]
+        and a5_m["attributed_recovered_paise"] == a3_m["attributed_recovered_paise"]
+        and a5_m.get("outbound_contacts") == a3_m.get("outbound_contacts")
+    )
+
+    if degenerate:
+        lines.append(
+            "- **A5 and A3 produced IDENTICAL metrics — this ablation is VOID (ADR-0011).** "
+            "The model and the heuristic selected the same action on every opportunity, so "
+            "the comparison measures nothing and no claim about the model is made in either "
+            "direction."
+        )
+        lines.append(
+            "  **Why:** the sandbox's outcome probability depends only on *which channel is "
+            "used* — not on the customer, amount, diagnosis or history. In a world with no "
+            "context-dependent structure, the optimal scorer is a fixed ranking of channels, "
+            "and the heuristic already is exactly that. A correctly-trained model can at best "
+            "tie it. **The harness, not the model, is the limiting factor here**, and until "
+            "the simulator carries context-dependent effects, A5 vs A3 cannot demonstrate a "
+            "model advantage even in principle."
+        )
+    elif a5_vs_a3 is not None:
         d = a5_vs_a3["incremental_recovery_rate"]
         sig = a5_vs_a3["status"] == "STATISTICALLY_SIGNIFICANT"
         if d < 0 and sig:
