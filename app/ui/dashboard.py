@@ -495,6 +495,93 @@ def section_experiment() -> None:
     )
 
 
+FLAG_STYLE = {
+    "PAID":    ("#059669", "rgba(5,150,105,.12)",  "PAID"),
+    "ACTIVE":  ("#4338CA", "rgba(67,56,202,.12)",  "IN PROGRESS"),
+    "WAITING": ("#D97706", "rgba(217,119,6,.12)",  "WAITING"),
+    "STALLED": ("#DC2626", "rgba(220,38,38,.12)",  "NEEDS ATTENTION"),
+}
+
+
+def section_case_board() -> None:
+    """One row per customer: what the agent decided, whether it reached them, did they pay."""
+    from app.cases.board import build_board, summarise
+    from app.cases.repository import CaseRepository
+    from app.realtime import ingest
+
+    st.markdown("#### Case board")
+    st.markdown(
+        '<div class="note">One row per customer, assembled from the case, its timeline, its '
+        'payment link and its follow-up schedule. <b>There is no open/click tracking in this '
+        'system</b> — the engine knows only whether a contact was confirmed delivered and '
+        'whether money arrived, so a red row means <i>contacted, no payment, nothing '
+        'scheduled</i>, never "the customer ignored us". We cannot tell ignored from '
+        'never-saw-it and the board does not pretend to.</div>',
+        unsafe_allow_html=True,
+    )
+
+    try:
+        repo = CaseRepository(ingest.get_conn())
+        rows = build_board(repo)
+    except Exception as exc:
+        st.info(f"No cases yet ({exc}).")
+        return
+
+    if not rows:
+        st.info("No cases yet. Upload a CSV below to create some.")
+        return
+
+    s = summarise(rows)
+    c1, c2, c3, c4, c5 = st.columns(5)
+    c1.metric("Cases", s["cases"])
+    c2.metric("At risk", rupees(s["total_paise"]))
+    c3.metric("Recovered", rupees(s["recovered_paise"]),
+              delta=f"{s['recovery_rate']:.0%} of value", delta_color="normal")
+    c4.metric("Contacts sent", s["contacts_made"])
+    c5.metric("Needs attention", s["needs_attention"],
+              delta="red rows" if s["needs_attention"] else None, delta_color="inverse")
+
+    chips = "".join(
+        f'<span class="pill" style="color:{FLAG_STYLE[f][0]};background:{FLAG_STYLE[f][1]};'
+        f'border:1px solid {FLAG_STYLE[f][0]}55;margin-right:.4rem;">'
+        f'{FLAG_STYLE[f][2]} · {n}</span>'
+        for f, n in sorted(s["by_flag"].items()) if f in FLAG_STYLE
+    )
+    st.markdown(f'<div style="margin:.5rem 0 .8rem;">{chips}</div>', unsafe_allow_html=True)
+
+    frame = pd.DataFrame([r.to_row() for r in rows])
+
+    def paint(row):
+        colour, background, _ = FLAG_STYLE.get(row["Flag"], ("", "", ""))
+        return [f"background-color:{background}" if background else "" for _ in row]
+
+    st.dataframe(
+        frame.style.apply(paint, axis=1),
+        use_container_width=True, hide_index=True,
+        column_config={
+            "Amount": st.column_config.NumberColumn(format="₹%.2f"),
+            "Stage": st.column_config.TextColumn(width="large"),
+            "Why": st.column_config.TextColumn("Why not paid", width="medium"),
+        },
+    )
+
+    with st.expander("Timeline for one case"):
+        labels = {f"{r.name or r.customer_id} · {rupees(r.amount_paise)} · {r.flag}": r
+                  for r in rows}
+        chosen = st.selectbox("Case", list(labels), key="board_case")
+        picked = labels[chosen]
+        if picked.payment_url:
+            st.markdown(f"**Payment link:** {picked.payment_url}")
+        for event in repo.timeline(picked.case_id):
+            st.markdown(
+                f'<div class="urx-kv"><span class="k">{event.at[11:19]} · '
+                f'{event.kind.value.replace("_", " ").title()}</span>'
+                f'<span class="v" style="font-weight:400;text-align:left;">'
+                f'{event.summary}</span></div>',
+                unsafe_allow_html=True,
+            )
+
+
 def section_handoff_report() -> None:
     """Everyone the engine could not recover, as a spreadsheet a human can work from."""
     from app.realtime import ingest
@@ -547,9 +634,17 @@ def section_handoff_report() -> None:
 def section_live_test() -> None:
     """Judge harness: upload a CSV, the real engine decides, real messages go out."""
     from app.dispatch import channels
-    from app.dispatch.csv_runner import MAX_ROWS, SAMPLE_CSV, parse_csv, run_csv
+    from app.agent.loop import RecoveryAgent
+    from app.cases.csv_ingest import create_cases, parse_csv
+    from app.cases.repository import CaseRepository
+    from app.dispatch.dispatcher import ChannelDispatcher
+    from app.realtime import ingest
 
-    st.markdown("#### Test it on yourself")
+    section_case_board()
+    st.write("")
+    st.markdown("---")
+
+    st.markdown("#### Upload a merchant CSV")
     st.markdown(
         '<div class="note">Upload a CSV with <b>your own</b> email and phone. The real '
         'decision engine runs — Stage 0, diagnosis, EV ranking, safety filter — and then '
@@ -583,19 +678,18 @@ def section_live_test() -> None:
         )
         return
 
-    rows, errors = parse_csv(uploaded.getvalue())
-    for err in errors:
-        st.error(err)
+    report = parse_csv(uploaded.getvalue())
+    rows = report.valid
+    for col in report.missing_columns:
+        st.error(f"CSV refused - missing required column: {col}")
+    for bad in report.rejected:
+        st.warning(f"Line {bad.line} rejected: {bad.reason}")
     if not rows:
         return
 
     st.dataframe(
         pd.DataFrame([
-            {"Row": r["_line"], "Name": r.get("customer_name", ""),
-             "Email": r.get("email", ""), "Phone": r.get("phone", ""),
-             "Amount": float(r["_amount_paise"]) / 100,
-             "Stream": (r.get("event_type") or "FAILED_PAYMENT").upper()}
-            for r in rows
+            r.to_dict() for r in rows
         ]),
         use_container_width=True, hide_index=True,
         column_config={"Amount": st.column_config.NumberColumn(format="₹%.2f")},
@@ -619,24 +713,31 @@ def section_live_test() -> None:
     if not dry and not confirm:
         return
 
-    with st.spinner("Running the engine…"):
-        results = run_csv(rows, dry_run=dry)
+    with st.spinner("Creating cases and running the engine…"):
+        # The DURABLE path: rows become Cases, so a payment webhook has something to close.
+        # The old ephemeral runner left nothing for the loop to close against.
+        conn = ingest.get_conn()
+        repo = CaseRepository(conn)
+        cases = create_cases(repo, rows, merchant_id="merch_demo")
+        agent = RecoveryAgent(
+            conn, repository=repo,
+            dispatcher=ChannelDispatcher(conn, repository=repo, dry_run=dry),
+        )
+        results = agent.run_batch([c.case_id for c in cases])
 
     for r in results:
-        if r.error:
-            st.error(f"Row {r.row_number}: {r.error}")
-            continue
-        icon = "SENT" if r.any_sent else ("DRY" if dry else "HELD")
-        with st.expander(
-            f"[{icon}]  Row {r.row_number} · ₹{r.amount_paise / 100:,.0f} · "
-            f"{r.event_type} → {r.decided_action}",
-            expanded=True,
-        ):
-            st.markdown(f"**Why:** {r.reasoning}")
-            if r.dispatches:
-                st.dataframe(
-                    pd.DataFrame(r.dispatches), use_container_width=True, hide_index=True
-                )
+        status = r.dispatch.get("status", "-")
+        icon = {"SENT": "SENT", "SKIPPED": "DRY", "BLOCKED": "BLOCKED"}.get(status, status)
+        with st.expander(f"[{icon}]  {r.action or 'NO ACTION'} — {r.case_id[:46]}",
+                         expanded=True):
+            st.markdown(f"**Why:** {r.reasoning or r.skipped_reason}")
+            if r.payment_url:
+                st.markdown(f"**PAY NOW:** {r.payment_url}")
+            if r.dispatch:
+                st.dataframe(pd.DataFrame([r.dispatch]),
+                             use_container_width=True, hide_index=True)
+
+    st.success("Cases created. Scroll up to the case board to track them.")
 
     section_handoff_report()
 
