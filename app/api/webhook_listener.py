@@ -155,6 +155,17 @@ def _reconcile_stale(ledger_id: str) -> bool:
     )
 
 
+def _payments():
+    """PaymentLinkService for this thread, bound to the durable shared database."""
+    from app.payments.link_service import PaymentLinkService
+
+    svc = getattr(_LOCAL, "payments", None)
+    if svc is None:
+        svc = PaymentLinkService(ingest.get_conn())
+        _LOCAL.payments = svc
+    return svc
+
+
 def _diagnosis_code(result: Any) -> Optional[str]:
     """Diagnosis from the executed decision — drives follow-up timing and message copy."""
     features = getattr(result.decision, "decision_features", None) or {}
@@ -351,6 +362,19 @@ async def handle_razorpay_webhook(request: Request) -> JSONResponse:
         ingest.record_resolution(entity_id, event_name, amount if isinstance(amount, int) else None)
         # Stop chasing immediately. The engine must never pursue money it already has.
         followup.cancel_for_entity(entity_id, f"resolved by {event_name}")
+
+        # Close the CASE. This is the step that makes the loop close: a payment made
+        # through a recovery link arrives as plink_..., and only the case layer can map
+        # that back to the case opened from the original failure (ADR-0023). Without it
+        # the payment is recorded and the customer keeps being contacted.
+        case_id = _payments().mark_paid_from_provider_event(
+            entity_id=entity_id,
+            event_name=event_name,
+            amount_paise=amount if isinstance(amount, int) else None,
+            reference_id=str((extract_entity(payload) or {}).get("reference_id") or ""),
+        )
+        if case_id:
+            followup.cancel_for_entity(case_id, f"case closed by {event_name}")
         ingest.record(
             razorpay_event_id=razorpay_event_id, razorpay_event=event_name,
             status="RESOLVED_PAID", payload=payload,

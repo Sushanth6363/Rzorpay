@@ -117,6 +117,12 @@ class Case:
     # `payment.captured` on the ORIGINAL attempt must also resolve back to this case.
     source_event_id: str = ""
     opportunity_id: str = ""
+    # Which recovery stream this debt belongs to. It drives which actions the engine will
+    # even CONSIDER: a receivable uploaded by a merchant has no stored instrument, so
+    # RECOMMEND_RETRY is not a real option and the candidate generator correctly does not
+    # offer it. Mislabelling a receivable as a FAILED_PAYMENT makes the engine recommend
+    # retrying a charge that was never attempted.
+    event_type: str = "OVERDUE_B2B_INVOICE"
     status: CaseStatus = CaseStatus.OPEN
     promised_date: str = ""
     close_reason: str = ""
@@ -135,6 +141,7 @@ class Case:
             "customer_id": self.customer_id, "amount_paise": self.amount_paise,
             "currency": self.currency, "due_date": self.due_date,
             "source_event_id": self.source_event_id, "opportunity_id": self.opportunity_id,
+            "event_type": self.event_type,
             "status": self.status.value, "promised_date": self.promised_date,
             "close_reason": self.close_reason, "created_at": self.created_at,
             "updated_at": self.updated_at, "closed_at": self.closed_at,

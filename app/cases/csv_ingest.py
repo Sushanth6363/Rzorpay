@@ -78,7 +78,7 @@ class ValidRow:
     phone: str
     amount_paise: int
     due_date: str
-    event_type: str = "FAILED_PAYMENT"
+    event_type: str = "OVERDUE_B2B_INVOICE"
     failure_reason: str = ""
 
     @property
@@ -271,7 +271,11 @@ def parse_csv(raw: bytes | str) -> IngestReport:
             line=i, customer_id=customer_id, name=row.get("name", ""),
             email=email, phone=phone or "", amount_paise=amount_paise,
             due_date=due_iso or "",
-            event_type=(row.get("event_type") or "FAILED_PAYMENT").upper(),
+            # A merchant uploading outstanding amounts is describing RECEIVABLES, not
+            # failed charges. There was no payment attempt, so there is no stored
+            # instrument to retry - and typing it as FAILED_PAYMENT makes the engine
+            # recommend retrying a charge that never happened. A row may override this.
+            event_type=(row.get("event_type") or "OVERDUE_B2B_INVOICE").upper(),
             failure_reason=(row.get("failure_reason") or "").upper(),
         ))
 
@@ -299,6 +303,7 @@ def create_cases(
             amount_paise=row.amount_paise,
             due_date=row.due_date,
             source_event_id=f"csv_{merchant_id}_{row.customer_id}_{stamp}_{row.line}",
+            event_type=row.event_type,
             status=CaseStatus.OPEN,
         )
         repo.create_case(case)

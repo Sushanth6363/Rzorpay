@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS cases (
     due_date        TEXT DEFAULT '',
     source_event_id TEXT DEFAULT '',
     opportunity_id  TEXT DEFAULT '',
+    event_type      TEXT DEFAULT 'OVERDUE_B2B_INVOICE',
     status          TEXT NOT NULL,
     promised_date   TEXT DEFAULT '',
     close_reason    TEXT DEFAULT '',
@@ -115,6 +116,14 @@ class CaseRepository:
     def ensure_schema(self) -> None:
         with _LOCK:
             self.conn.executescript(CASES_DDL)
+            # Additive migration for databases created before event_type existed.
+            try:
+                self.conn.execute(
+                    "ALTER TABLE cases ADD COLUMN event_type TEXT "
+                    "DEFAULT 'OVERDUE_B2B_INVOICE';"
+                )
+            except sqlite3.OperationalError:
+                pass  # already present
             self.conn.commit()
 
     # --- customers -----------------------------------------------------------------
@@ -153,12 +162,12 @@ class CaseRepository:
         self.conn.execute(
             """INSERT OR REPLACE INTO cases (
                    case_id, merchant_id, customer_id, amount_paise, currency, due_date,
-                   source_event_id, opportunity_id, status, promised_date, close_reason,
-                   created_at, updated_at, closed_at
-               ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?);""",
+                   source_event_id, opportunity_id, event_type, status, promised_date,
+                   close_reason, created_at, updated_at, closed_at
+               ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);""",
             (case.case_id, case.merchant_id, case.customer_id, case.amount_paise,
              case.currency, case.due_date, case.source_event_id, case.opportunity_id,
-             case.status.value, case.promised_date, case.close_reason,
+             case.event_type, case.status.value, case.promised_date, case.close_reason,
              case.created_at, case.updated_at, case.closed_at),
         )
         self.conn.commit()
@@ -176,6 +185,8 @@ class CaseRepository:
             currency=row["currency"], due_date=row["due_date"] or "",
             source_event_id=row["source_event_id"] or "",
             opportunity_id=row["opportunity_id"] or "",
+            event_type=(row["event_type"] if "event_type" in row.keys() else None)
+                       or "OVERDUE_B2B_INVOICE",
             status=CaseStatus(row["status"]), promised_date=row["promised_date"] or "",
             close_reason=row["close_reason"] or "", created_at=row["created_at"],
             updated_at=row["updated_at"], closed_at=row["closed_at"] or "",
