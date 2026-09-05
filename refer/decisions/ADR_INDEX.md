@@ -17,9 +17,9 @@ Every significant decision is recorded as an ADR. **An ADR is mandatory before**
 | [0009](ADR-0009-external-data-calibration-only.md) | External data for calibration only | ACCEPTED | 2026-08-31 | data, claims |
 | [0010](ADR-0010-streamlit-over-react.md) | Streamlit over a Node frontend | ACCEPTED | 2026-08-31 | frontend, toolchain |
 | [0011](ADR-0011-five-arms-and-primary-metric.md) | Five experiment arms; primary metric = incremental recovery rate | ACCEPTED | 2026-08-31 | experiment, claims |
-| [0012](ADR-0012-adapter-boundary-and-canonical-event.md) | Provider-neutral adapter boundary & `CanonicalEvent` contract (Razorpay Test Mode + Simulator) | PROPOSED | 2026-09-01 | ingestion, adapters, domain |
-| [0013](ADR-0013-webhook-verification-and-idempotency.md) | Webhook HMAC SHA256 verification, idempotency, and tenant mapping | PROPOSED | 2026-09-01 | webhooks, security, ledger |
-| [0014](ADR-0014-streamlit-judge-sandbox-architecture.md) | Streamlit Public Live Demo & Judge Interactive Sandbox (Live, Sandbox, Red-Team modes) | PROPOSED | 2026-09-01 | UI, judge sandbox, deployment |
+| [0012](ADR-0012-adapter-boundary-and-canonical-event.md) | Provider-neutral adapter boundary & `CanonicalEvent` contract (Razorpay Test Mode + Simulator) | ACCEPTED | 2026-09-01 | ingestion, adapters, domain |
+| 0013 | *(withdrawn — never written; superseded before it existed)* | WITHDRAWN | 2026-09-05 | — |
+| 0014 | *(withdrawn — never written; partly superseded, partly never built)* | WITHDRAWN | 2026-09-05 | — |
 | [0015](ADR-0015-compliant-escalation-ladder.md) | Compliant escalation: one rung, on evidence, after a quiet period | ACCEPTED | 2026-09-03 | policy, actions, pipeline, audit |
 | [0016](ADR-0016-tds-derivation-over-declared-flag.md) | TDS position derived from the invoice, never read off a flag | ACCEPTED | 2026-09-03 | Stage 0, attribution, money reporting |
 | [0017](ADR-0017-train-on-logged-outcomes.md) | S-learner trains on the engine's own logged outcomes | ACCEPTED | 2026-09-03 | AI/ML, experiment |
@@ -32,10 +32,23 @@ Every significant decision is recorded as an ADR. **An ADR is mandatory before**
 
 | # | Question | Blocking | Owner |
 |---|---|---|---|
-| OD-1 | Actual submission deadline (third-party sources say 2026-09-05; unpublished by Razorpay) | which roadmap applies | human |
-| OD-2 | NPCI / MSME Samadhaan licence terms | calibration source; fallback defined | human |
-| OD-3 | Razorpay Payment Downtime API access (support-request gated) | D2 realism; simulate if denied | human |
+| OD-1 | *Closed 2026-09-05.* Deadline believed to be 2026-09-05 — that is today. Third-party sources only; Razorpay never published it. Treat the build as submittable now rather than waiting for confirmation. | nothing | human |
+| OD-2 | NPCI / MSME Samadhaan licence terms | calibration source; fallback defined and active | human |
+| OD-3 | Razorpay Payment Downtime API access (support-request gated) | D2 realism; live path built, simulator fallback active | human |
+
+## Withdrawn
+
+Three ADR numbers were listed as `PROPOSED` in this index on 2026-09-01 with links to files
+that were never written. Rather than back-fill documents for decisions that were not made as
+described, the numbers are retired here. **0012 was the exception** — its decision was real,
+implemented, and cited by a code docstring, so the document was written on 2026-09-05.
+
+| # | Was to cover | Disposition |
+|---|---|---|
+| 0013 | Webhook HMAC verification, idempotency, tenant mapping | **Superseded before it was written.** The subject was decided and recorded in full in [ADR-0018](ADR-0018-realtime-webhook-ingestion.md) (fail-closed HMAC SHA256, idempotency on the Razorpay event id, explicit event mapping) and [ADR-0019](ADR-0019-production-reliability.md) (replay guard, pseudonymous customer keys). Nothing is undocumented; only the number is dead. |
+| 0014 | Streamlit public demo & judge sandbox with Live, Sandbox and **Red-Team** modes | **Partly superseded, partly never built.** The Streamlit-over-Node decision is [ADR-0010](ADR-0010-streamlit-over-react.md); the dashboard rebuild is recorded there. Red-team mode **was never built** — see `01_PROJECT_STATE.md` §Not built. Writing this ADR would have documented a feature that does not exist. |
 
 ## Superseded
 
 None yet.
+

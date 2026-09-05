@@ -2,7 +2,16 @@
 
 Canonical implementation architecture. **Frozen** (`p0.2-closure.md`). Changes require an ADR.
 
-Every component below is `PLANNED`. None is implemented — see `01_PROJECT_STATE.md`.
+**Implemented and verified 2026-09-05 at commit `e803e36`** — 62 modules, 255 passing tests.
+Until 2026-09-05 this line read *"Every component below is `PLANNED`. None is implemented"*,
+which was written before the build and never updated. Two contracts below were **never built**
+and are marked as such inline: Multi-Agent Arbitration (superseded by the shared contact budget)
+and red-team mode. Everything else exists. See `01_PROJECT_STATE.md` for the module inventory.
+
+The `Owner:` paths below are the **delivered** ones. Several differ from the plan — the planned
+`app/policy/`, `app/actions/`, `app/candidates/`, `app/ingestion/` and `app/simulation/`
+packages were consolidated into `app/pipeline/`, `app/dispatch/`, `app/realtime/` and
+`app/sandbox/`. `09_IMPLEMENTATION_ROADMAP.md` carries the full planned-vs-delivered map.
 
 ---
 
@@ -12,7 +21,7 @@ Every component below is `PLANNED`. None is implemented — see `01_PROJECT_STAT
 - **Purpose**: canonical unit of work; all four streams map into it
 - **Inputs**: ingested event (payment / cart / subscription / invoice)
 - **Outputs**: opportunity with `merchant_id`, `canonical_customer_id`, `gross_at_risk_paise`
-- **Owner**: `app/ingestion/`
+- **Owner**: `app/realtime/` + `app/pipeline/dataset_adapter.py` (ADR-0012)
 - **Dependencies**: identity resolution
 - **State**: `OPEN` → `CLOSED_NOT_AT_RISK` | `ACTIONED` | `RESOLVED`
 - **Failure modes**: duplicate delivery; unresolvable identity
@@ -38,7 +47,7 @@ Every component below is `PLANNED`. None is implemented — see `01_PROJECT_STAT
 ### Candidate Generation
 - **Purpose**: enumerate feasible actions for a validated opportunity
 - **Outputs**: `RECOMMEND_RETRY` `SEND_PAYMENT_LINK` `SEND_REMINDER` `UPDATE_PAYMENT_METHOD` `NO_ACTION`
-- **Owner**: `app/candidates/`
+- **Owner**: `app/pipeline/candidate_generator.py`
 - **Safety constraints**: `NO_ACTION` is **always** present; the generator may never bypass policy
 - **Tests**: `NO_ACTION` in every candidate set
 
@@ -46,7 +55,8 @@ Every component below is `PLANNED`. None is implemented — see `01_PROJECT_STAT
 - **Purpose**: decide which actions are permissible — once, before scoring is used and before exploration
 - **Inputs**: opportunity, customer flags, budget view, payment state, outage state
 - **Outputs**: eligible action set + per-candidate block reasons
-- **Owner**: `app/policy/`
+- **Owner**: `app/pipeline/safety_filter.py`, with `app/pipeline/escalation.py` layered **under**
+  it (ADR-0015 — escalation may only remove a candidate, never revive one)
 - **Constraints checked**: opt-out · cooldown · contact budget · merchant policy · legal restriction · payment state · already-recovered · outage · retry ownership · action eligibility · tenant isolation
 - **Safety constraints**: this set **is** the exploration pool (INV-3)
 - **Tests**: blocked candidate reserves nothing; 2,000-seed exploration property test
@@ -68,11 +78,20 @@ Every component below is `PLANNED`. None is implemented — see `01_PROJECT_STAT
 - **Owner**: `app/scoring/` selection step
 - **Safety constraints**: eligible actions only; may override a VALUE abstention, never a SAFETY one; ε = 0.05 deterministic; propensity recorded
 
-### Multi-Agent Arbitration
-- **Purpose**: choose one action per customer across competing stream agents
-- **Owner**: `app/arbitration/`
-- **Safety constraints**: deterministic function, **never** an agent; single serialized decision point
-- **Tests**: two agents → one contact, with real suppression reasons persisted
+### Multi-Agent Arbitration — **NOT BUILT; superseded by the contact ledger**
+- **Purpose (as planned)**: choose one action per customer across competing stream agents
+- **Owner (as planned)**: `app/arbitration/` — **does not exist.** Neither does `app/agents/`.
+  No agent objects are simulated anywhere in this project.
+- **What actually arbitrates**: the shared per-customer contact budget below. All four streams
+  contend for **one** atomic slot; `BEGIN IMMEDIATE` plus the DB `CHECK` decides, with a single
+  writer. Deterministic, serialized, and enforced by the database rather than by a ranking
+  function — which is the stronger version of the same guarantee.
+- **How the effect is measured**: as an arm contrast, not as agent objects. **A1** gives each
+  stream its own budget row so nothing arbitrates; **A2ns/A2** share one slot. A1 spends 1,500
+  contacts (22.73 per customer) for recovery statistically indistinguishable from A2's 1,336
+  (20.24). See `app/experiment/policies.py` and `results/RESULTS.md`.
+- **Recorded in**: `01_PROJECT_STATE.md` §Not built · `09_IMPLEMENTATION_ROADMAP.md` M9.
+  **Never claim 12 competing agents.**
 
 ### Contact Ledger / Atomic Reservation
 - **Purpose**: enforce the shared per-customer contact budget under concurrency
@@ -84,7 +103,8 @@ Every component below is `PLANNED`. None is implemented — see `01_PROJECT_STAT
 
 ### Execution
 - **Purpose**: perform the single arbitrated action
-- **Owner**: `app/actions/` — sole holder of send credentials
+- **Owner**: `app/dispatch/` — sole holder of send credentials; off unless
+  `RECOVERY_DISPATCH_ENABLED`
 - **Safety constraints**: re-checks `flags_version` inside the same transaction as `reserved → executed`; an ambiguous provider response never auto-releases
 
 ### Downtime Suppression

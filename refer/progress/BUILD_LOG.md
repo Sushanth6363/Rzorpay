@@ -296,5 +296,139 @@ Git commit:
 - **Decisions made**: Local offline launch model (`python run_demo.py`), zero cloud dependencies, complete offline self-containment.
 - **Next action**: Project submission complete.
 
+---
+
+## 2026-09-03 — Post-M9 day 1: honest measurement (reconstructed)
+
+> **Reconstructed from git on 2026-09-05, not written live.** The five commits below were made
+> on 2026-09-03 without log entries. This entry is written from `git log` and the code, and is
+> marked as reconstructed so it is never mistaken for a contemporaneous record. Per this file's
+> own rule, the M9 entry above is left untouched.
+
+- **Date**: 2026-09-03 (logged 2026-09-05)
+- **Agent/model**: Claude Opus 5
+- **Goal**: make the evaluation say something true. M9 declared completion while the arms were
+  not meaningfully differentiated, so the headline number measured very little.
+- **Work performed**:
+  1. `03d9f5c` — differentiated the experiment arms, added `make eval`, fixed a simulator RNG
+     defect that made arms share a draw.
+  2. `600f6ad` — rebuilt the judge dashboard: readable decision trace, safety checks that
+     *execute* rather than assert, real theme (ADR-0010).
+  3. `22b37e6` — added the contact-efficiency metric. This is the axis the engine is actually
+     for: comparable recovery for materially fewer contacts.
+  4. `995ba53` — closed the four Track 3 spec gaps: money metrics, four-stream coverage,
+     compliant escalation (ADR-0015), TDS derivation (ADR-0016). **+29 tests.**
+  5. `280f96c` — closed the `.venv` trap (Python 3.14 has no wheels for the pinned scientific
+     stack) and rewrote the README to lead with the honest framing.
+- **Files changed**: `app/experiment/*`, `app/ui/dashboard.py`, `app/pipeline/escalation.py`,
+  `app/pipeline/tds.py`, `app/pipeline/stage0.py`, `scripts/bootstrap.py`, `Makefile`,
+  `README.md`, `tests/pipeline/test_escalation.py`, `tests/pipeline/test_tds_derivation.py`
+- **Tests run / passed / failed**: `pytest` · 190 · 0
+- **Decisions made**: ADR-0015 (compliant escalation ladder), ADR-0016 (TDS derived, never
+  read off a flag)
+- **Problems discovered**: the simulator RNG defect meant arms drew from a shared stream —
+  every pre-`03d9f5c` arm contrast is void. Superseded, not corrected in place.
+- **Next action**: real-time ingestion, so the four streams are reachable from actual traffic.
+
+---
+
+## 2026-09-04 — Post-M9 day 2: the live path, reliability, and a falsified prediction (reconstructed)
+
+> **Reconstructed from git on 2026-09-05, not written live.** Eleven commits, no log entries.
+
+- **Date**: 2026-09-04 (logged 2026-09-05)
+- **Agent/model**: Claude Opus 5
+- **Goal**: make the engine reachable from real Razorpay traffic without weakening any safety
+  gate, and find out whether the model actually earns its place.
+- **Work performed**:
+  1. `3a1738a` / `b881f7b` — real-time Razorpay API and webhook integration; root
+     `streamlit_app.py` entrypoint plus the `sys.path` fix for Streamlit Cloud.
+  2. `90b4edd` — retrained the S-learner on the engine's **own logged outcomes** instead of a
+     mismatched table (ADR-0017).
+  3. `8a280f9` / `acbe951` — durable, idempotent, **fail-closed** webhook ingestion; consumed
+     downtime and resolution webhooks (ADR-0018). **+25 tests.** An absent
+     `RAZORPAY_WEBHOOK_SECRET` refuses traffic rather than opening the door; event mapping is
+     an explicit table, never a family prefix.
+  4. `8a81586` — context-dependent sandbox outcome model. **Pre-registered prediction P1 was
+     FALSIFIED** and reported as such (ADR-0020).
+  5. `7d59873` — production reliability: retry with backoff, visible dead-letter queue,
+     reconciliation sweep, replay guard, pseudonymous customer keys (ADR-0019). **+12 tests.**
+  6. `6f785ff` — recorded ADR-0017 through ADR-0020.
+  7. `0afa01a` — judge CSV harness that really sends email/SMS/WhatsApp/IVR, behind
+     `RECOVERY_DISPATCH_ENABLED`.
+  8. `03e99e9` — act on silence: follow-up delay derived from failure reason, channel and
+     stream. **+17 tests.**
+  9. `e803e36` — Excel handoff report for every case the engine could not recover. **+11 tests.**
+- **Files changed**: `app/realtime/**` (new), `app/api/webhook_listener.py` (new),
+  `app/dispatch/**` (new), `app/reporting/**` (new), `app/integrations/razorpay_client.py`,
+  `app/sandbox/outcome_model.py`, `app/scoring/logged_dataset.py`, `streamlit_app.py`,
+  `refer/decisions/ADR-0017..0020`, `tests/realtime/**`, `tests/reporting/**`
+- **Tests run / passed / failed**: `pytest` · 255 · 0
+- **Decisions made**: ADR-0017, ADR-0018, ADR-0019, ADR-0020
+- **Problems discovered**: ADR-0020 — policy bounds the action space so tightly that the scorer
+  is nearly irrelevant, measured at **99.6% of decisions**. That is why A5 does not beat A3.
+  Reported rather than tuned away.
+- **Next action**: submission packaging.
+
+---
+
+## 2026-09-05 — Correction: documentation drift across the `refer/` corpus
+
+- **Date**: 2026-09-05
+- **Agent/model**: Claude Opus 5
+- **Goal**: this is the correction entry this file's own rule requires. No past entry above was
+  edited; the record of what was wrong is here.
+- **What was wrong**: the `refer/` corpus was authored as a design-freeze artifact *before*
+  implementation and was not re-synced during the four-day sprint that raced past it. At
+  `e803e36`, with 255 tests passing and the evaluation reproducing, the documents still said:
+
+  | Document | Claimed | Actually |
+  |---|---|---|
+  | `01_PROJECT_STATE.md` | "No component of this system has been implemented, tested, or verified"; `IMPLEMENTED: 0`; "repository has zero git commits" | 62 modules / 10,530 lines, 255 tests, 33 commits |
+  | `00_START_HERE.md` | M1.1-era status; "12 agents modeled as simulated agent recommendations"; red-team mode | build complete; no agent objects exist; no red-team mode |
+  | `09_IMPLEMENTATION_ROADMAP.md` | "Every milestone is `NOT_STARTED`" | M1–M14 delivered bar two features |
+  | `progress/CURRENT_STATUS.md` | last verified at M9 / 161 tests | 255 tests; sixteen unlogged commits |
+  | `testing/TEST_MATRIX.md` | total 161 | 161 historical + 94 post-M8 = 255 |
+  | `README.md` | "190 tests" (×3) | 255 |
+  | `decisions/ADR_INDEX.md` | ADR-0012/0013/0014 linked as `PROPOSED` | the three files never existed |
+  | `run_demo.py` | dashboard on port 8501 | 8555 everywhere else |
+
+- **Two substantive overclaims found and removed** (these were not staleness — they described
+  features that do not exist):
+  1. **Competing-agent arbitrator** — no `app/arbitration/` or `app/agents/`. Arbitration *is*
+     the shared atomic contact budget; the cross-stream effect is measured via the A1 vs
+     A2ns/A2 arm contrast (1,500 contacts / 22.73 per customer vs 1,336 / 20.24).
+  2. **Red-team mode** — no `app/ui/red_team.py`, no nine attack cards. The Safety tab does
+     execute live invariant checks, which covers the intent; the claim did not.
+- **Work performed**: rewrote `01_PROJECT_STATE.md` (with a new §Not built),
+  `progress/CURRENT_STATUS.md`, `progress/NEXT_STEPS.md`; corrected `00_START_HERE.md` (status
+  block, arbitration claims, red-team claims, architecture diagram, simulated-vs-real table);
+  reconciled `09_IMPLEMENTATION_ROADMAP.md` milestone by milestone with a planned-vs-delivered
+  map; appended the 94 post-M8 tests to `testing/TEST_MATRIX.md` and fixed the total to 255;
+  fixed the README test count; wrote the missing **ADR-0012** (its decision was real and cited
+  by `app/domain/models.py:43`) and formally **withdrew ADR-0013 and ADR-0014** with their
+  dispositions; closed OD-1; unified `run_demo.py` on port 8555.
+- **Files changed**: `README.md`, `run_demo.py`, `refer/00_START_HERE.md`,
+  `refer/01_PROJECT_STATE.md`, `refer/09_IMPLEMENTATION_ROADMAP.md`,
+  `refer/testing/TEST_MATRIX.md`, `refer/decisions/ADR_INDEX.md`,
+  `refer/decisions/ADR-0012-adapter-boundary-and-canonical-event.md` (new),
+  `refer/progress/CURRENT_STATUS.md`, `refer/progress/NEXT_STEPS.md`,
+  `refer/progress/BUILD_LOG.md`
+- **Tests run / passed / failed**: `pytest` · 255 · 0. Quality gate 6/6, zero hardcoded
+  secrets. Evaluation regenerated at `e803e36` on a clean tree, reproducing batch hash
+  `0837b24cbe3992a6…` and primary A2−A1 = −0.0148 (p=0.1846) exactly. **No source code
+  behaviour changed** — only documentation and the launcher's port.
+- **Decisions made**: ADR-0012 written; ADR-0013 and ADR-0014 withdrawn rather than back-filled.
+  Writing an ADR for a decision that was never made is worse than an empty index row.
+- **Problems discovered**: a status file cannot be trusted as evidence of state. The mitigation
+  is procedural and is now written at the top of `01_PROJECT_STATE.md` and at the end of
+  `progress/NEXT_STEPS.md`: **establish state by running the suite, not by reading a status
+  file.** Dated historical records (handoff docs at 130/151/161 tests) were deliberately left
+  alone — they are correct *as history*, and rewriting them would destroy the only evidence of
+  when each count was true.
+- **Next action**: submission packaging — see `progress/NEXT_STEPS.md`. Re-run `make eval`
+  immediately before submitting so `RESULTS.md` carries a clean-tree stamp at the final commit.
+
+
 
 

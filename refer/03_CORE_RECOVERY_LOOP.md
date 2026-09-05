@@ -1,20 +1,24 @@
 # 03 — CORE RECOVERY LOOP
 
-The exact runtime sequence. Every stage is `PLANNED`; no code exists yet.
+The exact runtime sequence. **Implemented and verified 2026-09-05 at `e803e36`** (255 tests).
+Until 2026-09-05 this line read *"Every stage is `PLANNED`; no code exists yet"*, written before
+the build and never updated. `Code:` paths below are the **delivered** ones; stage 9 was never
+built as designed and says so.
 
 ```
 Payment / Revenue Event → RecoveryOpportunity → Stage 0 Validate → Stage 1 Diagnose
-  → Candidate Generation → Hard Safety Filter → AI Recovery Decision
-  → NO_ACTION vs Intervention → Policy → Multi-Agent Arbitration
-  → Atomic Contact Reservation → Execution → Outcome
-  → Self-Cure / Attribution → Experiment Result → Feedback Dataset → Future Model Version
+  → Candidate Generation → Hard Safety Filter → Compliant Escalation Ceiling
+  → AI Recovery Decision → NO_ACTION vs Intervention → Policy Recheck
+  → Atomic Contact Reservation  ← this IS the cross-stream arbitration
+  → Execution → Outcome → Self-Cure / Attribution
+  → Follow-up on silence → Experiment Result → Feedback Dataset → Future Model Version
 ```
 
 ---
 
 ## 1. Event → RecoveryOpportunity
 - **What happens**: event ingested, deduplicated on `source_event_id`, identity resolved within the merchant partition, opportunity created
-- **Code**: `app/ingestion/events.py` · `app/identity/resolve.py`
+- **Code**: `app/realtime/event_mapper.py` · `app/pipeline/dataset_adapter.py` (ADR-0012)
 - **In**: raw event · **Out**: `RecoveryOpportunity`
 - **Can fail**: duplicate delivery; identity below confidence threshold — fail toward *distinct*, never merge
 - **Test proves it**: replay every event twice → identical state
@@ -36,13 +40,13 @@ Payment / Revenue Event → RecoveryOpportunity → Stage 0 Validate → Stage 1
 
 ## 4. Candidate Generation
 - **What happens**: enumerate feasible actions; `NO_ACTION` always included
-- **Code**: `app/candidates/generate.py`
+- **Code**: `app/pipeline/candidate_generator.py`
 - **Can fail**: generator bypassing policy (architecturally forbidden)
 - **Test proves it**: `NO_ACTION` present in every candidate set
 
 ## 5. Hard Safety Filter
 - **What happens**: 11 constraints applied; ineligible actions removed *with* reasons; the surviving set becomes the exploration pool
-- **Code**: `app/policy/hard_filter.py`
+- **Code**: `app/pipeline/safety_filter.py` (then `app/pipeline/escalation.py`, ADR-0015)
 - **In**: candidates + flags + budget + payment state + outage · **Out**: eligible set + block reasons
 - **Can fail**: an ineligible action surviving into scoring or exploration
 - **Test proves it**: 2,000 random seeds cannot produce an ineligible action (INV-3)
@@ -65,11 +69,19 @@ Payment / Revenue Event → RecoveryOpportunity → Stage 0 Validate → Stage 1
 - **Can fail**: opt-out or dispute arriving between decision and send (TOCTOU)
 - **Test proves it**: opt-out mid-flight → abort, release, audit, nothing sent
 
-## 9. Multi-Agent Arbitration
-- **What happens**: competing agent proposals ranked deterministically; one winner; every non-winner persisted with its real reason
-- **Code**: `app/arbitration/arbitrate.py`
-- **Can fail**: hardcoded suppression reasons making the audit trail wrong
-- **Test proves it**: two agents → one contact; suppression reasons distinct and correct
+## 9. Cross-stream arbitration — **the ledger, not an arbitrator**
+- **What happens**: nothing separate happens here. Arbitration *is* stage 10: all four streams
+  contend for one atomic per-customer contact slot and the cap decides. There is no ranking of
+  competing agent proposals, because there are no agents.
+- **Code**: `app/ledger/reservation.py` (see stage 10) · `app/experiment/policies.py` for the
+  A1-vs-A2 contrast that measures the effect
+- **Planned as**: `app/arbitration/arbitrate.py` plus `app/agents/*.py`, 12 simulated agent
+  recommendations. **Never built** — recorded in `01_PROJECT_STATE.md` §Not built.
+- **Can fail**: claiming an arbitrator exists. It does not; the guarantee comes from
+  `BEGIN IMMEDIATE` and a DB `CHECK`, which is stronger than a deterministic ranking function.
+- **Test proves it**: A1 (per-stream budgets, nothing arbitrates) spends 1,500 contacts / 22.73
+  per customer; A2 (one shared slot) spends 1,336 / 20.24 for statistically indistinguishable
+  recovery.
 
 ## 10. Atomic Contact Reservation
 - **What happens**: `BEGIN IMMEDIATE`; look up by idempotency key **first**; conditional `UPDATE … WHERE reserved_count + consumed_count < cap`; insert reservation; write decision record — all one transaction

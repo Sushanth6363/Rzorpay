@@ -8,34 +8,35 @@
 
 ## CURRENT PROJECT STATUS (keep this block current)
 
-## CURRENT PROJECT STATUS (keep this block current)
-
 ```
-CURRENT PROJECT STATUS:   IMPLEMENTATION STARTED (M1 COMPLETE)
-CURRENT PHASE:            Implementation Phase (M1 Foundation verified)
-CURRENT MILESTONE:        M1 — Project setup (COMPLETED)
-LAST COMPLETED TASK:      M1.1 — Repository + Reproducibility Foundation (2026-09-01)
-CURRENT TASK:             M1.2 — Razorpay Test Mode Integration Research & Spec
-NEXT TASK:                M2 — Domain model + Database schema (sqlite WAL)
-BLOCKERS:                 B-1 RESOLVED (Git commit `eb52c38`). B-2 (Deadline verification) open.
-OPEN QUESTIONS:           1. Actual deadline — decides 10-day vs 3-day plan
+CURRENT PROJECT STATUS:   BUILD COMPLETE — submittable
+CURRENT PHASE:            Documentation reconciliation & submission
+CURRENT MILESTONE:        M9 complete (2026-09-01); six post-M9 feature commits (2026-09-04)
+LAST COMPLETED TASK:      Excel handoff report for unrecovered cases (e803e36, 2026-09-04)
+CURRENT TASK:             Re-sync status docs against the code (2026-09-05)
+NEXT TASK:                Submission package — see progress/NEXT_STEPS.md
+BLOCKERS:                 none blocking. OD-2, OD-3 open (calibration licence, downtime API access)
+OPEN QUESTIONS:           1. Deadline believed 2026-09-05 — that is today; treat as submittable now
                           2. NPCI / MSME Samadhaan licence terms (fallback active)
-                          3. Razorpay Payment Downtime API access (simulator fallback active)
-LAST VERIFIED TEST:       tests/test_smoke.py::test_app_import_and_version PASSED (2026-09-01)
-LAST VERIFIED EXPERIMENT: NONE — no experiment has ever been run
+                          3. Razorpay Payment Downtime API access (live path built; simulator fallback active)
+LAST VERIFIED TEST:       full suite — 255 passed in 9.0s (2026-09-05, e803e36)
+LAST VERIFIED EXPERIMENT: 200 events x 20 seeds, batch hash 0837b24c… ; primary A2-A1 = -0.0148
+                          (p=0.1846) INCONCLUSIVE; A5-A3 = +0.0005, ADR-0020 P1 FALSIFIED
 ```
 
-**Verified 2026-09-01 by direct execution**: `.venv` running Python 3.12.9 LTS, `pytest` 1 passed in 1.92s, Git repository active (`eb52c38`), 0 secrets in scanned code.
+**Verified 2026-09-05 by direct execution**: `.venv` on Python 3.12.9, `pytest` **255 passed in 9.0s**, `scripts/verify_environment.py` quality gate **PASSED** (6/6, zero hardcoded secrets), evaluation regenerated at `e803e36` on a clean tree reproducing the committed batch hash and primary comparison exactly.
 
 ---
 
 ## What are we building?
 
-A **Unified Recovery Engine**: a single decision system sitting above four revenue-leak channels (failed payment, abandoned checkout, failed subscription renewal, overdue B2B invoice). It ingests events via **dual paths** (**Razorpay TEST MODE** webhooks/APIs where available and a **Deterministic Simulator** for sandbox/red-team scenarios), validates whether money was genuinely lost (**Stage 0**), diagnoses why (**Stage 1**), ranks candidate interventions including `NO_ACTION` using a calibrated CatBoost model (**Stage 2 AI**), enforces a shared per-customer contact budget across streams via an atomic SQLite contact ledger, arbitrates competing agent proposals deterministically, executes interventions safely, attributes recovery accurately (excluding self-cure), and presents full audit traces via an interactive **Streamlit Judge Sandbox** deployable to a **Public Live Demo**.
+A **Unified Recovery Engine**: a single decision system sitting above four revenue-leak channels (failed payment, abandoned checkout, failed subscription renewal, overdue B2B invoice). It ingests events via **dual paths** (**Razorpay TEST MODE** webhooks/APIs where available and a **Deterministic Simulator** for sandbox scenarios), validates whether money was genuinely lost (**Stage 0**), diagnoses why (**Stage 1**), ranks candidate interventions including `NO_ACTION` using a calibrated CatBoost model (**Stage 2 AI**), enforces a shared per-customer contact budget across streams via an atomic SQLite contact ledger — **that shared budget is the arbitration mechanism; streams contend for one slot and the atomic cap decides** — executes interventions safely, attributes recovery accurately (excluding self-cure), and presents full audit traces via an interactive **Streamlit judge dashboard** deployable as a public demo.
 
 ## Why?
 
-Razorpay ships **twelve single-purpose recovery agents across two platforms** (7 Agent Studio + 5 RazorpayX) with no published shared customer state. A customer appearing in three of them can receive three messages from three systems, none aware of the others. Nothing published arbitrates across leak types for the same customer, and nothing checks whether the "at-risk" money was ever at risk. In our prototype, these 12 agents are modeled as **SIMULATED AGENT RECOMMENDATIONS** competing for the single contact slot.
+Razorpay ships **twelve single-purpose recovery agents across two platforms** (7 Agent Studio + 5 RazorpayX) with no published shared customer state. A customer appearing in three of them can receive three messages from three systems, none aware of the others. Nothing published arbitrates across leak types for the same customer, and nothing checks whether the "at-risk" money was ever at risk.
+
+**How we model that, precisely.** We do not simulate twelve named agents as objects. The uncoordinated world is modelled as experiment arm **A1**, where each stream reserves against its own budget row so nothing arbitrates; the coordinated world is **A2ns/A2**, where all streams contend for one atomic per-customer slot. The difference between those arms *is* the measurement: A1 spends 1,500 contacts (22.73 per customer) for recovery statistically indistinguishable from A2's 1,336 (20.24). See `app/experiment/policies.py` and the contact-efficiency table in `results/RESULTS.md`.
 
 ## What problem does it solve?
 
@@ -50,7 +51,7 @@ Razorpay ships **twelve single-purpose recovery agents across two platforms** (7
 | **D1** | Shared per-customer contact ledger + cross-stream arbitration |
 | **D3** | Stage 0 — validate that money was lost *before* acting (a gate, not a report) |
 | **D2** | Consuming Razorpay's downtime signal at the *recovery* layer (narrow claim) |
-| **Sandbox** | Interactive Judge Sandbox with Sandbox, Live Test, and Red-Team modes |
+| **Sandbox** | Judge dashboard with a readable decision trace, a Live Test tab, and safety invariants that are *executed* rather than asserted |
 | — | Abstention as a first-class output; per-case permission derivation |
 
 ## What is NOT novel (never claim it)
@@ -71,7 +72,7 @@ The hard policy filter, the atomic contact ledger, deterministic arbitration, te
 |---|---|
 | Razorpay Test Mode Events | **REAL** test events via Razorpay Webhooks (`source: RAZORPAY_TEST`) |
 | Simulator / Sandbox Events | **SIMULATED** deterministic event factory (`source: SIMULATED`) |
-| 12 Recovery Agents | **SIMULATED AGENT RECOMMENDATIONS** competing for arbitration |
+| Uncoordinated vs coordinated recovery | **MODELLED AS EXPERIMENT ARMS** (A1 = per-stream budgets, nothing arbitrates; A2 = one shared atomic slot). No agent objects exist. |
 | Core Recovery Engine | **REAL** Python domain models, SQLite ledger, Stage 0-2 logic |
 | AI Scoring & Policy | **REAL** CatBoost ML model, hard safety filter, atomic CAS ledger |
 
@@ -79,11 +80,21 @@ Environmental distributions (issuer failure rates, B2B ageing) are **calibrated*
 
 ## What is already implemented?
 
-- **M1.1 Repository Foundation**: `.gitignore`, `requirements.txt`, `pytest.ini`, `.env.example`, `Makefile`, `app/__init__.py`, `tests/__init__.py`, `tests/test_smoke.py`. Verified by `pytest` (1 passed) and Git commit `eb52c38`.
+**All of it, on the critical path.** 62 modules / 10,530 lines under `app/`, 255 passing tests, one reproducible evaluation. Verified 2026-09-05 at `e803e36`:
+
+- **Foundation** — schema (WAL, `CHECK` cap), domain model (integer paise, injectable clock), tenant-scoped DAL
+- **Safety core** — atomic contact ledger (`app/ledger/`), reservation state machine, hard policy filter, tenant isolation
+- **Pipeline** — Stage 0 validate, Stage 1 diagnose, candidate generation, compliant escalation (`app/pipeline/escalation.py`), TDS derivation (`app/pipeline/tds.py`), downtime consumer
+- **AI** — CatBoost S-learner trained on the engine's own logged outcomes, EV calculator, point-in-time feature builder, file registry, ε-exploration
+- **Real-time** — HMAC-verified fail-closed webhook ingestion, retry/dead-letter/reconciliation/replay guard, follow-up on silence
+- **Measurement** — 6-arm runner, Holm-Bonferroni, `results/RESULTS.md`, Excel handoff report for unrecovered cases
+- **Interface** — Streamlit judge dashboard with live safety checks
+
+Two planned features were **never built** and are recorded as such in `01_PROJECT_STATE.md` §Not built: a red-team mode, and a competing-agent arbitrator (arbitration is the shared budget instead).
 
 ## What should be built next?
 
-`M1.2` — Razorpay Test Mode Research & Specification (`refer/integrations/RAZORPAY_TEST_MODE.md`). Then `M2` (domain model & database schema) and `M3` (contact ledger). See `progress/NEXT_STEPS.md`.
+Nothing on the critical path. Remaining work is submission packaging — see `progress/NEXT_STEPS.md`.
 
 
 ## What must never change without an ADR?
@@ -107,15 +118,19 @@ Candidate Generation        incl. NO_ACTION, always
         ↓
 HARD SAFETY / POLICY FILTER ← eligibility decided ONCE, here
         ↓
+Compliant escalation ceiling ← one rung, on confirmed evidence, after the
+                              quiet period; layered UNDER safety, so it can
+                              only remove a candidate, never revive one
+        ↓
 Eligible Actions            ← this set IS the exploration pool
         ↓
 AI Decision                 p̂(x,a), Δ̂ vs NO_ACTION, expected value
         ↓
 Exploration OR Exploitation ε = 0.05, eligible actions only
         ↓
-Multi-Agent Arbitration     deterministic, single-writer
-        ↓
 Atomic Contact Reservation  BEGIN IMMEDIATE; reserved + consumed < cap
+                            ← this IS the cross-stream arbitration:
+                              one slot, single writer, the cap decides
         ↓
 Execution                   engine recommends retries, never executes them
         ↓
