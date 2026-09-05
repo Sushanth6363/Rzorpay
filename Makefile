@@ -49,7 +49,7 @@ eval-quick:
 	$(VENV_PY) scripts/run_evaluation.py --events 60 --seeds 21-25
 
 demo:
-	$(VENV_PY) -m streamlit run app/ui/dashboard.py --server.port 8555
+	$(VENV_PY) -m streamlit run streamlit_app.py --server.port 8555
 
 clean:
 	$(VENV_PY) -c "import shutil, glob; [shutil.rmtree(p, ignore_errors=True) for p in glob.glob('**/__pycache__', recursive=True) + ['.pytest_cache', '.coverage', 'htmlcov', 'catboost_info']]"
