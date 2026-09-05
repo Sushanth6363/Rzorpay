@@ -71,11 +71,16 @@ class RazorpayIntegrationClient:
         customer_contact: str = "+919876543210",
         description: str = "Payment Recovery Link",
         reference_id: Optional[str] = None,
+        notify: Optional[bool] = None,
     ) -> Dict[str, Any]:
         """Call Razorpay API POST /v1/payment_links to generate an active recovery payment link.
         
         If live keys are missing or test mock is active, returns a valid test Razorpay recovery payload.
         """
+        if notify is None:
+            from app.realtime import config as realtime_config
+            notify = realtime_config.PROVIDER_NOTIFIES
+
         payload = {
             "amount": amount_paise,
             "currency": "INR",
@@ -86,8 +91,22 @@ class RazorpayIntegrationClient:
                 "email": customer_email,
                 "contact": customer_contact,
             },
-            "notify": {"sms": True, "email": True},
-            "reminder_enable": True,
+            # WHO CONTACTS THE CUSTOMER IS A DECISION, NOT A DEFAULT.
+            #
+            # These two fields used to be hardcoded True. That made Razorpay send its own
+            # email AND SMS the instant a link was created, plus run its own reminder
+            # cadence - regardless of which single rung the engine had decided on, and
+            # without any of it passing through ChannelDispatcher. So a one-rung decision
+            # produced three messages, none of them recorded in contact_ledger, and the
+            # escalation ladder, contact budget and quiet period (ADR-0015) were bypassed
+            # by sends the engine could not see.
+            #
+            # Default is now "engine": Razorpay takes the money and says nothing. Set
+            # RECOVERY_LINK_NOTIFY=razorpay to hand delivery back to the provider, which
+            # is a real SMS with no Twilio account - the dispatcher then abstains from
+            # sending that rung itself rather than duplicating it.
+            "notify": {"sms": notify, "email": notify},
+            "reminder_enable": notify,
             "notes": {
                 "source": "AI_Unified_Recovery_Engine",
                 "reference_id": reference_id or "ref_unknown",

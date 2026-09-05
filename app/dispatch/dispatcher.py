@@ -98,6 +98,12 @@ class DispatchOutcome:
         }
 
 
+# Razorpay's `notify` covers exactly two channels for a payment link: email and SMS. It
+# does not place voice calls, so IVR and agent dial remain the engine's own to send even
+# when the provider owns link delivery.
+PROVIDER_DELIVERED_ACTIONS = frozenset({ActionType.EMAIL_LINK, ActionType.SMS_LINK})
+
+
 class ChannelDispatcher:
     """Routes an already-decided action to a channel, after re-checking case facts."""
 
@@ -227,6 +233,31 @@ class ChannelDispatcher:
                 detail={"would_send_to": email or phone, "payment_url": payment_url},
             )
             self._record(idempotency_key, case_id, action, outcome)
+            return outcome
+
+        # RECOVERY_LINK_NOTIFY=razorpay hands delivery of the link's email and SMS to
+        # Razorpay itself. Sending here as well would put two messages in front of the
+        # customer for one rung the engine decided on, which is the exact double-contact
+        # this setting exists to prevent. The record still lands in dispatch_log and the
+        # timeline, attributed to the provider that actually delivered it, so the ladder
+        # and the contact budget still count the rung.
+        from app.realtime import config as realtime_config  # late, so tests can reload it
+
+        if realtime_config.PROVIDER_NOTIFIES and action in PROVIDER_DELIVERED_ACTIONS:
+            outcome = DispatchOutcome(
+                True, "SENT",
+                "delivered by Razorpay (RECOVERY_LINK_NOTIFY=razorpay), not re-sent here",
+                channel="RAZORPAY_LINK",
+                detail={"delivered_to": email or phone, "payment_url": payment_url},
+            )
+            self._record(idempotency_key, case_id, action, outcome)
+            self.repo.add_event(CaseEvent(
+                case_id=case_id, kind=CaseEventKind.MESSAGE_SENT, actor="provider",
+                summary=f"{action.value} sent via RAZORPAY_LINK",
+                detail={"channel": "RAZORPAY_LINK", "provider_id": None},
+            ))
+            if self.repo.get_case(case_id).status == CaseStatus.OPEN:
+                self.repo.set_status(case_id, CaseStatus.IN_PROGRESS, reason="contacted")
             return outcome
 
         result = self._send(action, name, email, phone, subject, body, html_body, spoken)

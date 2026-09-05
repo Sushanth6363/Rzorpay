@@ -68,6 +68,28 @@ DISPATCH_ENABLED = _flag("RECOVERY_DISPATCH_ENABLED", False)
 # A second, independent gate for live (non-test) Razorpay credentials.
 ALLOW_LIVE_CREDENTIALS = _flag("RECOVERY_ALLOW_LIVE_CREDENTIALS", False)
 
+# --- Who is allowed to contact the customer ----------------------------------------------
+# Razorpay Payment Links accept `notify: {sms, email}` and `reminder_enable`, which make
+# RAZORPAY send its own message the moment a link is created and then run its own reminder
+# cadence. That is a genuinely useful mode - it delivers a real SMS with no Twilio account
+# - but it cannot be on at the same time as the engine's own sending, because then a
+# single-rung decision produces three messages: the engine's email, Razorpay's email and
+# Razorpay's SMS.
+#
+# More seriously, none of Razorpay's sends pass through ChannelDispatcher, so none reach
+# contact_ledger. The escalation ladder, the contact budget and the quiet period (ADR-0015)
+# are all bypassed by messages the engine cannot see and did not decide to send.
+#
+# So it is one or the other, stated explicitly:
+#   "engine"   (default) the engine owns contact. Razorpay takes money and says nothing.
+#   "razorpay"           Razorpay delivers the SMS and email for a link it creates, and
+#                        the engine does not also send that rung itself.
+LINK_NOTIFY_OWNER = (os.environ.get("RECOVERY_LINK_NOTIFY", "engine") or "engine").strip().lower()
+if LINK_NOTIFY_OWNER not in ("engine", "razorpay"):
+    LINK_NOTIFY_OWNER = "engine"
+
+PROVIDER_NOTIFIES = LINK_NOTIFY_OWNER == "razorpay"
+
 
 def is_live_key(key_id: str) -> bool:
     return key_id.startswith("rzp_live")
@@ -93,5 +115,6 @@ def describe() -> dict:
         "webhook_secret_configured": bool(WEBHOOK_SECRET),
         "dispatch_enabled": DISPATCH_ENABLED,
         "allow_live_credentials": ALLOW_LIVE_CREDENTIALS,
+        "link_notify_owner": LINK_NOTIFY_OWNER,
         "webhook_max_age_seconds": WEBHOOK_MAX_AGE_SECONDS,
     }
