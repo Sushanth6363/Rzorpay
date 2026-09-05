@@ -1,4 +1,4 @@
-"""Context-dependent outcome model for the sandbox — CANDIDATE, NOT YET ADOPTED.
+"""Context-dependent outcome model for the sandbox — ADOPTED (ADR-0020).
 
 =========================================================================================
 PRE-REGISTRATION. Written and committed BEFORE this model was ever run.
