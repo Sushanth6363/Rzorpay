@@ -635,7 +635,7 @@ def section_live_test() -> None:
     """Judge harness: upload a CSV, the real engine decides, real messages go out."""
     from app.dispatch import channels
     from app.agent.loop import RecoveryAgent
-    from app.cases.csv_ingest import create_cases, parse_csv
+    from app.cases.csv_ingest import MAX_ROWS, SAMPLE_CSV, create_cases, parse_csv
     from app.cases.repository import CaseRepository
     from app.dispatch.dispatcher import ChannelDispatcher
     from app.realtime import ingest

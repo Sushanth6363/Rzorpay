@@ -67,6 +67,14 @@ DATE_FORMATS = ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d", "%d %b %Y", "%d 
 
 MAX_ROWS = 500
 
+# The template a merchant downloads. Exactly the six columns they can actually know -
+# no reason field, because they do not know why a customer has not paid and the engine
+# diagnoses that itself. Replace the addresses with your own before sending anything.
+SAMPLE_CSV = """customer_id,name,email,phone,amount,due_date
+CUST001,Your Name,you@example.com,9876543210,25000,2026-08-24
+CUST002,Second Customer,someone@example.com,9812345678,1299.50,15/08/2026
+"""
+
 
 @dataclass
 class RejectedRow:
