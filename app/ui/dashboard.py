@@ -555,9 +555,11 @@ def section_case_board() -> None:
         colour, background, _ = FLAG_STYLE.get(row["Flag"], ("", "", ""))
         return [f"background-color:{background}" if background else "" for _ in row]
 
-    st.dataframe(
+    st.caption("Click a row to open that customer's full history.")
+    event = st.dataframe(
         frame.style.apply(paint, axis=1),
         use_container_width=True, hide_index=True,
+        on_select="rerun", selection_mode="single-row", key="board_table",
         column_config={
             "Amount": st.column_config.NumberColumn(format="₹%.2f"),
             "Stage": st.column_config.TextColumn(width="large"),
@@ -565,21 +567,45 @@ def section_case_board() -> None:
         },
     )
 
-    with st.expander("Timeline for one case"):
-        labels = {f"{r.name or r.customer_id} · {rupees(r.amount_paise)} · {r.flag}": r
-                  for r in rows}
-        chosen = st.selectbox("Case", list(labels), key="board_case")
-        picked = labels[chosen]
-        if picked.payment_url:
-            st.markdown(f"**Payment link:** {picked.payment_url}")
-        for event in repo.timeline(picked.case_id):
-            st.markdown(
-                f'<div class="urx-kv"><span class="k">{event.at[11:19]} · '
-                f'{event.kind.value.replace("_", " ").title()}</span>'
-                f'<span class="v" style="font-weight:400;text-align:left;">'
-                f'{event.summary}</span></div>',
-                unsafe_allow_html=True,
-            )
+    picked_rows = (event.selection.rows if event and event.selection else []) or []
+    picked = rows[picked_rows[0]] if picked_rows else None
+
+    if picked is None:
+        st.info("Select a row above to see the decision trail for that customer.")
+        return
+
+    colour, background, label = FLAG_STYLE.get(picked.flag, ("", "", picked.flag))
+    st.markdown(
+        f'<div class="urx-card" style="border-color:{colour}55;background:{background};">'
+        f'<h4 style="color:{colour};">{label} · {picked.name or picked.customer_id}</h4>'
+        f'{kv("Amount", rupees(picked.amount_paise))}'
+        f'{kv("Contact", picked.contact or "-")}'
+        f'{kv("Stage", picked.stage)}'
+        f'{kv("Last decision", picked.last_action or "-")}'
+        f'{kv("Channels tried", picked.channels_tried or "none")}'
+        f'{kv("Confirmed contacts", str(picked.contacts_made))}'
+        f'{kv("Paid", "YES" if picked.paid else "NO")}'
+        f'{kv("Why", picked.payment_note)}'
+        f'{kv("Next review", picked.next_review[:16].replace("T", " ") if picked.next_review else "none scheduled")}'
+        f'</div>', unsafe_allow_html=True,
+    )
+
+    if picked.payment_url and not picked.paid:
+        st.markdown(f"**PAY NOW link for this case:** {picked.payment_url}")
+        st.caption(
+            "Paying this link fires a Razorpay webhook. The case flips to PAID and every "
+            "pending action is cancelled - refresh to watch it happen."
+        )
+
+    st.markdown("**Decision trail**")
+    for entry in repo.timeline(picked.case_id):
+        st.markdown(
+            f'<div class="urx-kv"><span class="k">{entry.at[11:19]} · '
+            f'{entry.kind.value.replace("_", " ").title()}</span>'
+            f'<span class="v" style="font-weight:400;text-align:left;">'
+            f'{entry.summary}</span></div>',
+            unsafe_allow_html=True,
+        )
 
 
 def section_handoff_report() -> None:
