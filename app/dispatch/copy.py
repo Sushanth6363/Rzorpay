@@ -100,7 +100,8 @@ SIGNATURE = (
 class Message:
     subject: str
     body: str
-    spoken: str  # for IVR / voice
+    spoken: str        # for IVR / voice
+    html: str = ""     # email only; empty means send plain text alone
 
 
 def rung_of(action: ActionType) -> int:
@@ -154,4 +155,20 @@ def build_message(
         f"Please check your email or messages for a secure payment link. Thank you."
     )
 
-    return Message(subject=subject, body=body, spoken=spoken)
+    # HTML is rendered from the SAME opener / ask / closer as the plain text, so the two
+    # parts of a multipart message can never drift into saying different things.
+    html = ""
+    if action == ActionType.EMAIL_LINK:
+        from app.dispatch.email_template import render_payment_email
+
+        html = render_payment_email(
+            greeting=greeting,
+            opener=opener,
+            ask=ask,
+            closer=closer,
+            amount_paise=amount_paise,
+            payment_url=payment_link,
+            signature=SIGNATURE,
+        )
+
+    return Message(subject=subject, body=body, spoken=spoken, html=html)
