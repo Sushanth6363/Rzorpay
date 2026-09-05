@@ -297,3 +297,51 @@ def test_a_paid_entity_is_remembered_across_webhooks(feed):
     feed.record_resolution("pay_x", "payment.captured", 500000)
 
     assert feed.is_resolved("pay_x") is True
+
+
+# --- Simulating a gateway outage end to end -----------------------------------------------
+
+
+def test_the_test_script_builds_a_downtime_payload_the_engine_can_actually_use(feed):
+    """The generic payment shape stores an outage with no method and no instrument, so
+    is_gateway_down() matches nothing - it looks like it worked and suppresses nothing.
+
+    Razorpay nests a downtime entity under the literal key `payment.downtime` and names the
+    affected thing by method or instrument. This pins that shape.
+    """
+    import app.api.webhook_listener as wl
+    from app.realtime.downtime_live import LiveRazorpayDowntimeProvider
+    from scripts.send_test_webhook import build_downtime_payload
+
+    payload = build_downtime_payload(
+        "payment.downtime.started", "down_t1", "netbanking", "HDFC", "high"
+    )
+    assert "payment.downtime" in payload["payload"]
+
+    wl._handle_downtime(payload, "payment.downtime.started")
+
+    provider = LiveRazorpayDowntimeProvider()
+    assert provider.is_gateway_down("HDFC") is True
+    assert provider.is_gateway_down("x", method="netbanking") is True
+    assert provider.is_gateway_down("ICICI") is False
+
+
+def test_a_simulated_outage_can_be_started_and_resolved(feed):
+    """A demo needs the outage to CLEAR as well as start, or the engine stays silent."""
+    import app.api.webhook_listener as wl
+    from app.realtime.downtime_live import LiveRazorpayDowntimeProvider
+    from scripts.send_test_webhook import build_downtime_payload
+
+    provider = LiveRazorpayDowntimeProvider()
+    wl._handle_downtime(
+        build_downtime_payload("payment.downtime.started", "down_t2", "upi", "HDFC", "high"),
+        "payment.downtime.started",
+    )
+    assert provider.is_gateway_down("HDFC") is True
+
+    wl._handle_downtime(
+        build_downtime_payload("payment.downtime.resolved", "down_t2", "upi", "HDFC", "high"),
+        "payment.downtime.resolved",
+    )
+
+    assert provider.is_gateway_down("HDFC") is False

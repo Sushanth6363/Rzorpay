@@ -17,6 +17,10 @@ Usage:
     python scripts/send_test_webhook.py --url https://x.trycloudflare.com
     python scripts/send_test_webhook.py --event payment.failed
     python scripts/send_test_webhook.py --entity plink_ABC123 --amount 2500000
+
+    # simulate a gateway outage, then clear it
+    python scripts/send_test_webhook.py --event payment.downtime.started  --instrument HDFC
+    python scripts/send_test_webhook.py --event payment.downtime.resolved --instrument HDFC
 """
 
 from __future__ import annotations
@@ -46,6 +50,42 @@ ENTITY_KEY = {
     "invoice": "invoice",
     "subscription": "subscription",
 }
+
+
+def build_downtime_payload(
+    event: str, entity_id: str, method: str, instrument: str, severity: str
+) -> dict:
+    """Razorpay's real downtime shape, which is NOT the shape of a payment event.
+
+    The entity sits under the literal key `payment.downtime`, and the affected thing is
+    named by `method` (upi / card / netbanking) or by `instrument` (an issuing bank or
+    wallet). Building a plain payment entity here stores an outage with no method and no
+    instrument, so `is_gateway_down()` matches nothing and the outage is invisible to the
+    engine - it looks like it worked and suppresses nothing.
+    """
+    now = int(time.time())
+    return {
+        "entity": "event",
+        "account_id": "acc_TEST",
+        "event": event,
+        "contains": ["payment.downtime"],
+        "created_at": now,
+        "payload": {
+            "payment.downtime": {
+                "entity": {
+                    "id": entity_id,
+                    "entity": "payment.downtime",
+                    "method": method,
+                    "begin": now,
+                    "end": now if event.endswith(".resolved") else None,
+                    "status": "resolved" if event.endswith(".resolved") else "started",
+                    "scheduled": False,
+                    "severity": severity,
+                    "instrument": {"issuer": instrument} if instrument else {},
+                }
+            }
+        },
+    }
 
 
 def build_payload(event: str, entity_id: str, amount_paise: int) -> dict:
@@ -83,6 +123,11 @@ def main() -> int:
     parser.add_argument("--entity", default="", help="e.g. plink_ABC. Defaults to a fake id.")
     parser.add_argument("--amount", type=int, default=2_500_000, help="integer paise")
     parser.add_argument("--secret", default="", help="overrides RAZORPAY_WEBHOOK_SECRET")
+    parser.add_argument("--method", default="netbanking",
+                        help="downtime only: upi | card | netbanking | wallet")
+    parser.add_argument("--instrument", default="HDFC",
+                        help="downtime only: the affected bank/issuer, e.g. HDFC")
+    parser.add_argument("--severity", default="high", help="downtime only")
     args = parser.parse_args()
 
     secret = args.secret or os.environ.get("RAZORPAY_WEBHOOK_SECRET", "")
@@ -91,8 +136,15 @@ def main() -> int:
         print("       Put it in .env, or pass --secret. The endpoint fails closed without it.")
         return 2
 
-    entity_id = args.entity or f"plink_TEST{int(time.time())}"
-    payload = build_payload(args.event, entity_id, args.amount)
+    is_downtime = args.event.startswith("payment.downtime")
+    if is_downtime:
+        entity_id = args.entity or "down_TEST_1"   # stable, so .resolved matches .started
+        payload = build_downtime_payload(
+            args.event, entity_id, args.method, args.instrument, args.severity
+        )
+    else:
+        entity_id = args.entity or f"plink_TEST{int(time.time())}"
+        payload = build_payload(args.event, entity_id, args.amount)
     body = json.dumps(payload).encode()
     signature = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
 
@@ -100,7 +152,11 @@ def main() -> int:
     print(f"POST {endpoint}")
     print(f"  event  : {args.event}")
     print(f"  entity : {entity_id}")
-    print(f"  amount : Rs {args.amount / 100:,.2f}")
+    if is_downtime:
+        print(f"  method : {args.method}")
+        print(f"  affects: {args.instrument}")
+    else:
+        print(f"  amount : Rs {args.amount / 100:,.2f}")
     print()
 
     try:
