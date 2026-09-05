@@ -1,0 +1,56 @@
+# Render blueprint for the Unified Recovery Engine judge dashboard.
+#
+# WHAT IS HOSTED HERE, AND WHAT DELIBERATELY IS NOT
+#     This deploys the dashboard: the decision trace, the experiment, the executed safety
+#     checks and the CSV live test. Those are the evidence surface - what a judge reads to
+#     decide whether the engine's claims are true - and none of them need durable storage.
+#
+#     The webhook listener is NOT deployed here, and that is a considered choice rather
+#     than an omission. Render's free instances have an EPHEMERAL FILESYSTEM and spin down
+#     after 15 minutes without traffic, and free services cannot attach a persistent disk.
+#     The recovery loop's closing step is a customer paying on Razorpay's own site, which
+#     sends no traffic to this service - so the instance sleeps, the SQLite file is wiped,
+#     and the payment webhook arrives to find no case to close. The demo would fail at
+#     precisely its most important moment, and fail silently.
+#
+#     So the live payment loop runs where its state survives: locally, behind the reserved
+#     ngrok domain (scripts/start_tunnel.ps1). To host the full loop instead, move to a
+#     paid instance with a disk mounted at /var/data and set RECOVERY_DB_PATH to it.
+#
+# SAFETY
+#     RECOVERY_DISPATCH_ENABLED is false here and must stay false. A public URL that can
+#     send email and SMS is a public URL that can be used to send email and SMS.
+
+services:
+  - type: web
+    name: unified-recovery-engine
+    runtime: python
+    plan: free
+    region: singapore          # closest to Razorpay's Indian infrastructure
+    buildCommand: pip install -r requirements.txt
+    startCommand: >
+      streamlit run streamlit_app.py
+      --server.port $PORT
+      --server.address 0.0.0.0
+      --server.headless true
+      --browser.gatherUsageStats false
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12"
+
+      # Nothing leaves this process. See the safety note above.
+      - key: RECOVERY_DISPATCH_ENABLED
+        value: "false"
+      - key: RECOVERY_ALLOW_LIVE_CREDENTIALS
+        value: "false"
+      - key: RECOVERY_LINK_NOTIFY
+        value: engine
+
+      # Ephemeral by construction on the free plan; named explicitly so the path is not a
+      # surprise if a disk is attached later.
+      - key: RECOVERY_DB_PATH
+        value: data/recovery.db
+
+      # Deliberately unset: RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET, SMTP_PASSWORD,
+      # TWILIO_AUTH_TOKEN. The hosted dashboard has no business holding credentials that
+      # can move money or contact people. Adapters report NOT_CONFIGURED, which is honest.
