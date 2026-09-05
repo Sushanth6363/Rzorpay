@@ -26,6 +26,13 @@ Every significant decision is recorded as an ADR. **An ADR is mandatory before**
 | [0018](ADR-0018-realtime-webhook-ingestion.md) | Real-time webhook ingestion: durable, idempotent, fail-closed | ACCEPTED | 2026-09-04 | ingestion, security, downtime |
 | [0019](ADR-0019-production-reliability.md) | Retry, dead-letter, reconciliation sweep, replay guard | ACCEPTED | 2026-09-04 | reliability, observability, PII |
 | [0020](ADR-0020-context-dependent-dgp.md) | Context-dependent sandbox outcome model (prediction falsified) | ACCEPTED | 2026-09-04 | experiment, claims |
+| [0021](ADR-0021-dynamic-followup-timing.md) | Follow-up timing derived from diagnosis, channel and attempt | ACCEPTED | 2026-09-05 | recovery workflow, contact policy |
+| [0022](ADR-0022-unrecovered-handoff-report.md) | The unrecovered handoff report is a first-class output | ACCEPTED | 2026-09-05 | reporting, claims, operations |
+| [0023](ADR-0023-durable-case-and-payment-resolution.md) | A durable case, and payment always wins | ACCEPTED | 2026-09-05 | domain, persistence, dispatch, payments |
+| [0024](ADR-0024-html-email-rendering.md) | HTML email built for mail clients, not for browsers | ACCEPTED | 2026-09-05 | dispatch, deliverability |
+| [0025](ADR-0025-merchant-csv-without-a-reason-column.md) | Merchant CSV carries no reason column; nothing is silently dropped | ACCEPTED | 2026-09-05 | ingestion, domain, claims |
+| [0026](ADR-0026-thin-agent-loop.md) | The agent loop is thin, and runs the evaluated engine | ACCEPTED | 2026-09-05 | architecture, claims, experiment integrity |
+| [0027](ADR-0027-case-board-reports-delivery-not-readership.md) | The case board reports delivery and payment, never readership | ACCEPTED | 2026-09-05 | UI, claims, operations |
 
 ## Open decisions
 
