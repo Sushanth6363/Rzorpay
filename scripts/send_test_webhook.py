@@ -115,10 +115,30 @@ def build_payload(event: str, entity_id: str, amount_paise: int) -> dict:
     }
 
 
+def default_base_url() -> str:
+    """The public tunnel if one is recorded, otherwise the local server.
+
+    NGROK_DOMAIN is a bare hostname in .env (no scheme), because that is the form the
+    ngrok dashboard hands you and asking anyone to remember to prepend https:// is how
+    the wrong string ends up in the Razorpay webhook registration.
+    """
+    domain = (os.environ.get("NGROK_DOMAIN") or "").strip()
+    if not domain:
+        return "http://localhost:8000"
+    if domain.startswith(("http://", "https://")):
+        return domain.rstrip("/")
+    return f"https://{domain}"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--url", default="http://localhost:8000",
-                        help="base URL of the server (use your tunnel URL to test end to end)")
+    # Defaults to the reserved tunnel domain when one is recorded in .env, because
+    # localhost proves only that the engine works - it says nothing about whether
+    # Razorpay can actually reach this machine, which is the failure this script exists
+    # to diagnose. Pass --url http://localhost:8000 to deliberately bypass the tunnel.
+    parser.add_argument("--url", default=default_base_url(),
+                        help="base URL of the server (defaults to NGROK_DOMAIN from .env "
+                             "if set, else http://localhost:8000)")
     parser.add_argument("--event", default="payment_link.paid")
     parser.add_argument("--entity", default="", help="e.g. plink_ABC. Defaults to a fake id.")
     parser.add_argument("--amount", type=int, default=2_500_000, help="integer paise")
