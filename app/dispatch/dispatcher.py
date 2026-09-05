@@ -103,6 +103,11 @@ class DispatchOutcome:
 # when the provider owns link delivery.
 PROVIDER_DELIVERED_ACTIONS = frozenset({ActionType.EMAIL_LINK, ActionType.SMS_LINK})
 
+# A call is the only rung that leaves nothing behind. These get an SMS alongside carrying
+# the payment link, so the most intrusive action the engine can take also produces
+# something the customer can act on afterwards. See RECOVERY_VOICE_COMPANION_SMS.
+VOICE_ACTIONS = frozenset({ActionType.IVR_CALL, ActionType.AGENT_DIAL})
+
 
 class ChannelDispatcher:
     """Routes an already-decided action to a channel, after re-checking case facts."""
@@ -186,6 +191,60 @@ class ChannelDispatcher:
         self.conn.commit()
 
     # --- dispatch -------------------------------------------------------------------
+
+    def _send_voice_companion_sms(
+        self,
+        case_id: str,
+        action: ActionType,
+        phone: str,
+        idempotency_key: str,
+        payment_url: str,
+    ) -> None:
+        """Follow a placed call with the link, so the call leaves something behind.
+
+        Only ever runs AFTER a call was actually placed. If the call itself did not go out,
+        sending an SMS instead would be the dispatcher substituting one channel for another
+        - a policy decision that belongs to the engine, not to the thing that carries out
+        its instructions.
+
+        Failure here is deliberately not fatal. The call succeeded and the contact is real;
+        a companion that could not be delivered is recorded and moves on rather than
+        turning a successful contact into a failed one.
+        """
+        if not phone or not payment_url:
+            return
+
+        # The call happened moments ago, but "moments" is exactly when a payment lands. The
+        # cheapest possible re-read closes the window rather than assuming it away.
+        case = self.repo.get_case(case_id)
+        if case is None or not case.may_contact:
+            return
+
+        companion_key = f"{idempotency_key}:companion_sms"
+        if self.already_dispatched(companion_key) is not None:
+            return
+
+        body = (
+            f"We just tried to call you about your outstanding payment. "
+            f"You can settle it here: {payment_url}"
+        )
+        result = channels.send_sms(phone, body)
+        outcome = DispatchOutcome(
+            allowed=True, status=result.status, reason=result.detail,
+            channel=result.channel, provider_id=result.provider_id,
+            detail={**dict(result.extra), "companion_to": action.value},
+        )
+        self._record(companion_key, case_id, ActionType.SMS_LINK, outcome)
+
+        if outcome.sent:
+            self.repo.add_event(CaseEvent(
+                case_id=case_id, kind=CaseEventKind.MESSAGE_SENT, actor="agent",
+                summary=f"Payment link sent by SMS alongside {action.value}",
+                detail={"channel": result.channel, "provider_id": result.provider_id,
+                        "companion_to": action.value},
+            ))
+        else:
+            logger.info("companion SMS for %s not sent: %s", case_id, result.detail)
 
     def dispatch(
         self,
@@ -279,6 +338,12 @@ class ChannelDispatcher:
             ))
             if self.repo.get_case(case_id).status == CaseStatus.OPEN:
                 self.repo.set_status(case_id, CaseStatus.IN_PROGRESS, reason="contacted")
+
+            if action in VOICE_ACTIONS and realtime_config.VOICE_COMPANION_SMS:
+                self._send_voice_companion_sms(
+                    case_id=case_id, action=action, phone=phone,
+                    idempotency_key=idempotency_key, payment_url=payment_url,
+                )
         else:
             self.repo.add_event(CaseEvent(
                 case_id=case_id, kind=CaseEventKind.MESSAGE_FAILED, actor="provider",

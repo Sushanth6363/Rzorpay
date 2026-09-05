@@ -91,6 +91,24 @@ if LINK_NOTIFY_OWNER not in ("engine", "razorpay"):
 PROVIDER_NOTIFIES = LINK_NOTIFY_OWNER == "razorpay"
 
 
+# --- a voice call leaves nothing behind ---------------------------------------------------
+# A phone call is the only rung with no artifact. If the customer misses it, or answers and
+# cannot write a URL down while driving, the contact produced nothing they can act on - and
+# the engine has spent its most expensive and most intrusive action for no recoverable
+# outcome.
+#
+# So a call is accompanied by an SMS carrying the payment link. This is NOT the uncontrolled
+# double-contact that RECOVERY_LINK_NOTIFY exists to prevent: that was a provider sending
+# messages the engine never decided on, which reached no ledger and bypassed the ladder.
+# This is one decision, made by the engine, recorded in full, delivered over two media
+# because one of them is transient by nature.
+#
+# It consumes ONE contact slot, not two. From the customer's side a call plus "here is the
+# link we just discussed" is a single interaction, and charging it twice would make the
+# engine give up sooner without protecting anyone.
+VOICE_COMPANION_SMS = _flag("RECOVERY_VOICE_COMPANION_SMS", True)
+
+
 def is_live_key(key_id: str) -> bool:
     return key_id.startswith("rzp_live")
 
@@ -116,5 +134,6 @@ def describe() -> dict:
         "dispatch_enabled": DISPATCH_ENABLED,
         "allow_live_credentials": ALLOW_LIVE_CREDENTIALS,
         "link_notify_owner": LINK_NOTIFY_OWNER,
+        "voice_companion_sms": VOICE_COMPANION_SMS,
         "webhook_max_age_seconds": WEBHOOK_MAX_AGE_SECONDS,
     }
