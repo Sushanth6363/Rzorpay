@@ -1,44 +1,66 @@
-# Render blueprint for the Unified Recovery Engine judge dashboard.
+# Render blueprint for the Unified Recovery Engine.
 #
-# WHAT IS HOSTED HERE, AND WHAT DELIBERATELY IS NOT
-#     This deploys the dashboard: the decision trace, the experiment, the executed safety
-#     checks and the CSV live test. Those are the evidence surface - what a judge reads to
-#     decide whether the engine's claims are true - and none of them need durable storage.
+# ONE SERVICE, ONE PORT, BOTH HALVES
+#     `app/server.py` serves the dashboard AND the webhook listener on the same port. That
+#     is not a preference: a Render service exposes ONE public port, and a persistent disk
+#     mounts to ONE service. The dashboard and the listener share a single SQLite file, so
+#     splitting them would mean moving to a client/server database - a rewrite of the DAL
+#     for a deployment detail.
 #
-#     The webhook listener is NOT deployed here, and that is a considered choice rather
-#     than an omission. Render's free instances have an EPHEMERAL FILESYSTEM and spin down
-#     after 15 minutes without traffic, and free services cannot attach a persistent disk.
-#     The recovery loop's closing step is a customer paying on Razorpay's own site, which
-#     sends no traffic to this service - so the instance sleeps, the SQLite file is wiped,
-#     and the payment webhook arrives to find no case to close. The demo would fail at
-#     precisely its most important moment, and fail silently.
+# CHOOSE YOUR PLAN BEFORE DEPLOYING
+#     The `plan` and `disk` settings below decide whether the recovery loop actually works.
 #
-#     So the live payment loop runs where its state survives: locally, behind the reserved
-#     ngrok domain (scripts/start_tunnel.ps1). To host the full loop instead, move to a
-#     paid instance with a disk mounted at /var/data and set RECOVERY_DB_PATH to it.
+#     plan: free      The dashboard works. The PAYMENT LOOP DOES NOT SURVIVE.
+#                     Free instances have an ephemeral filesystem, cannot attach a disk,
+#                     and spin down after 15 minutes without traffic. The loop closes when
+#                     a customer pays ON RAZORPAY'S SITE, which sends no traffic here - so
+#                     the instance sleeps during exactly that gap, the SQLite file is
+#                     wiped, and the webhook arrives to find no case to close. The demo
+#                     fails at its most important moment, silently, and looks like an
+#                     engine bug.
 #
-# SAFETY
-#     RECOVERY_DISPATCH_ENABLED is false here and must stay false. A public URL that can
-#     send email and SMS is a public URL that can be used to send email and SMS.
+#     plan: starter   ~$7/month, plus ~$0.25/month for the disk. No spin-down, and state
+#     + disk          survives restarts and deploys. This is the only configuration in
+#                     which a judge can pay a link and watch the case close by itself.
+#
+#     To use starter: change `plan` to `starter`, uncomment the `disk` block, and change
+#     RECOVERY_DB_PATH to /var/data/recovery.db. Nothing else changes.
+#
+# BEFORE YOU ENABLE SENDING ON A PUBLIC URL
+#     RECOVERY_DISPATCH_ENABLED is false here, deliberately. With it true, anyone who finds
+#     this URL can upload a CSV and cause email to be sent to addresses of their choosing,
+#     from your domain, using your SMTP credentials. That is an open relay.
+#
+#     Turn it on only while you are demonstrating, and turn it off afterwards. Set it from
+#     the Render dashboard rather than committing it here, so the repository never implies
+#     that a public deployment sends mail.
 
 services:
   - type: web
     name: unified-recovery-engine
     runtime: python
-    plan: free
+    plan: free                 # see "CHOOSE YOUR PLAN" above
     region: singapore          # closest to Razorpay's Indian infrastructure
+
     buildCommand: pip install -r requirements.txt
-    startCommand: >
-      streamlit run streamlit_app.py
-      --server.port $PORT
-      --server.address 0.0.0.0
-      --server.headless true
-      --browser.gatherUsageStats false
+    startCommand: python -m app.server
+
+    # Render probes this to decide the service is live. It is served by the listener
+    # in-process, so it stays truthful even if the Streamlit subprocess is still starting.
+    healthCheckPath: /health
+
+    # Uncomment together with `plan: starter` to make recovery state durable.
+    # disk:
+    #   name: recovery-data
+    #   mountPath: /var/data
+    #   sizeGB: 1
+
     envVars:
       - key: PYTHON_VERSION
-        value: "3.12"
+        value: "3.12.9"
 
-      # Nothing leaves this process. See the safety note above.
+      # --- outbound side effects: both gates closed --------------------------------------
+      # Nothing leaves this process. See the note above before changing the first one.
       - key: RECOVERY_DISPATCH_ENABLED
         value: "false"
       - key: RECOVERY_ALLOW_LIVE_CREDENTIALS
@@ -46,11 +68,18 @@ services:
       - key: RECOVERY_LINK_NOTIFY
         value: engine
 
-      # Ephemeral by construction on the free plan; named explicitly so the path is not a
-      # surprise if a disk is attached later.
+      # --- storage -----------------------------------------------------------------------
+      # Ephemeral on the free plan. With a disk attached, change to /var/data/recovery.db
       - key: RECOVERY_DB_PATH
         value: data/recovery.db
 
-      # Deliberately unset: RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET, SMTP_PASSWORD,
-      # TWILIO_AUTH_TOKEN. The hosted dashboard has no business holding credentials that
-      # can move money or contact people. Adapters report NOT_CONFIGURED, which is honest.
+      # Streamlit's internal port. Bound to loopback by app/server.py and never exposed:
+      # it is the same app without the webhook routes, so a second public way in would be
+      # a second thing to secure.
+      - key: STREAMLIT_INTERNAL_PORT
+        value: "8501"
+
+      # --- deliberately NOT set here -----------------------------------------------------
+      # RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET, SMTP_PASSWORD, TWILIO_AUTH_TOKEN.
+      # Add them in the Render dashboard as secrets if you enable the live loop. They must
+      # never enter this file, which is public.

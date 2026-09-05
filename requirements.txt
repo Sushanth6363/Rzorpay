@@ -1,3 +1,6 @@
+Jinja2==3.1.6
+MarkupSafe==3.0.3
+Pygments==2.21.0
 altair==6.2.2
 anyio==4.14.2
 attrs==26.1.0
@@ -14,16 +17,15 @@ fonttools==4.64.0
 graphviz==0.21
 h11==0.16.0
 httptools==0.8.0
+httpx==0.28.1
 hypothesis==6.167.1
 idna==3.19
 iniconfig==2.3.0
 itsdangerous==2.2.0
-Jinja2==3.1.6
 joblib==1.6.0
 jsonschema-specifications==2025.9.1
 jsonschema==4.26.0
 kiwisolver==1.5.1
-MarkupSafe==3.0.3
 matplotlib==3.11.1
 narwhals==2.25.0
 numpy==2.5.2
@@ -36,7 +38,6 @@ pluggy==1.6.0
 protobuf==7.36.1
 pyarrow==25.0.1
 pydeck==0.9.3
-Pygments==2.21.0
 pyparsing==3.3.2
 pytest==9.1.1
 python-dateutil==2.9.0.post0
