@@ -53,6 +53,7 @@ from app.realtime.downtime_live import LiveRazorpayDowntimeProvider
 from app.realtime.event_mapper import (
     DOWNTIME_EVENTS,
     RESOLUTION_EVENTS,
+    extract_case_hints,
     extract_entity,
     map_webhook,
 )
@@ -371,11 +372,16 @@ async def handle_razorpay_webhook(request: Request) -> JSONResponse:
         # through a recovery link arrives as plink_..., and only the case layer can map
         # that back to the case opened from the original failure (ADR-0023). Without it
         # the payment is recorded and the customer keeps being contacted.
+        # Not just the entity id and a top-level reference_id: `payment.captured` and
+        # `order.paid` carry our reference inside `notes` and the payment link inside
+        # `description`, and reading only the top level is what left a paid case open
+        # with a follow-up still scheduled against it.
         case_id = _payments().mark_paid_from_provider_event(
             entity_id=entity_id,
             event_name=event_name,
             amount_paise=amount if isinstance(amount, int) else None,
-            reference_id=str((extract_entity(payload) or {}).get("reference_id") or ""),
+            reference_id=str(entity.get("reference_id") or ""),
+            hints=extract_case_hints(payload),
         )
         if case_id:
             followup.cancel_for_entity(case_id, f"case closed by {event_name}")

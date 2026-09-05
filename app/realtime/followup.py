@@ -206,18 +206,29 @@ def _stop(opportunity_id: str, reason: str) -> None:
     conn.commit()
 
 
-def cancel_for_entity(origin_event_id: str, reason: str = "payment received") -> int:
-    """Stop chasing an entity the money has arrived for. Returns rows stopped."""
+def cancel_for_entity(entity_id: str, reason: str = "payment received") -> int:
+    """Stop chasing an entity the money has arrived for. Returns rows stopped.
+
+    Matches EITHER identifier a queue row carries. Callers legitimately hold different
+    ones: the webhook path resolves a payment to a `case_id`, the ingest path holds the
+    `origin_event_id` of the failure that opened the opportunity. Matching only
+    origin_event_id meant a real paid case kept a live follow-up scheduled against it -
+    the update matched nothing, returned 0, and nobody looked at the return value.
+
+    Nothing was sent to that customer, because ChannelDispatcher re-reads case state
+    before dispatching and would have refused. But relying on the last line of defence
+    for something the first line was supposed to handle is not a design, it is luck.
+    """
     ensure_schema()
     conn = ingest.get_conn()
     cur = conn.execute(
         """UPDATE followup_queue SET status='STOPPED', stop_reason=?, updated_at=?
-           WHERE origin_event_id=? AND status='SCHEDULED';""",
-        (reason, _now().isoformat(), origin_event_id),
+           WHERE (origin_event_id=? OR opportunity_id=?) AND status='SCHEDULED';""",
+        (reason, _now().isoformat(), entity_id, entity_id),
     )
     conn.commit()
     if cur.rowcount:
-        logger.info("cancelled %d follow-up(s) for %s: %s", cur.rowcount, origin_event_id, reason)
+        logger.info("cancelled %d follow-up(s) for %s: %s", cur.rowcount, entity_id, reason)
     return cur.rowcount
 
 

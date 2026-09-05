@@ -194,3 +194,88 @@ def test_the_spoken_message_never_reads_out_a_url():
 
     assert "http" not in message.spoken
     assert "rzp.io" not in message.spoken
+
+
+# --- cancelling by whichever identifier the caller happens to hold --------------------------
+
+
+def test_cancelling_by_case_id_stops_the_follow_up(tmp_path, monkeypatch):
+    """A real paid case kept a live follow-up scheduled against it.
+
+    The webhook path resolves a payment to a case_id and cancels with that; the queue row
+    stores the case_id in `opportunity_id` and the CSV's event id in `origin_event_id`.
+    Matching only origin_event_id meant the update hit nothing and returned 0, which no
+    caller checked. Nothing reached the customer - ChannelDispatcher re-reads case state
+    and would have refused - but the first line of defence was silently doing nothing.
+    """
+    import importlib
+    monkeypatch.setenv("RECOVERY_DB_PATH", str(tmp_path / "cancel.db"))
+    from app.realtime import config as cfg
+    importlib.reload(cfg)
+    from app.realtime import ingest as ing
+    importlib.reload(ing)
+    from app.realtime import followup as f
+    importlib.reload(f)
+    from app.domain.enums import ActionType
+
+    f.ensure_schema()
+    f.schedule(
+        opportunity_id="case_merch_demo_CUST001_x", merchant_id="m1", customer_id="c1",
+        origin_event_id="csv_merch_demo_CUST001_x", event={}, diagnosis_code=None,
+        last_action=ActionType.EMAIL_LINK, attempt=0,
+    )
+
+    stopped = f.cancel_for_entity("case_merch_demo_CUST001_x", "case closed by payment.captured")
+
+    assert stopped == 1
+    row = ing.get_conn().execute(
+        "SELECT status FROM followup_queue WHERE opportunity_id='case_merch_demo_CUST001_x';"
+    ).fetchone()
+    assert row[0] == "STOPPED"
+
+
+def test_cancelling_by_origin_event_id_still_stops_the_follow_up(tmp_path, monkeypatch):
+    """The other caller must keep working; this is a widening, not a swap."""
+    import importlib
+    monkeypatch.setenv("RECOVERY_DB_PATH", str(tmp_path / "cancel2.db"))
+    from app.realtime import config as cfg
+    importlib.reload(cfg)
+    from app.realtime import ingest as ing
+    importlib.reload(ing)
+    from app.realtime import followup as f
+    importlib.reload(f)
+    from app.domain.enums import ActionType
+
+    f.ensure_schema()
+    f.schedule(
+        opportunity_id="opp_1", merchant_id="m1", customer_id="c1",
+        origin_event_id="pay_FAILED_1", event={}, diagnosis_code=None,
+        last_action=ActionType.EMAIL_LINK, attempt=0,
+    )
+
+    assert f.cancel_for_entity("pay_FAILED_1", "resolved by payment.captured") == 1
+
+
+def test_cancelling_an_unknown_id_stops_nothing(tmp_path, monkeypatch):
+    """The widened WHERE must not become a wildcard that stops other customers' chases."""
+    import importlib
+    monkeypatch.setenv("RECOVERY_DB_PATH", str(tmp_path / "cancel3.db"))
+    from app.realtime import config as cfg
+    importlib.reload(cfg)
+    from app.realtime import ingest as ing
+    importlib.reload(ing)
+    from app.realtime import followup as f
+    importlib.reload(f)
+    from app.domain.enums import ActionType
+
+    f.ensure_schema()
+    f.schedule(
+        opportunity_id="opp_keep", merchant_id="m1", customer_id="c1",
+        origin_event_id="csv_keep", event={}, diagnosis_code=None,
+        last_action=ActionType.EMAIL_LINK, attempt=0,
+    )
+
+    assert f.cancel_for_entity("something_else_entirely", "nope") == 0
+    row = ing.get_conn().execute(
+        "SELECT status FROM followup_queue WHERE opportunity_id='opp_keep';").fetchone()
+    assert row[0] == "SCHEDULED"

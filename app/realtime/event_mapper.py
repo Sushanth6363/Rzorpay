@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import hashlib
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from app.domain.enums import EventType
 
@@ -83,6 +83,63 @@ def extract_entity(payload: Dict[str, Any]) -> Dict[str, Any]:
         if isinstance(entity, dict) and entity:
             return entity
     return {}
+
+
+def extract_case_hints(payload: Dict[str, Any]) -> List[str]:
+    """Every identifier in a verified payment event that could name one of our cases.
+
+    WHY THIS EXISTS
+        A real Razorpay payment through a recovery link arrived as `payment.captured`
+        and `order.paid`. Both were verified, both were recorded - and the case stayed
+        open, because the entity id is `pay_...` and nothing in the code looked anywhere
+        else. The customer had paid and the engine was still scheduled to chase them.
+
+        The identifiers were in the payload the whole time. A PAYMENT LINK entity carries
+        `reference_id` at the top level, which is what the listener read. A PAYMENT or
+        ORDER entity does not: our reference is echoed inside `notes`, and the payment
+        link it belongs to appears in `description` as `#<id-without-the-plink-prefix>`.
+
+        So this returns candidates rather than one id. Being unable to resolve a payment
+        is the single worst failure this system has - it means chasing someone for money
+        they have already paid - and it must not depend on which of three event types the
+        merchant happened to tick in a dashboard.
+
+    Ordered most to least authoritative. Caller tries each until one resolves.
+    """
+    container = payload.get("payload", {}) or {}
+    hints: List[str] = []
+
+    def add(value: Any) -> None:
+        text = str(value or "").strip()
+        if text and text not in hints:
+            hints.append(text)
+
+    for key in ENTITY_KEYS:
+        entity = (container.get(key, {}) or {}).get("entity")
+        if not isinstance(entity, dict):
+            continue
+
+        # 1. our own reference, top level (payment_link entity)
+        add(entity.get("reference_id"))
+
+        # 2. our own reference, echoed inside notes (payment and order entities)
+        notes = entity.get("notes")
+        if isinstance(notes, dict):
+            add(notes.get("reference_id"))
+
+        # 3. the payment link id, which Razorpay puts in the payment's description as
+        #    "#TYQwevtIn7Imdx" - the id with its `plink_` prefix stripped and a `#` added.
+        #    Restore the prefix rather than storing the mangled form: the id in our
+        #    payment_links table is the canonical one.
+        description = str(entity.get("description") or "").strip()
+        if description.startswith("#") and len(description) > 1:
+            add(f"plink_{description[1:]}")
+
+        # 4. the entity's own id, last: for a payment it is `pay_...`, which resolves only
+        #    when the case was opened from that exact failed attempt.
+        add(entity.get("id"))
+
+    return hints
 
 
 def _iso(created_at: Any) -> str:

@@ -1,0 +1,64 @@
+{
+  "account_id": "acc_RTbZJNHnkVxGz5",
+  "contains": [
+    "payment"
+  ],
+  "created_at": 1788628887,
+  "entity": "event",
+  "event": "payment.captured",
+  "payload": {
+    "payment": {
+      "entity": {
+        "acquirer_data": {
+          "auth_code": "969724"
+        },
+        "amount": 2500000,
+        "amount_refunded": 0,
+        "bank": null,
+        "base_amount": 2500000,
+        "captured": true,
+        "card": {
+          "emi": false,
+          "entity": "card",
+          "id": "card_TYR5bzqxe2WRYN",
+          "international": false,
+          "issuer": "DCBL",
+          "last4": "1007",
+          "name": "",
+          "network": "Visa",
+          "sub_type": "consumer",
+          "token_iin": "410028000",
+          "type": "debit"
+        },
+        "card_id": "card_TYR5bzqxe2WRYN",
+        "contact": "+919999999999",
+        "created_at": 1788628876,
+        "currency": "INR",
+        "description": "#TYQwevtIn7Imdx",
+        "email": "customer@example.com",
+        "entity": "payment",
+        "error_code": null,
+        "error_description": null,
+        "error_reason": null,
+        "error_source": null,
+        "error_step": null,
+        "fee": 64900,
+        "id": "pay_TYR5bmfIqEsc4x",
+        "international": false,
+        "invoice_id": null,
+        "method": "card",
+        "notes": {
+          "reference_id": "case_case_merch_demo_CUST001_20260905171244_2_2500000",
+          "source": "AI_Unified_Recovery_Engine"
+        },
+        "order_id": "order_TYR2xA2WFWQXYp",
+        "refund_status": null,
+        "reward": null,
+        "status": "captured",
+        "tax": 9900,
+        "vpa": null,
+        "wallet": null
+      }
+    }
+  }
+}

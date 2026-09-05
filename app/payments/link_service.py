@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
-from typing import Optional, Tuple
+from typing import Optional, Sequence, Tuple
 
 from app.cases.models import (
     Case,
@@ -155,6 +155,7 @@ class PaymentLinkService:
         event_name: str,
         amount_paise: Optional[int] = None,
         reference_id: str = "",
+        hints: Sequence[str] = (),
     ) -> Optional[str]:
         """Apply a VERIFIED payment event to its case. Returns the case_id, or None.
 
@@ -163,10 +164,23 @@ class PaymentLinkService:
         caller's cancellation logic runs exactly the same way on a redelivery.
         """
         case_id = self.resolve_case_id(entity_id, reference_id)
+
+        # The entity id alone is not enough. A payment made through a recovery link
+        # arrives as `pay_...`, which names nothing we store; the reference that DOES
+        # name the case is echoed back inside the payload, in a different place for
+        # every event type. Failing to resolve here means chasing someone who has
+        # already paid, so every identifier the provider handed us gets a turn.
+        for hint in hints:
+            if case_id is not None:
+                break
+            if hint and hint != entity_id:
+                case_id = self.resolve_case_id(hint, "")
+
         if case_id is None:
             logger.warning(
                 "verified payment %s (%s) could not be mapped to a case - "
-                "it will not close anything", entity_id, event_name,
+                "it will not close anything. Tried: %s",
+                entity_id, event_name, ", ".join([entity_id, reference_id, *hints]) or "nothing",
             )
             return None
 
