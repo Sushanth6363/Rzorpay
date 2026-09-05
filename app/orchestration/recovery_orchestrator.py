@@ -181,6 +181,7 @@ class RecoveryOrchestrator:
                 trace_id=trace_id,
                 event_type=context.opportunity.event_type,
                 escalation=context.escalation,
+                diagnosis_code=context.diagnosis.diagnosis_code.value,
             )
 
         # 5. Handle Action Intervention -> Atomic Reservation
@@ -251,6 +252,7 @@ class RecoveryOrchestrator:
                 trace_id=trace_id,
                 event_type=context.opportunity.event_type,
                 escalation=context.escalation,
+                diagnosis_code=context.diagnosis.diagnosis_code.value,
             )
 
         # 6. Record Execution Attempt
@@ -337,4 +339,5 @@ class RecoveryOrchestrator:
             trace_id=trace_id,
             event_type=context.opportunity.event_type,
             escalation=context.escalation,
+            diagnosis_code=context.diagnosis.diagnosis_code.value,
         )

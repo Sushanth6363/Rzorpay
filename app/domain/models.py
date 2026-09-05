@@ -570,6 +570,11 @@ class EndToEndRecoveryResult:
     # batch can report how often compliant escalation actually held intensity down -
     # a control nobody can count is not an auditable control.
     escalation: Optional[Any] = None
+    # Stage 1's verdict. Carried because two live behaviours depend on it and neither can
+    # reach it otherwise: the follow-up delay is derived from the diagnosis, and the message
+    # copy's ASK is chosen by it. AIRecoveryDecision does not carry features, so without
+    # this the live path silently fell back to a default interval and generic copy.
+    diagnosis_code: str = ""
 
     @property
     def event_type_value(self) -> str:

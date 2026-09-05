@@ -174,11 +174,8 @@ def _payments():
 
 
 def _diagnosis_code(result: Any) -> Optional[str]:
-    """Diagnosis from the executed decision — drives follow-up timing and message copy."""
-    features = getattr(result.decision, "decision_features", None) or {}
-    if isinstance(features, dict) and features.get("diagnosis_code"):
-        return str(features["diagnosis_code"])
-    return None
+    """Stage 1's verdict — drives follow-up timing and the message's ASK."""
+    return str(getattr(result, "diagnosis_code", "") or "") or None
 
 
 def _run_followup(item: Dict[str, Any]) -> None:

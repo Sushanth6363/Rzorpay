@@ -210,6 +210,35 @@ class RecoveryAgent:
             payment_url=link.short_url,
         )
         result.dispatch = dispatch.to_dict()
+
+        # SCHEDULE THE NEXT LOOK. Without this a CSV-originated case gets exactly ONE
+        # contact and then nothing ever happens again - no second touch, no escalation to
+        # SMS, no promise-to-pay. The webhook path scheduled follow-ups; this path did not,
+        # so "closed loop" was true for webhook cases and false for the CSV path the demo
+        # actually uses.
+        #
+        # Only after a real or dry-run send, never after a block: a message that did not go
+        # out has not started a conversation to follow up on.
+        if dispatch.status in ("SENT", "SKIPPED"):
+            from app.realtime import followup
+
+            due = followup.schedule(
+                opportunity_id=case_id,
+                merchant_id=case.merchant_id,
+                customer_id=case.customer_id,
+                origin_event_id=case.source_event_id or case_id,
+                event=self.build_event(case),
+                diagnosis_code=result.diagnosis or None,
+                last_action=action,
+                attempt=0,
+            )
+            if due:
+                self.repo.add_event(CaseEvent(
+                    case_id=case_id, kind=CaseEventKind.FOLLOWUP_SCHEDULED, actor="agent",
+                    summary=f"Next review scheduled for {due[:16].replace('T', ' ')} UTC",
+                    detail={"next_touch_at": due, "after_action": action.value},
+                ))
+
         return result
 
     def run_batch(
@@ -221,10 +250,8 @@ class RecoveryAgent:
 
     @staticmethod
     def _diagnosis(outcome: Any) -> str:
-        features = getattr(outcome.decision, "decision_features", None) or {}
-        if isinstance(features, dict) and features.get("diagnosis_code"):
-            return str(features["diagnosis_code"])
-        return ""
+        """Stage 1's verdict, read off the result the orchestrator returned."""
+        return str(getattr(outcome, "diagnosis_code", "") or "")
 
     @staticmethod
     def _explain(decision: Any, action: ActionType) -> str:
