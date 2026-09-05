@@ -251,3 +251,11 @@ def test_a_row_carries_everything_needed_to_open_it(repo):
 
     assert row.case_id == case.case_id
     assert row.payment_url == "https://rzp.io/rzp/ROW"
+
+
+def test_the_row_carries_the_due_date_from_the_merchants_own_file(repo):
+    """The card ages the debt from this. Re-deriving it in the UI would let the screen
+    drift from the CSV the merchant uploaded."""
+    row = _row(build_board(repo, "m1"), "Rahul")
+
+    assert row.due_date == "2026-08-24"

@@ -16,7 +16,7 @@ import os
 # Ensure repository root is in sys.path for Streamlit Cloud deployment
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 import pandas as pd
@@ -79,6 +79,48 @@ STYLES = """
   .verdict .lab { font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; opacity:.6; }
   .verdict .big { font-size:1.6rem; font-weight:680; font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
   .verdict .ci  { font-size:.8rem; opacity:.7; font-variant-numeric:tabular-nums; }
+
+  /* --- case board: a card per customer, not a spreadsheet ------------------------- */
+  .case { position:relative; border:1px solid rgba(128,128,128,.20); border-radius:12px;
+          padding:.82rem 1rem .72rem 1.15rem; margin-bottom:.5rem; overflow:hidden;
+          background:linear-gradient(90deg, var(--tint) 0%, rgba(128,128,128,.028) 42%); }
+  .case::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px;
+                  background:var(--c); }
+  .case .top { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; }
+  .case .who { font-size:.99rem; font-weight:650; letter-spacing:-.012em; line-height:1.25; }
+  .case .con { font-size:.745rem; opacity:.52; margin-top:.14rem;
+               font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .case .amt { font-size:1.14rem; font-weight:680; letter-spacing:-.02em;
+               font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap; }
+  .case .due { font-size:.715rem; opacity:.55; text-align:right; margin-top:.1rem;
+               white-space:nowrap; }
+  .case .stg { font-size:.845rem; opacity:.9; margin:.15rem 0 .1rem; line-height:1.45; }
+  .case .meta { display:flex; gap:.4rem; flex-wrap:wrap; align-items:center; margin-top:.5rem; }
+  .case .meta .m { font-size:.725rem; opacity:.55; }
+  .case .meta .dot { opacity:.3; }
+
+  /* the escalation ladder: which rungs this customer has actually been through */
+  .lad { display:flex; align-items:center; margin:.6rem 0 .1rem; }
+  .lad .r { font-size:.645rem; letter-spacing:.055em; font-weight:700; padding:.15rem .42rem;
+            border-radius:5px; border:1px solid rgba(128,128,128,.28); opacity:.3;
+            white-space:nowrap; }
+  .lad .r.done { opacity:1; color:#059669; border-color:rgba(5,150,105,.45);
+                 background:rgba(5,150,105,.10); }
+  .lad .r.next { opacity:.95; color:#4338CA; border-color:rgba(67,56,202,.5);
+                 border-style:dashed; background:rgba(67,56,202,.08); }
+  .lad .sep { width:13px; height:1px; background:rgba(128,128,128,.28); flex:0 0 13px; }
+
+  /* the decision trail, as a rail rather than a list of rows */
+  .tl { border-left:2px solid rgba(128,128,128,.22); margin:.15rem 0 .2rem .38rem;
+        padding-left:1.05rem; }
+  .tl .e { position:relative; padding:.28rem 0; font-size:.825rem; line-height:1.45; }
+  .tl .e::before { content:""; position:absolute; left:-1.36rem; top:.62rem; width:8px;
+                   height:8px; border-radius:50%; background:rgba(128,128,128,.45);
+                   box-shadow:0 0 0 3px rgba(128,128,128,.10); }
+  .tl .e.hi::before { background:#059669; box-shadow:0 0 0 3px rgba(5,150,105,.16); }
+  .tl .e .t { font-size:.715rem; opacity:.45; font-variant-numeric:tabular-nums;
+              margin-right:.55rem; }
+  .tl .e .k { font-weight:650; }
 
   .note { font-size:.78rem; opacity:.62; line-height:1.5; }
   div[data-testid="stMetricValue"] { font-size:1.25rem; }
@@ -502,6 +544,96 @@ FLAG_STYLE = {
     "STALLED": ("#DC2626", "rgba(220,38,38,.12)",  "NEEDS ATTENTION"),
 }
 
+# The board is sorted by who needs a human, not by when the row was created. A merchant
+# looking at fifty cases should never have to scroll to find the one that has stalled.
+FLAG_ORDER = {"STALLED": 0, "ACTIVE": 1, "WAITING": 2, "PAID": 3}
+
+# The compliant escalation ladder, drawn as it is actually climbed. `channels_tried` has
+# already had "_SMTP" and "TWILIO_" stripped by the board, so these are the surviving keys.
+LADDER = (("EMAIL", "EMAIL"), ("SMS", "SMS"), ("WHATSAPP", "WHATSAPP"), ("VOICE", "CALL"))
+ACTION_RUNG = {
+    "EMAIL_LINK": "EMAIL", "SMS_LINK": "SMS", "WHATSAPP_LINK": "WHATSAPP",
+    "IVR_CALL": "VOICE", "AGENT_DIAL": "VOICE",
+}
+
+# Events worth a filled dot on the rail: the money, and the case ending.
+TIMELINE_HIGHLIGHT = {"PAYMENT_RECEIVED", "CASE_CLOSED"}
+
+
+def _ladder(row) -> str:
+    """Which rungs this customer has been through, and which one is queued next.
+
+    A rung is lit only when a contact was CONFIRMED SENT on that channel. A dashed rung is
+    a decision that has not been dispatched yet - it must not read as a message delivered.
+    """
+    done = {c.strip() for c in (row.channels_tried or "").split(",") if c.strip()}
+    planned = "" if row.paid else ACTION_RUNG.get(row.last_action, "")
+    cells = []
+    for key, label in LADDER:
+        if key in done:
+            cls = "r done"
+        elif key == planned:
+            cls = "r next"
+        else:
+            cls = "r"
+        cells.append(f'<span class="{cls}">{label}</span>')
+    return '<div class="lad">' + '<span class="sep"></span>'.join(cells) + '</div>'
+
+
+def _due_line(row) -> str:
+    """The merchant's own due date, aged.
+
+    A settled case is never shown as overdue. "17d overdue" beside a PAID badge is both
+    wrong and the kind of detail that makes a merchant distrust every other number on the
+    screen - the debt stopped ageing the moment the payment was verified.
+    """
+    if not row.due_date:
+        return "settled" if row.paid else "no due date supplied"
+    try:
+        due = datetime.strptime(row.due_date, "%Y-%m-%d").date()
+    except ValueError:
+        return f"due {row.due_date}"
+    if row.paid:
+        return f"due {row.due_date} · settled"
+    overdue = (datetime.now(timezone.utc).date() - due).days
+    return f"due {row.due_date} · {overdue}d overdue" if overdue > 0 else f"due {row.due_date}"
+
+
+def _case_card(row) -> str:
+    """One customer as a card: who, how much, how far up the ladder, and what happens next."""
+    colour, tint, label = FLAG_STYLE.get(row.flag, ("#6B7280", "rgba(128,128,128,.08)", row.flag))
+
+    meta = [f'{row.contacts_made} confirmed contact{"" if row.contacts_made == 1 else "s"}']
+    if row.days_since_contact is not None:
+        meta.append(f"last contact {row.days_since_contact}d ago")
+    if row.next_review:
+        meta.append(f'next review {row.next_review[:16].replace("T", " ")}')
+    elif not row.paid:
+        meta.append("nothing scheduled")
+    meta.append(row.payment_note)
+    meta_html = '<span class="dot">·</span>'.join(f'<span class="m">{m}</span>' for m in meta)
+
+    return (
+        f'<div class="case" style="--c:{colour};--tint:{tint};">'
+        f'  <div class="top">'
+        f'    <div>'
+        f'      <div class="who">{row.name or row.customer_id} '
+        f'        <span class="pill" style="color:{colour};background:{tint};'
+        f'border:1px solid {colour}55;margin-left:.3rem;vertical-align:.08em;">{label}</span>'
+        f'      </div>'
+        f'      <div class="con">{row.contact or "no contact on file"}</div>'
+        f'    </div>'
+        f'    <div>'
+        f'      <div class="amt">{rupees(row.amount_paise)}</div>'
+        f'      <div class="due">{_due_line(row)}</div>'
+        f'    </div>'
+        f'  </div>'
+        f'  {_ladder(row)}'
+        f'  <div class="stg">{row.stage}</div>'
+        f'  <div class="meta">{meta_html}</div>'
+        f'</div>'
+    )
+
 
 def section_case_board() -> None:
     """One row per customer: what the agent decided, whether it reached them, did they pay."""
@@ -549,63 +681,96 @@ def section_case_board() -> None:
     )
     st.markdown(f'<div style="margin:.5rem 0 .8rem;">{chips}</div>', unsafe_allow_html=True)
 
-    frame = pd.DataFrame([r.to_row() for r in rows])
-
-    def paint(row):
-        colour, background, _ = FLAG_STYLE.get(row["Flag"], ("", "", ""))
-        return [f"background-color:{background}" if background else "" for _ in row]
-
-    st.caption("Click a row to open that customer's full history.")
-    event = st.dataframe(
-        frame.style.apply(paint, axis=1),
-        use_container_width=True, hide_index=True,
-        on_select="rerun", selection_mode="single-row", key="board_table",
-        column_config={
-            "Amount": st.column_config.NumberColumn(format="₹%.2f"),
-            "Stage": st.column_config.TextColumn(width="large"),
-            "Why": st.column_config.TextColumn("Why not paid", width="medium"),
-        },
+    st.caption(
+        "Sorted by who needs a human first, not by upload order. "
+        "Press **Open** on any customer to expand their full decision trail."
     )
+    st.write("")
 
-    picked_rows = (event.selection.rows if event and event.selection else []) or []
-    picked = rows[picked_rows[0]] if picked_rows else None
+    rows = sorted(rows, key=lambda r: (FLAG_ORDER.get(r.flag, 9), -r.amount_paise))
+    open_id = st.session_state.get("board_open_case")
 
-    if picked is None:
-        st.info("Select a row above to see the decision trail for that customer.")
-        return
+    for row in rows:
+        # Top alignment, not centre: the button must not drift down the screen when the
+        # detail below it expands, or the control moves out from under the cursor that
+        # just pressed it.
+        card_col, action_col = st.columns([11, 1.7], vertical_alignment="top")
+        card_col.markdown(_case_card(row), unsafe_allow_html=True)
 
-    colour, background, label = FLAG_STYLE.get(picked.flag, ("", "", picked.flag))
-    st.markdown(
-        f'<div class="urx-card" style="border-color:{colour}55;background:{background};">'
-        f'<h4 style="color:{colour};">{label} · {picked.name or picked.customer_id}</h4>'
-        f'{kv("Amount", rupees(picked.amount_paise))}'
-        f'{kv("Contact", picked.contact or "-")}'
-        f'{kv("Stage", picked.stage)}'
-        f'{kv("Last decision", picked.last_action or "-")}'
-        f'{kv("Channels tried", picked.channels_tried or "none")}'
-        f'{kv("Confirmed contacts", str(picked.contacts_made))}'
-        f'{kv("Paid", "YES" if picked.paid else "NO")}'
-        f'{kv("Why", picked.payment_note)}'
-        f'{kv("Next review", picked.next_review[:16].replace("T", " ") if picked.next_review else "none scheduled")}'
-        f'</div>', unsafe_allow_html=True,
-    )
+        is_open = open_id == row.case_id
+        if action_col.button(
+            "Close" if is_open else "Open",
+            key=f"board_open_{row.case_id}",
+            use_container_width=True,
+            help=f"Full timeline for {row.name or row.customer_id}",
+        ):
+            st.session_state["board_open_case"] = None if is_open else row.case_id
+            st.rerun()
 
-    if picked.payment_url and not picked.paid:
-        st.markdown(f"**PAY NOW link for this case:** {picked.payment_url}")
-        st.caption(
-            "Paying this link fires a Razorpay webhook. The case flips to PAID and every "
-            "pending action is cancelled - refresh to watch it happen."
-        )
+        # Rendered INSIDE the card's own column so the panel lines up under the card it
+        # belongs to rather than spanning the button gutter as well.
+        if is_open:
+            with card_col:
+                _render_case_detail(repo, row)
 
-    st.markdown("**Decision trail**")
-    for entry in repo.timeline(picked.case_id):
-        st.markdown(
-            f'<div class="urx-kv"><span class="k">{entry.at[11:19]} · '
-            f'{entry.kind.value.replace("_", " ").title()}</span>'
-            f'<span class="v" style="font-weight:400;text-align:left;">'
-            f'{entry.summary}</span></div>',
-            unsafe_allow_html=True,
-        )
+
+def _render_case_detail(repo, row) -> None:
+    """Everything known about one case, expanded in place beneath its card."""
+    colour, tint, label = FLAG_STYLE.get(row.flag, ("#6B7280", "rgba(128,128,128,.08)", row.flag))
+
+    with st.container(border=True):
+        left, right = st.columns([1, 1])
+
+        with left:
+            st.markdown(
+                f'<div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;'
+                f'opacity:.6;margin-bottom:.45rem;">Case detail</div>'
+                f'{kv("Customer", row.name or row.customer_id)}'
+                f'{kv("Contact", row.contact or "-")}'
+                f'{kv("Amount", rupees(row.amount_paise))}'
+                f'{kv("Status", label)}'
+                f'{kv("Last decision", row.last_action or "-")}'
+                f'{kv("Channels tried", row.channels_tried or "none")}'
+                f'{kv("Confirmed contacts", str(row.contacts_made))}'
+                f'{kv("Paid", "YES" if row.paid else "NO")}'
+                f'{kv("Next review", row.next_review[:16].replace("T", " ") if row.next_review else "none scheduled")}'
+                f'{kv("Case id", row.case_id, mono=True)}',
+                unsafe_allow_html=True,
+            )
+
+        with right:
+            st.markdown(
+                '<div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;'
+                'opacity:.6;margin-bottom:.45rem;">Decision trail</div>',
+                unsafe_allow_html=True,
+            )
+            entries = repo.timeline(row.case_id)
+            if not entries:
+                st.markdown('<div class="note">Nothing has happened on this case yet.</div>',
+                            unsafe_allow_html=True)
+            else:
+                rail = "".join(
+                    f'<div class="e{" hi" if e.kind.value in TIMELINE_HIGHLIGHT else ""}">'
+                    f'<span class="t">{str(e.at)[11:16]}</span>'
+                    f'<span class="k">{e.kind.value.replace("_", " ").title()}</span> — '
+                    f'{e.summary}</div>'
+                    for e in entries
+                )
+                st.markdown(f'<div class="tl">{rail}</div>', unsafe_allow_html=True)
+
+        if row.payment_url and not row.paid:
+            st.markdown(
+                f'<div style="margin-top:.6rem;font-size:.83rem;">'
+                f'<b>Live payment link</b> · <a href="{row.payment_url}" target="_blank">'
+                f'{row.payment_url}</a></div>',
+                unsafe_allow_html=True,
+            )
+            st.caption(
+                "Paying this link fires a real Razorpay webhook. The case flips to PAID and "
+                "every pending contact is cancelled — press Open again after paying to watch it."
+            )
+
+    st.write("")
 
 
 def section_handoff_report() -> None:
@@ -697,10 +862,15 @@ def section_live_test() -> None:
     )
     uploaded = st.file_uploader("Upload CSV", type=["csv"])
     if uploaded is None:
+        # Read off the template itself rather than typed out, so the instructions cannot
+        # drift from what the parser accepts. They already had once: this caption still
+        # asked for `failure_reason` months after the engine started diagnosing that
+        # itself, which would have had a judge uploading a file the parser ignored.
         st.caption(
-            "Columns: customer_name, email, phone, amount_rupees, event_type, "
-            "failure_reason. Optional for B2B: invoice_status, amount_received_rupees, "
-            "tds_section."
+            f"Columns: **{SAMPLE_CSV.splitlines()[0]}**. `amount` is required and every "
+            "row needs an email or a phone. There is deliberately no reason column - a "
+            "merchant knows what is owed, not why it is unpaid, so the engine diagnoses "
+            "that itself, per case."
         )
         return
 

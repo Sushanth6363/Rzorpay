@@ -66,6 +66,7 @@ class BoardRow:
     days_since_contact: Optional[int] = None
     flag: str = "WAITING"       # PAID | ACTIVE | WAITING | STALLED
     payment_url: str = ""
+    due_date: str = ""          # from the merchant's own CSV, so the card can age it
     detail: Dict[str, Any] = field(default_factory=dict)
 
     def to_row(self) -> Dict[str, Any]:
@@ -193,6 +194,7 @@ def build_board(
             days_since_contact=days,
             flag=flag,
             payment_url=link.short_url if link else "",
+            due_date=case.due_date or "",
         ))
 
     return rows
