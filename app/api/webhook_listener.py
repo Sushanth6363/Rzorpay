@@ -83,9 +83,16 @@ def get_orchestrator() -> RecoveryOrchestrator:
     """
     orch = getattr(_LOCAL, "orchestrator", None)
     if orch is None:
-        orch = RecoveryOrchestrator(
+        # Arm A5's exact configuration, so the live engine is the evaluated engine. A
+        # bare RecoveryOrchestrator carries an UNFITTED model and quietly scores from
+        # cold-start baselines instead.
+        from app.domain.enums import ExperimentArm
+        from app.experiment.policies import build_orchestrator_for_arm
+
+        orch = build_orchestrator_for_arm(
+            ExperimentArm.A5,
             db_conn=ingest.get_conn(),
-            downtime_provider=LiveRazorpayDowntimeProvider(),
+            downtime_provider_override=LiveRazorpayDowntimeProvider(),
         )
         _LOCAL.orchestrator = orch
     return orch

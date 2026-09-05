@@ -66,14 +66,14 @@ def test_a_receivable_gets_a_contact_channel_not_a_retry(env):
     case correctly is what makes the engine reach the right answer on its own. Forcing the
     action in the loop would have hidden the modelling error instead of fixing it.
     """
-    result = env["agent"].run_cycle(env["case"].case_id)
+    result = env["agent"].run_cycle(env["case"].case_id, random_seed=7)
 
     assert result.action == "EMAIL_LINK"
 
 
 def test_the_reasoning_is_read_off_the_decision_not_composed(env):
     """The explanation must be the engine's own arithmetic, not a story told afterwards."""
-    result = env["agent"].run_cycle(env["case"].case_id)
+    result = env["agent"].run_cycle(env["case"].case_id, random_seed=7)
 
     assert "uplift" in result.reasoning
     assert "EV" in result.reasoning
@@ -81,7 +81,7 @@ def test_the_reasoning_is_read_off_the_decision_not_composed(env):
 
 def test_the_opportunity_is_attached_back_to_the_case(env):
     """Without this the engine's decision cannot be traced from the case."""
-    env["agent"].run_cycle(env["case"].case_id)
+    env["agent"].run_cycle(env["case"].case_id, random_seed=7)
 
     assert env["repo"].get_case(env["case"].case_id).opportunity_id
 
@@ -92,7 +92,7 @@ def test_the_opportunity_is_attached_back_to_the_case(env):
 def test_a_paid_case_is_skipped_before_the_engine_even_runs(env):
     env["repo"].set_status(env["case"].case_id, CaseStatus.PAID, reason="paid")
 
-    result = env["agent"].run_cycle(env["case"].case_id)
+    result = env["agent"].run_cycle(env["case"].case_id, random_seed=7)
 
     assert result.action == ""
     assert "PAID" in result.skipped_reason
@@ -101,7 +101,7 @@ def test_a_paid_case_is_skipped_before_the_engine_even_runs(env):
 def test_a_closed_case_is_skipped(env):
     env["repo"].set_status(env["case"].case_id, CaseStatus.CLOSED, reason="wrong person")
 
-    assert "CLOSED" in env["agent"].run_cycle(env["case"].case_id).skipped_reason
+    assert "CLOSED" in env["agent"].run_cycle(env["case"].case_id, random_seed=7).skipped_reason
 
 
 def test_an_unknown_case_is_reported_not_raised(env):
@@ -116,7 +116,7 @@ def test_no_payment_link_means_no_message(env):
     contact slot, and cannot possibly close the case."""
     agent = _agent(env["conn"], env["repo"], client=FakeRZP(fail=True))
 
-    result = agent.run_cycle(env["case"].case_id)
+    result = agent.run_cycle(env["case"].case_id, random_seed=7)
 
     assert result.dispatch["status"] == "BLOCKED"
     assert "no payment link" in result.skipped_reason
@@ -129,8 +129,8 @@ def test_the_link_is_reused_across_cycles_not_duplicated(env):
     client = FakeRZP()
     agent = _agent(env["conn"], env["repo"], client=client)
 
-    first = agent.run_cycle(env["case"].case_id)
-    second = agent.run_cycle(env["case"].case_id)
+    first = agent.run_cycle(env["case"].case_id, random_seed=7)
+    second = agent.run_cycle(env["case"].case_id, random_seed=7)
 
     assert first.payment_url == second.payment_url
     assert client.created == 1
@@ -140,7 +140,7 @@ def test_the_link_is_reused_across_cycles_not_duplicated(env):
 
 
 def test_the_decision_and_the_link_both_reach_the_timeline(env):
-    env["agent"].run_cycle(env["case"].case_id)
+    env["agent"].run_cycle(env["case"].case_id, random_seed=7)
 
     kinds = [e.kind for e in env["repo"].timeline(env["case"].case_id)]
 
@@ -150,7 +150,7 @@ def test_the_decision_and_the_link_both_reach_the_timeline(env):
 
 
 def test_dry_run_records_the_decision_without_sending(env):
-    result = env["agent"].run_cycle(env["case"].case_id)
+    result = env["agent"].run_cycle(env["case"].case_id, random_seed=7)
 
     assert result.dispatch["status"] == "SKIPPED"
     assert "DRY RUN" in result.dispatch["reason"]
@@ -162,6 +162,6 @@ def test_a_batch_returns_one_result_per_case(env):
         "customer_id,name,email,amount\nC2,B,b@x.com,900\nC3,C,c@x.com,700\n"
     ).valid, merchant_id="m1")
 
-    results = env["agent"].run_batch([c.case_id for c in cases])
+    results = env["agent"].run_batch([c.case_id for c in cases], random_seed=7)
 
     assert len(results) == 2

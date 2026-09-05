@@ -39,6 +39,8 @@ from app.cases.models import Case, CaseEvent, CaseEventKind
 from app.cases.repository import CaseRepository
 from app.dispatch.copy import build_message
 from app.dispatch.dispatcher import CONTACT_ACTIONS, ChannelDispatcher, DispatchOutcome
+from app.domain.enums import ExperimentArm
+from app.experiment.policies import build_orchestrator_for_arm
 from app.domain.enums import ActionType
 from app.orchestration.recovery_orchestrator import RecoveryOrchestrator
 from app.payments.link_service import PaymentLinkService
@@ -85,7 +87,13 @@ class RecoveryAgent:
     ) -> None:
         self.conn = conn
         self.repo = repository or CaseRepository(conn)
-        self.orchestrator = orchestrator or RecoveryOrchestrator(db_conn=conn)
+        # The live agent must run the SAME configuration that was evaluated. A bare
+        # RecoveryOrchestrator carries an UNFITTED CatBoost, which falls back to cold-start
+        # baselines and abstains with INSUFFICIENT_TRAINING_DATA - so the scorer being
+        # demonstrated would not be the one any published figure describes.
+        self.orchestrator = orchestrator or build_orchestrator_for_arm(
+            ExperimentArm.A5, db_conn=conn
+        )
         self.payments = payments or PaymentLinkService(conn, repository=self.repo)
         self.dispatcher = dispatcher or ChannelDispatcher(conn, repository=self.repo)
 
@@ -108,8 +116,15 @@ class RecoveryAgent:
 
     # -- one cycle -------------------------------------------------------------------
 
-    def run_cycle(self, case_id: str) -> CycleResult:
-        """Observe, let the engine decide, act on what it decided, record the result."""
+    def run_cycle(self, case_id: str, random_seed: Optional[int] = None) -> CycleResult:
+        """Observe, let the engine decide, act on what it decided, record the result.
+
+        `random_seed` defaults to None, which is correct for live traffic: epsilon
+        exploration is a real feature (ADR-0004) and live decisions are not a replay. It
+        also means the agent is deliberately NON-DETERMINISTIC - on a small fraction of
+        cases it will explore and abstain. Tests pass a seed so a probabilistic branch does
+        not turn into an intermittent failure that gets "fixed" by rerunning.
+        """
         case = self.repo.get_case(case_id)
         if case is None:
             return CycleResult(case_id=case_id, skipped_reason="unknown case")
@@ -124,7 +139,7 @@ class RecoveryAgent:
 
         # DELEGATE. Every decision is made here, by the unchanged engine.
         outcome = self.orchestrator.process_and_execute(
-            raw_event=self.build_event(case), arm="A5", random_seed=None,
+            raw_event=self.build_event(case), arm="A5", random_seed=random_seed,
         )
         decision = outcome.decision
         action = decision.selected_action
@@ -197,8 +212,10 @@ class RecoveryAgent:
         result.dispatch = dispatch.to_dict()
         return result
 
-    def run_batch(self, case_ids: List[str]) -> List[CycleResult]:
-        return [self.run_cycle(cid) for cid in case_ids]
+    def run_batch(
+        self, case_ids: List[str], random_seed: Optional[int] = None
+    ) -> List[CycleResult]:
+        return [self.run_cycle(cid, random_seed=random_seed) for cid in case_ids]
 
     # -- helpers ---------------------------------------------------------------------
 

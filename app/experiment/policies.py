@@ -105,8 +105,20 @@ def _fitted_catboost() -> CatBoostSLearner:
     return _CATBOOST_SINGLETON
 
 
-def build_orchestrator_for_arm(arm: ExperimentArm) -> RecoveryOrchestrator:
-    """Construct an orchestrator whose capabilities match the arm's declared configuration."""
+def build_orchestrator_for_arm(
+    arm: ExperimentArm,
+    db_conn: Any = None,
+    downtime_provider_override: Any = None,
+) -> RecoveryOrchestrator:
+    """Construct an orchestrator whose capabilities match the arm's declared configuration.
+
+    `db_conn` and `downtime_provider_override` exist so the LIVE path can run the exact
+    configuration that was evaluated. Without them the production agent built a bare
+    RecoveryOrchestrator with an UNFITTED CatBoost, which silently falls back to cold-start
+    baselines and abstains with INSUFFICIENT_TRAINING_DATA - meaning the scorer being
+    demonstrated was not the scorer any published number describes. Neither parameter
+    changes what an arm IS; they only supply where its state lives.
+    """
     cfg = ARM_CONFIG[arm]
 
     if cfg["downtime_signal"]:
@@ -138,7 +150,8 @@ def build_orchestrator_for_arm(arm: ExperimentArm) -> RecoveryOrchestrator:
     ai_engine = AIRecoveryDecisionEngine(learner=learner, model_version=model_version)
 
     return RecoveryOrchestrator(
-        downtime_provider=downtime_provider,
+        db_conn=db_conn,
+        downtime_provider=downtime_provider_override or downtime_provider,
         ai_engine=ai_engine,
         stage0_enabled=cfg["stage0_enabled"],
         shared_ledger_enabled=cfg["shared_ledger"],

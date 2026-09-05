@@ -43,10 +43,19 @@ COLUMN_ALIASES: Dict[str, Tuple[str, ...]] = {
     "phone": ("phone", "mobile", "contact", "phone_number", "msisdn"),
     "amount": ("amount", "amount_rupees", "amount_due", "outstanding", "value"),
     "due_date": ("due_date", "duedate", "due", "date"),
-    # Optional extras the engine understands; absent is fine.
-    "event_type": ("event_type", "stream", "type"),
-    "failure_reason": ("failure_reason", "reason", "error_code"),
 }
+
+# DELIBERATELY NOT CSV COLUMNS: event_type and failure_reason.
+#
+# A merchant uploading receivables knows what is owed and by whom. They do not know WHY a
+# customer has not paid - and if they did, asking them to type it into a spreadsheet would
+# make the engine's diagnosis a formality. Every row is treated as one thing: an
+# outstanding amount. Stage 1 diagnoses it and the engine decides, per case, what to do.
+#
+# The stream is a structural fact rather than an opinion: a merchant-uploaded debt had no
+# charge attempt, so there is no stored instrument and RECOMMEND_RETRY is not a legal
+# action for it. That is derived here, not asked for.
+RECEIVABLE_STREAM = "OVERDUE_B2B_INVOICE"
 
 REQUIRED = ("amount",)          # plus at least one of email / phone, checked per row
 
@@ -78,8 +87,6 @@ class ValidRow:
     phone: str
     amount_paise: int
     due_date: str
-    event_type: str = "OVERDUE_B2B_INVOICE"
-    failure_reason: str = ""
 
     @property
     def days_overdue(self) -> int:
@@ -96,7 +103,7 @@ class ValidRow:
             "Line": self.line, "Customer": self.customer_id, "Name": self.name,
             "Email": self.email, "Phone": self.phone,
             "Amount": self.amount_paise / 100, "Due": self.due_date or "-",
-            "Days overdue": self.days_overdue, "Stream": self.event_type,
+            "Days overdue": self.days_overdue,
         }
 
 
@@ -271,12 +278,6 @@ def parse_csv(raw: bytes | str) -> IngestReport:
             line=i, customer_id=customer_id, name=row.get("name", ""),
             email=email, phone=phone or "", amount_paise=amount_paise,
             due_date=due_iso or "",
-            # A merchant uploading outstanding amounts is describing RECEIVABLES, not
-            # failed charges. There was no payment attempt, so there is no stored
-            # instrument to retry - and typing it as FAILED_PAYMENT makes the engine
-            # recommend retrying a charge that never happened. A row may override this.
-            event_type=(row.get("event_type") or "OVERDUE_B2B_INVOICE").upper(),
-            failure_reason=(row.get("failure_reason") or "").upper(),
         ))
 
     return report
@@ -303,7 +304,7 @@ def create_cases(
             amount_paise=row.amount_paise,
             due_date=row.due_date,
             source_event_id=f"csv_{merchant_id}_{row.customer_id}_{stamp}_{row.line}",
-            event_type=row.event_type,
+            event_type=RECEIVABLE_STREAM,
             status=CaseStatus.OPEN,
         )
         repo.create_case(case)
