@@ -27,6 +27,12 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
+# Populate os.environ from .env before ANY value below is read. Without this the file is
+# documentation: the engine reports NOT_CONFIGURED, refuses to send, and the operator
+# concludes the integration is broken when nothing ever read the file. An already-exported
+# variable always wins, so tests and CI are unaffected.
+from app import config_env  # noqa: E402,F401  (import for side effect, must precede reads)
+
 
 def _flag(name: str, default: bool = False) -> bool:
     raw = os.environ.get(name)

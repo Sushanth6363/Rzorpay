@@ -282,6 +282,22 @@ class CaseRepository:
         ).fetchone()
         return self._row_to_link(row) if row else None
 
+    def find_reusable_link_any_amount(self, case_id: str) -> Optional[PaymentLink]:
+        """Any live link on this case, regardless of amount. Used when closing a case."""
+        self.conn.row_factory = sqlite3.Row
+        row = self.conn.execute(
+            "SELECT * FROM payment_links WHERE case_id=? AND status=? LIMIT 1;",
+            (case_id, PaymentLinkStatus.CREATED.value),
+        ).fetchone()
+        return self._row_to_link(row) if row else None
+
+    def mark_link_cancelled(self, payment_link_id: str, reason: str = "") -> None:
+        self.conn.execute(
+            "UPDATE payment_links SET status=?, updated_at=? WHERE payment_link_id=?;",
+            (PaymentLinkStatus.CANCELLED.value, now_iso(), payment_link_id),
+        )
+        self.conn.commit()
+
     def mark_link_paid(self, payment_link_id: str) -> Optional[str]:
         """Mark a link paid. Returns its case_id, or None if unknown."""
         link = self.get_payment_link(payment_link_id)

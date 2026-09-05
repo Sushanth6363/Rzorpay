@@ -186,13 +186,44 @@ class PaymentLinkService:
             detail={"entity_id": entity_id, "event": event_name,
                     "amount_paise": amount_paise},
         ))
+        # Any OTHER live link on this case is now a hazard: the customer could click it and
+        # pay a second time for a debt that is already settled.
+        cancelled = self.cancel_open_links(case_id, reason="paid")
+
         self.repo.add_event(CaseEvent(
             case_id=case_id, kind=CaseEventKind.CASE_CLOSED, actor="agent",
             summary="Case closed - payment verified. All pending contact cancelled.",
-            detail={"trigger": event_name},
+            detail={"trigger": event_name, "links_cancelled": cancelled},
         ))
         logger.info("case %s closed by verified payment %s", case_id, entity_id)
         return case_id
+
+    def cancel_open_links(self, case_id: str, reason: str = "case closed") -> int:
+        """Cancel every live link for a closed case. Returns how many were cancelled.
+
+        A live link on a settled case is a real hazard, not untidiness: a customer who paid
+        by another route can still click an old link and pay TWICE. Cancelling at closure
+        makes the link's lifetime match the debt's.
+
+        Provider failure here is logged, never raised - the case is already correctly
+        closed, and a stale link is a lesser problem than an exception unwinding the
+        closure path.
+        """
+        link = self.repo.find_reusable_link_any_amount(case_id)
+        cancelled = 0
+        while link is not None:
+            try:
+                if self.is_configured:
+                    self.client.cancel_payment_link(link.payment_link_id)
+            except Exception as exc:
+                logger.warning(
+                    "could not cancel %s at the provider (%s); marking cancelled locally",
+                    link.payment_link_id, exc,
+                )
+            self.repo.mark_link_cancelled(link.payment_link_id, reason)
+            cancelled += 1
+            link = self.repo.find_reusable_link_any_amount(case_id)
+        return cancelled
 
     def record_payment_failure(self, entity_id: str, event_name: str) -> Optional[str]:
         """Record a verified payment FAILURE. The case stays open for re-evaluation."""

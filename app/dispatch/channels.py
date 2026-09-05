@@ -113,8 +113,18 @@ def send_razorpay_link(
 # --- SMTP email ---------------------------------------------------------------------------
 
 
-def send_email_smtp(to_email: str, subject: str, body: str) -> DispatchResult:
-    """Send a real email over SMTP."""
+def send_email_smtp(
+    to_email: str,
+    subject: str,
+    body: str,
+    html_body: str = "",
+) -> DispatchResult:
+    """Send a real email over SMTP.
+
+    When `html_body` is supplied the message is multipart/alternative: the plain-text part
+    is a genuine fallback, not a placeholder, because a client that cannot render HTML must
+    still receive a usable payment URL rather than an empty message.
+    """
     host = os.environ.get("SMTP_HOST", "smtp.gmail.com")
     port = int(os.environ.get("SMTP_PORT", "587"))
     user = os.environ.get("SMTP_USER", "")
@@ -130,6 +140,8 @@ def send_email_smtp(to_email: str, subject: str, body: str) -> DispatchResult:
     message["To"] = to_email
     message["Subject"] = subject
     message.set_content(body)
+    if html_body:
+        message.add_alternative(html_body, subtype="html")
 
     try:
         with smtplib.SMTP(host, port, timeout=20) as server:

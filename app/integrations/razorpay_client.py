@@ -41,6 +41,28 @@ class RazorpayIntegrationClient:
         ).hexdigest()
         return hmac.compare_digest(expected_sig, signature)
 
+    def cancel_payment_link(self, payment_link_id: str) -> Dict[str, Any]:
+        """Cancel a live Payment Link so a settled debt cannot be paid twice.
+
+        Only links in `created` state are cancellable; a `paid` link is a permanent record
+        of a real transaction and the provider correctly refuses. That refusal is returned
+        rather than raised, because it is an expected outcome and not an error.
+        """
+        if self.key_id.startswith("rzp_test_mock"):
+            return {"id": payment_link_id, "status": "cancelled", "is_simulated": True}
+        try:
+            response = requests.post(
+                f"{self.base_url}/payment_links/{payment_link_id}/cancel",
+                auth=(self.key_id, self.key_secret),
+                timeout=10,
+            )
+            if response.status_code in (200, 201):
+                return response.json()
+            return {"id": payment_link_id, "error": response.text[:200],
+                    "status_code": response.status_code}
+        except Exception as exc:
+            return {"id": payment_link_id, "error": str(exc)[:200]}
+
     def create_payment_link(
         self,
         amount_paise: int,
