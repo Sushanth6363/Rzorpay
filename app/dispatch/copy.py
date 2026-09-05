@@ -31,6 +31,7 @@ INVARIANTS:
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from dataclasses import dataclass
 from typing import Dict, Optional
 
@@ -110,6 +111,31 @@ def rung_of(action: ActionType) -> int:
     return RUNG_OF.get(action, 0)
 
 
+def first_name(full_name: str) -> str:
+    """Greet with the first name. "Hi Rahul Sharma," reads like a form letter."""
+    return (full_name or "").strip().split(" ")[0]
+
+
+def due_context(due_date: str) -> str:
+    """One sentence of factual overdue context, or nothing.
+
+    Stated as a fact the merchant's ledger already holds, never as pressure - "12 days
+    overdue" is information; "overdue - act immediately" is manufactured urgency.
+    """
+    if not due_date:
+        return ""
+    try:
+        due = datetime.strptime(due_date, "%Y-%m-%d").date()
+    except ValueError:
+        return ""
+    days = (datetime.now(timezone.utc).date() - due).days
+    if days > 0:
+        return f"It was due on {due.strftime('%d %B %Y')}, {days} day{'s' if days != 1 else ''} ago."
+    if days == 0:
+        return f"It is due today, {due.strftime('%d %B %Y')}."
+    return f"It is due on {due.strftime('%d %B %Y')}."
+
+
 def build_message(
     action: ActionType,
     amount_paise: int,
@@ -117,6 +143,7 @@ def build_message(
     diagnosis_code: Optional[str] = None,
     payment_link: str = "",
     attempt: int = 0,
+    due_date: str = "",
 ) -> Message:
     """Compose copy whose TONE follows the earned rung and whose ASK follows the diagnosis."""
     amount = f"Rs {amount_paise / 100:,.2f}"
@@ -127,7 +154,7 @@ def build_message(
     closer = B2B_CLOSER if is_b2b else CLOSER_BY_TONE[tone]
     ask = ASK_BY_DIAGNOSIS.get(str(diagnosis_code or ""), ASK_BY_DIAGNOSIS[DiagnosisCode.UNKNOWN.value])
 
-    greeting = f"Hi {customer_name}," if customer_name else "Hello,"
+    greeting = f"Hi {first_name(customer_name)}," if customer_name else "Hello,"
     link_line = f"You can complete it here: {payment_link}" if payment_link else ""
 
     subject = {
@@ -140,7 +167,10 @@ def build_message(
     if is_b2b:
         subject = f"Outstanding invoice — {amount}"
 
-    body_parts = [greeting, "", opener, ask]
+    overdue = due_context(due_date)
+    ask_block = f"{ask} {overdue}".strip() if overdue else ask
+
+    body_parts = [greeting, "", opener, ask_block]
     if link_line:
         body_parts += ["", link_line]
     body_parts += ["", closer, "", SIGNATURE]
@@ -164,7 +194,7 @@ def build_message(
         html = render_payment_email(
             greeting=greeting,
             opener=opener,
-            ask=ask,
+            ask=ask_block,
             closer=closer,
             amount_paise=amount_paise,
             payment_url=payment_link,
