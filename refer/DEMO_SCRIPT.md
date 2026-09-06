@@ -10,6 +10,14 @@
 2:10 – 5:00   The live run
 ```
 
+Each section carries a **⚠ What broke here** box: a real defect found in this project and
+how it was fixed. They are **optional narration** - the timings above assume you skip them.
+Use one or two where you have slack, or keep them in reserve for questions. A bug you found
+in your own system and can explain is worth more than a feature you can only describe.
+
+**If you only tell one**, tell the payment one under *Payment always wins*: a verified real
+payment that failed to close its case, surviving 395 passing tests.
+
 ---
 
 ## Before you start (2 minutes, off camera)
@@ -48,6 +56,17 @@ PORT=8555 .venv/Scripts/python.exe -m app.server    # dashboard + webhooks + wor
 >
 > Everything below the fold is honesty: what's simulated, what's real, and the result that went against us."
 
+**Do:** name the external surface — it's short, and saying it out loud shows the integration is real.
+
+> "Four external services actually get called.
+>
+> **Razorpay** — the Payment Links API to create and cancel links, and signed webhooks coming back, HMAC-SHA256 verified, fail-closed.
+> **Gmail SMTP** — the email that actually reaches the customer.
+> **Twilio** — SMS, WhatsApp and voice, with the IVR fetching TwiML from our own signed endpoint.
+> **Meta's WhatsApp Cloud API** — implemented as a second provider, because Twilio's WhatsApp can't be exercised on a free account.
+>
+> Everything else is deliberately boring: **SQLite** in WAL mode, **Starlette** for the webhook server, **Streamlit** for this dashboard, **CatBoost** for the scorer, and **ngrok** for a reserved public URL so Razorpay can reach a laptop. No queue, no Redis, no Docker, and **no LLM anywhere on the decision path** — a decision to chase someone for money has to be reproducible from a number."
+
 ---
 
 ## 0:50 – 1:10 · Decision trace, in two sentences
@@ -72,6 +91,12 @@ PORT=8555 .venv/Scripts/python.exe -m app.server    # dashboard + webhooks + wor
 >
 > Every comparison is on screen, including the four inconclusive ones. Showing only the flattering one is how an honest experiment becomes a marketing chart."
 
+**⚠ What broke here** *(say it if you have 15 seconds — it is the strongest thing on this screen)*
+
+> "The model looked like it was losing, and the first instinct was to tune it. Instead we looked for a reason and found a **train/serve mismatch**: the contact ledger was being stamped from wall-clock time instead of decision time, which killed the escalation ladder in every evaluation run. **The model was being graded in a world that didn't exist.**
+>
+> We fixed the clock, re-ran it, and the prediction was *still* falsified. That's the result we're reporting."
+
 ---
 
 ## 1:45 – 2:10 · Safety and tests
@@ -82,7 +107,15 @@ PORT=8555 .venv/Scripts/python.exe -m app.server    # dashboard + webhooks + wor
 >
 > Below them, six more enforced structurally and covered by the test suite, deliberately listed **without ticks**, because this page didn't run them. A green tick not backed by a live check is the thing this screen exists to avoid.
 >
-> **521 tests. 24 architecture decision records. The evaluation reproduces bit-for-bit on a fresh clone** — I cloned it cold this morning and got the identical batch hash."
+> **523 tests. 24 architecture decision records. The evaluation reproduces bit-for-bit on a fresh clone** — I cloned it cold this morning and got the identical batch hash."
+
+**⚠ What broke here**
+
+> "Two things this suite didn't catch until we went looking.
+>
+> The **contact ledger was recording the simulator's outcome, not the dispatcher's** — a row stamped EXECUTED with a payment outcome nine milliseconds after creation, six seconds before the email actually left. Dry runs were recorded as real contacts. That matters because the ledger drives the escalation ceiling and the handoff report, so a fabricated contact would escalate toward a phone call for a message nobody received.
+>
+> And the **test suite was reading the developer's `.env`** — enabling dispatch for a live demo meant tests ran with real sending enabled and live credentials loaded. One test caught itself; nothing protected the rest. Now a session fixture forces every outbound gate closed."
 
 ---
 
@@ -97,6 +130,12 @@ PORT=8555 .venv/Scripts/python.exe -m app.server    # dashboard + webhooks + wor
 **Do:** switch to your inbox.
 
 > "That email is real, sent over SMTP seconds ago. The amount, the name and the due date are read back from the row you just uploaded. Nothing downstream re-types a number."
+
+**⚠ What broke here**
+
+> "A customer with a **valid phone and no email was never contacted at all** — zero times, indefinitely, while the debt sat recoverable. Receivables enter the ladder at email, nothing checked whether an address existed on that channel, the send was skipped, so the contact was never confirmed, so the ceiling never rose. The engine offered the same impossible action forever.
+>
+> Now an unreachable channel is rejected outright, and the ladder skips to the lowest rung that can actually reach them."
 
 ---
 
@@ -114,6 +153,12 @@ PORT=8555 .venv/Scripts/python.exe -m app.server    # dashboard + webhooks + wor
 
 > "A lit rung means a message was **confirmed sent**. A message that failed earns nothing — so a broken channel can never walk the ladder up to a phone call."
 
+**⚠ What broke here**
+
+> "Razorpay's payment links carry a `notify` flag, and we had it on. So **Razorpay was sending its own SMS and email** on top of ours — three messages for a one-rung decision, none of them through our dispatcher, none in the ledger. The escalation ladder, the contact budget and the quiet period were all being bypassed by sends the engine couldn't see. Ownership of contact is now an explicit setting.
+>
+> And Twilio: a trial account rejects inline TwiML for voice. So the engine **serves its own TwiML from a signed endpoint** — HMAC'd, because Twilio fetches it with no credentials and a bare case id would read a customer's name and debt aloud to anyone who guessed one."
+
 *(If the IVR rung fires, your phone rings. Let it.)*
 
 ---
@@ -127,6 +172,14 @@ PORT=8555 .venv/Scripts/python.exe -m app.server    # dashboard + webhooks + wor
 > Case state is re-read at the *moment of dispatch*, not when the action was queued. Money arriving cancels everything already in flight."
 
 > "`CASE_CREATED → AGENT_DECIDED → PAYMENT_LINK_CREATED → MESSAGE_SENT → FOLLOWUP_SCHEDULED → PAYMENT_RECEIVED → CASE_CLOSED`"
+
+**⚠ What broke here** *(the best story in the project — use it if you have 20 seconds)*
+
+> "The first time I actually paid this link, **the case didn't close.** The webhook arrived, passed HMAC verification, was recorded — and the case stayed open with a follow-up still scheduled. The engine was about to chase me for money I'd just paid. That survived 395 passing tests.
+>
+> Razorpay sent `payment.captured` and `order.paid`, not `payment_link.paid`. A payment-link entity carries our reference at the top level; a **payment** entity hides it inside `notes`. We were only reading the top level.
+>
+> And a second bug underneath it: cancelling the follow-up matched on the wrong column, so it updated zero rows and returned zero, and nothing checked. Both fixed — and the regression test uses the **actual payload Razorpay sent**, because a hand-written mock would have encoded the same wrong assumption that caused the bug."
 
 ---
 
