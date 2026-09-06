@@ -95,6 +95,28 @@ class RecoveryAgent:
         self.orchestrator = orchestrator or build_orchestrator_for_arm(
             ExperimentArm.A5, db_conn=conn
         )
+
+        # THE QUIET PERIOD IS WALL-CLOCK, AND THE DEMO CLOCK IS NOT.
+        #
+        # `RECOVERY_FOLLOWUP_HOUR_SECONDS` compresses the follow-up schedule so a review
+        # that would take a week takes seconds. It does NOT touch the 24h quiet period,
+        # which is measured against real timestamps. So on a compressed clock the ladder
+        # can never advance: every follow-up lands seconds after the last contact, the
+        # cooldown is always active, the ceiling is held, and the engine re-sends the same
+        # rung forever. Observed as two EMAIL_LINK rows and no climb to SMS.
+        #
+        # `csv_runner` already set cooldown_hours=0 for exactly this path, and the Live
+        # test screen already tells the reader that the quiet period is one of the two
+        # campaign-pacing controls relaxed there. The durable agent path simply never got
+        # it, so the screen's claim was true of the old runner and false of this one.
+        #
+        # Only relaxed when the clock is compressed. At real timing the quiet period binds
+        # exactly as it does in production - it is a customer-protection control, not a
+        # demo inconvenience.
+        from app.realtime import config as _rt_config
+        if getattr(_rt_config, "FOLLOWUP_HOUR_SECONDS", 3600) < 3600:
+            from app.pipeline.escalation import EscalationPolicy
+            self.orchestrator.pipeline.escalation_policy = EscalationPolicy(cooldown_hours=0)
         self.payments = payments or PaymentLinkService(conn, repository=self.repo)
         self.dispatcher = dispatcher or ChannelDispatcher(conn, repository=self.repo)
 
