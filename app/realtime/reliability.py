@@ -268,12 +268,27 @@ class BackgroundWorker:
                     from app.realtime import followup as _followup
 
                     for due in _followup.due_followups():
+                        opp = due.get("opportunity_id", "")
+                        reason = "handled"
                         try:
                             self.followup_fn(due)
-                        except Exception:
-                            logger.exception(
-                                "follow-up failed for %s", due.get("opportunity_id")
-                            )
+                        except Exception as exc:  # noqa: BLE001
+                            reason = f"failed: {exc}"
+                            logger.exception("follow-up failed for %s", opp)
+                        finally:
+                            # RETIRE IT EITHER WAY.
+                            #
+                            # Nothing used to change this row's status, so a due follow-up
+                            # was re-run on every tick forever. That produced the log line
+                            # repeating hundreds of times, nineteen overdue rows from one
+                            # case, and a payment provider 429 from a new link request
+                            # every two seconds.
+                            #
+                            # A failure is retired too, deliberately. Retrying the same
+                            # row every two seconds is not resilience, it is the loop that
+                            # caused the outage - and a genuine retry already exists in
+                            # the next scheduled follow-up.
+                            _followup.mark_handled(opp, reason)
             except Exception:
                 logger.exception("background worker iteration failed")
             self._stop.wait(self.interval)

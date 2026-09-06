@@ -209,6 +209,36 @@ def _stop(opportunity_id: str, reason: str) -> None:
     conn.commit()
 
 
+def mark_handled(opportunity_id: str, reason: str = "handled") -> None:
+    """Retire a row the worker has just run.
+
+    WHY THIS HAS TO EXIST
+        `due_followups` selected rows and nothing ever changed their status. The only
+        transitions were `_stop` for the recovery window and `cancel_for_entity` for a
+        payment. So a row that came due stayed SCHEDULED and was re-run on EVERY worker
+        tick, forever.
+
+        That is the cause of nearly every strange thing seen during a demo: a log line
+        repeating hundreds of times, nineteen "overdue" rows accumulating from a single
+        case, and a payment provider returning 429 because the worker was asking it for a
+        new link every two seconds. Waiting never helped, because the loop never stopped.
+
+        The chain is not broken by retiring the row. A follow-up schedules its successor
+        under a NEW opportunity id (`<origin>#f2`), which is its own row. This one has
+        done its job.
+
+    HANDLED, NOT DELETED: the row stays as a record of what the engine did and when.
+    """
+    ensure_schema()
+    conn = ingest.get_conn()
+    conn.execute(
+        """UPDATE followup_queue SET status='HANDLED', stop_reason=?, updated_at=?
+           WHERE opportunity_id=? AND status='SCHEDULED';""",
+        (reason[:200], _now().isoformat(), opportunity_id),
+    )
+    conn.commit()
+
+
 def cancel_for_entity(entity_id: str, reason: str = "payment received") -> int:
     """Stop chasing an entity the money has arrived for. Returns rows stopped.
 
