@@ -212,3 +212,53 @@ def test_the_board_is_empty_and_nothing_is_left_pointing_at_it(repo):
     assert build_board(repo, "m1") == []
     assert repo.conn.execute("SELECT COUNT(*) FROM followup_queue;").fetchone()[0] == 0
     assert repo.conn.execute("SELECT COUNT(*) FROM contact_budgets;").fetchone()[0] == 0
+
+
+# --- the foreign key that took the page down ------------------------------------------
+
+
+def test_a_ledger_row_the_sweep_cannot_see_does_not_abort_the_delete(tmp_path, monkeypatch):
+    """The crash this shipped with, reproduced.
+
+        sqlite3.IntegrityError: FOREIGN KEY constraint failed
+          repository.py, delete_cases -> DELETE FROM contact_budgets
+
+    contact_ledger carries a FOREIGN KEY onto contact_budgets. The opportunity-id sweep
+    finds ledger rows written for a case, but not ones whose opportunity was never a case
+    id - a webhook-born row, or anything left by an earlier partial delete. One of those
+    was enough to abort the whole statement and take the dashboard down with a traceback,
+    on the button whose entire job is recovering from a bad state.
+
+    Foreign keys are enforced explicitly here. The live database runs with them ON and the
+    other tests in this file do not, which is exactly why they all passed while the real
+    Delete all crashed.
+    """
+    monkeypatch.setenv("RECOVERY_DB_PATH", str(tmp_path / "fk.db"))
+    import importlib
+    from app.realtime import config as cfg
+    importlib.reload(cfg)
+    from app.realtime import ingest as ing
+    importlib.reload(ing)
+    from app.realtime import followup as f
+    importlib.reload(f)
+    f.ensure_schema()
+
+    conn = ing.get_conn()
+    conn.execute("PRAGMA foreign_keys = ON;")
+    repo = CaseRepository(conn)
+    case = create_cases(repo, parse_csv(CSV).valid, merchant_id="m1")[0]
+
+    _exhaust_budget(repo, "m1", case.customer_id)
+    conn.execute(
+        """INSERT INTO contact_ledger
+           (ledger_id, merchant_id, customer_id, opportunity_id, action_type,
+            intervention_idempotency_key, status, created_at, updated_at)
+           VALUES ('l_orphan',?,?,'opp_from_a_webhook','EMAIL_LINK','k_orphan',
+                   'EXECUTED','2026-09-06T00:00:00Z','2026-09-06T00:00:00Z');""",
+        ("m1", case.customer_id))
+    conn.commit()
+
+    removed = repo.delete_cases([case.case_id])   # must not raise
+
+    assert removed["cases"] == 1
+    assert _budget(repo, "m1", case.customer_id) is None

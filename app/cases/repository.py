@@ -26,9 +26,12 @@ RESOLUTION IS THE POINT
 from __future__ import annotations
 
 import json
+import logging
 import sqlite3
 import threading
 from typing import Any, Dict, List, Optional, Sequence
+
+logger = logging.getLogger(__name__)
 
 from app.cases.models import (
     Case,
@@ -492,12 +495,30 @@ class CaseRepository:
                 if still_open:
                     continue
                 try:
+                    # contact_ledger carries a FOREIGN KEY onto contact_budgets, so the
+                    # budget cannot go while any ledger row still points at this customer.
+                    # The opportunity-id sweep above misses rows whose opportunity was
+                    # never a case id - webhook-born ones, and anything written before an
+                    # earlier delete - and each of those was enough to abort the whole
+                    # delete with "FOREIGN KEY constraint failed" and take the page down.
+                    #
+                    # This customer has no cases left, so those rows are orphans by
+                    # definition. They go first, then the counter they were holding up.
+                    self.conn.execute(
+                        "DELETE FROM contact_ledger WHERE merchant_id=? AND customer_id=?;",
+                        (merchant_id, customer_id))
                     cur = self.conn.execute(
                         "DELETE FROM contact_budgets WHERE merchant_id=? AND customer_id=?;",
                         (merchant_id, customer_id))
                     cleared += cur.rowcount
                 except sqlite3.OperationalError:
                     break  # table absent in this database
+                except sqlite3.IntegrityError:
+                    # Something still references it. Leaving the counter is a stale demo;
+                    # letting this escape is a crashed page. The first is recoverable.
+                    logger.warning(
+                        "contact budget for %s/%s kept: still referenced",
+                        merchant_id, customer_id)
             removed["contact_budgets"] = cleared
 
             self.conn.commit()
