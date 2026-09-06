@@ -118,6 +118,46 @@ STYLES = """
                  border-style:dashed; background:rgba(67,56,202,.10); }
   .lad .sep { width:16px; height:1px; background:rgba(128,128,128,.26); flex:0 0 16px; }
 
+  /* --- decision trace: a numbered pipeline, not a bulleted list ------------------- */
+  .step { position:relative; display:flex; gap:.95rem; padding:.55rem 0 .8rem; }
+  .step:not(:last-child)::before { content:""; position:absolute; left:15px; top:34px;
+        bottom:-6px; width:2px; background:rgba(128,128,128,.22); }
+  .step .n { flex:0 0 32px; height:32px; border-radius:50%; display:flex;
+             align-items:center; justify-content:center; font-size:.8rem; font-weight:700;
+             background:rgba(128,128,128,.14); border:1px solid rgba(128,128,128,.3);
+             position:relative; z-index:1; }
+  .step .bd { flex:1; min-width:0; padding-top:.15rem; }
+  .step .t { font-size:.95rem; font-weight:650; letter-spacing:-.01em;
+             display:flex; align-items:center; gap:.55rem; flex-wrap:wrap; }
+  .step .d { font-size:.815rem; opacity:.62; line-height:1.5; margin-top:.2rem; }
+  /* A highlighted step is a claim that something happened THERE. Colour carries it. */
+  .step.on  { background:rgba(67,56,202,.07); border-left:3px solid #4338CA;
+              border-radius:0 9px 9px 0; padding-left:.85rem; margin-left:-.2rem; }
+  .step.on .n  { background:#4338CA; border-color:#4338CA; color:#fff; }
+  .step.warn { background:rgba(217,119,6,.07); border-left:3px solid #D97706;
+               border-radius:0 9px 9px 0; padding-left:.85rem; margin-left:-.2rem; }
+  .step.warn .n { background:#D97706; border-color:#D97706; color:#fff; }
+  .step.stop { background:rgba(220,38,38,.07); border-left:3px solid #DC2626;
+               border-radius:0 9px 9px 0; padding-left:.85rem; margin-left:-.2rem; }
+  .step.stop .n { background:#DC2626; border-color:#DC2626; color:#fff; }
+
+  /* the answer, beside the story */
+  .ans { border:1px solid rgba(128,128,128,.24); border-radius:12px; padding:.95rem 1.1rem;
+         margin-bottom:.75rem; background:rgba(128,128,128,.03); }
+  .ans .h { font-size:.7rem; letter-spacing:.1em; text-transform:uppercase; opacity:.6;
+            font-weight:650; margin-bottom:.5rem; }
+  .ans .big { font-size:1.85rem; font-weight:700; letter-spacing:-.03em; line-height:1.15;
+              font-variant-numeric:tabular-nums; }
+  .ans .action { font-size:1.5rem; font-weight:700; letter-spacing:-.02em;
+                 font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .ans .formula { font-size:.75rem; opacity:.55; margin-top:.45rem; line-height:1.5;
+                  font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .rej { display:flex; justify-content:space-between; gap:1rem; padding:.34rem 0;
+         font-size:.79rem; border-bottom:1px dotted rgba(128,128,128,.16); }
+  .rej:last-child { border-bottom:none; }
+  .rej .a { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; opacity:.85; }
+  .rej .w { font-size:.71rem; font-weight:700; letter-spacing:.04em; white-space:nowrap; }
+
   /* headline tiles, bordered rather than floating - they read as one instrument panel */
   .tiles { display:flex; gap:.7rem; margin:.2rem 0 .9rem; flex-wrap:wrap; }
   .tile { flex:1 1 0; min-width:150px; border:1px solid rgba(128,128,128,.22);
@@ -183,6 +223,24 @@ def stage(n: int, title: str, detail: str, state: str = "") -> str:
 # ---------------------------------------------------------------------------
 # live invariant checks — executed, never asserted as decoration
 # ---------------------------------------------------------------------------
+
+def step(n: int, title: str, detail: str, state: str = "", tag: str = "") -> str:
+    """One numbered stage of the pipeline.
+
+    `state` is a claim, not decoration: "on" says this stage acted, "warn" that it
+    suppressed something, "stop" that it halted the case. A reader should be able to see
+    where the decision was actually made without reading every line.
+    """
+    chip = (f'<span class="pill warn" style="font-size:.63rem;">{tag}</span>') if tag else ""
+    return (
+        f'<div class="step {state}"><div class="n">{n}</div><div class="bd">'
+        f'<div class="t">{title}{chip}</div><div class="d">{detail}</div></div></div>'
+    )
+
+
+def answer_card(heading: str, body: str) -> str:
+    return f'<div class="ans"><div class="h">{heading}</div>{body}</div>'
+
 
 def run_invariant_checks() -> List[Dict[str, Any]]:
     """Execute real safety checks. Each row reports what actually happened."""
@@ -303,85 +361,117 @@ def section_trace(seed: int, outage_toggle: bool, exhaust_toggle: bool) -> None:
     )
 
     st.write("")
-    left, right = st.columns([1.75, 1])
+    story, answer = st.columns([1.55, 1])
 
-    # --- candidate ranking: the hero ---------------------------------------
-    with left:
-        st.markdown("##### Candidate actions, ranked by expected value")
-        rows = []
-        for c in d.candidate_scores:
-            eligible = c.eligibility == EligibilityStatus.ELIGIBLE
-            rows.append({
-                "": "▶" if c.action_type == d.selected_action else "",
-                "Action": c.action_type.value.replace("_", " ").title(),
-                "P(recover | action)": c.raw_probability * 100,
-                "P(no action)": c.baseline_probability * 100,
-                "Uplift": c.incremental_effect * 100,
-                "Expected value": c.expected_value_paise / 100,
-                "Cost": c.action_cost_paise / 100,
-                "Status": "Eligible" if eligible else c.reject_reason.value.replace("_", " ").title(),
-            })
-        df = pd.DataFrame(rows)
-        st.dataframe(
-            df, use_container_width=True, hide_index=True,
-            column_config={
-                "": st.column_config.TextColumn(width="small"),
-                "P(recover | action)": st.column_config.NumberColumn(format="%.1f%%"),
-                "P(no action)": st.column_config.NumberColumn(format="%.1f%%"),
-                "Uplift": st.column_config.NumberColumn(format="%+.1f%%"),
-                "Expected value": st.column_config.NumberColumn(format="₹%.2f"),
-                "Cost": st.column_config.NumberColumn(format="₹%.2f"),
-            },
-        )
-        st.markdown(
-            '<div class="note">Uplift is <code>p̂(x,a) − p̂(x, NO_ACTION)</code> — an <b>estimated '
-            'incremental effect under the simulator\'s data-generating process</b>, used for ranking '
-            'only. It is not a measured causal effect; those come from the arm comparison.</div>',
-            unsafe_allow_html=True,
-        )
+    eligible = [c for c in d.candidate_scores if c.eligibility == EligibilityStatus.ELIGIBLE]
+    rejected = [c for c in d.candidate_scores if c.eligibility != EligibilityStatus.ELIGIBLE]
+    chosen = next((c for c in d.candidate_scores if c.action_type == d.selected_action), None)
+    stage0_ok = "not_recoverable" not in str(getattr(d, "abstention_reason", "")).lower()
+    reserved = getattr(d, "is_contact_reserved", False)
 
-    # --- pipeline flow -----------------------------------------------------
-    with right:
-        st.markdown("##### Pipeline")
-        s0 = result.opportunity_id
-        stage0_ok = "not_recoverable" not in str(getattr(d, "abstention_reason", "")).lower()
-        eligible_n = sum(1 for c in d.candidate_scores if c.eligibility == EligibilityStatus.ELIGIBLE)
-        blocked_n = len(d.candidate_scores) - eligible_n
-        reserved = getattr(d, "is_contact_reserved", False)
+    # --- the story: where the decision was actually made -------------------
+    with story:
+        st.markdown("##### How this decision was reached")
+        st.markdown("".join([
+            step(1, "Event ingested",
+                 f"<code>{result.event_id}</code> became opportunity "
+                 f"<code>{result.opportunity_id}</code>."),
+            step(2, "Stage 0 · Validate",
+                 "Genuine recoverable exposure confirmed." if stage0_ok
+                 else "Closed as not recoverable. No contact is made.",
+                 "" if stage0_ok else "stop"),
+            step(3, "Stage 1 · Diagnose",
+                 f"Cause identified, and {len(d.candidate_scores)} candidate actions "
+                 f"generated for it.", "on"),
+            step(4, "Candidate generation",
+                 "Only actions this stream can legally take are offered. A merchant-"
+                 "uploaded debt has no stored instrument, so a retry is never a candidate."),
+            step(5, "Safety filter · escalation ceiling",
+                 f"{len(eligible)} eligible, {len(rejected)} suppressed before any "
+                 f"scoring happened.",
+                 "warn" if rejected else "", "SUPPRESSED" if rejected else ""),
+            step(6, "Expected value ranking",
+                 f"Model <code>{d.model_version}</code> scored every surviving candidate "
+                 f"against doing nothing."),
+            _escalation_stage(result, 7).replace('class="stage', 'class="step'),
+            step(8, "Arbitration & attribution",
+                 f"{result.attribution.payment_outcome.value.replace('_', ' ').title()} → "
+                 f"attributed {rupees(attributed)}."
+                 + ("" if reserved else " No contact slot was consumed.")),
+        ]), unsafe_allow_html=True)
 
-        flow = "".join([
-            stage(1, "Event ingested", f"<code>{result.event_id}</code> → opportunity <code>{s0}</code>", "active"),
-            stage(2, "Stage 0 — validate",
-                  "Genuine recoverable exposure confirmed." if stage0_ok
-                  else "Closed as not recoverable. No contact.", "active" if stage0_ok else "halt"),
-            stage(3, "Stage 1 — diagnose", f"{len(d.candidate_scores)} candidate actions generated.", "active"),
-            stage(4, "Hard safety filter",
-                  f"{eligible_n} eligible, {blocked_n} suppressed before scoring.",
-                  "active" if blocked_n == 0 else "halt"),
-            stage(5, "Scoring & arbitration",
-                  f"Model <code>{d.model_version}</code> ranked candidates; "
-                  f"<b>{d.selected_action.value.replace('_', ' ').title()}</b> selected.", "active"),
-            _escalation_stage(result, 6),
-            stage(7, "Contact reservation",
-                  "Slot reserved atomically against the shared per-customer budget." if reserved
-                  else ("No slot consumed — NO_ACTION consumes zero capacity."
-                        if d.selected_action == ActionType.NO_ACTION
-                        else "No reservation recorded on this scenario path."),
-                  "active" if reserved else ""),
-            stage(8, "Execution & attribution",
-                  f"{result.attribution.payment_outcome.value.replace('_', ' ').title()} → "
-                  f"attributed {rupees(attributed)}.", "active"),
+    # --- the answer, beside it ---------------------------------------------
+    with answer:
+        st.markdown("##### What it decided")
+
+        detail = "".join([
+            kv("Decision mode", d.decision_mode.value.replace("_", " ").title()),
+            kv("P(recover | action)", f"{chosen.raw_probability * 100:.1f}%") if chosen else "",
+            kv("P(no action)", f"{chosen.baseline_probability * 100:.1f}%") if chosen else "",
+            kv("Uplift", f"{chosen.incremental_effect * 100:+.1f}%") if chosen else "",
+            kv("Action cost", rupees(chosen.action_cost_paise)) if chosen else "",
         ])
-        st.markdown(flow, unsafe_allow_html=True)
+        st.markdown(answer_card(
+            "Chosen action",
+            f'<div class="action">{d.selected_action.value}</div>'
+            f'<div style="margin-top:.6rem;">{detail}</div>'), unsafe_allow_html=True)
 
-        st.write("")
-        card("Provenance", "".join([
-            kv("Decision", d.decision_id, mono=True),
-            kv("Trace", result.trace_id, mono=True),
+        ev = chosen.expected_value_paise if chosen else 0
+        st.markdown(answer_card(
+            "Expected value",
+            f'<div class="big">{rupees(ev)}</div>'
+            f'<div class="formula">EV = round(Δ̂ × amount_at_risk) − cost(a)<br>'
+            f'Δ̂ = p̂(x,a) − p̂(x, NO_ACTION)</div>'), unsafe_allow_html=True)
+
+        if rejected:
+            rows = "".join(
+                f'<div class="rej"><span class="a">{c.action_type.value}</span>'
+                f'<span class="w" style="color:#DC2626;">'
+                f'{c.reject_reason.value}</span></div>'
+                for c in rejected
+            )
+            st.markdown(answer_card("Rejected before scoring", rows), unsafe_allow_html=True)
+
+        st.markdown(answer_card("Provenance", "".join([
+            kv("Decision", d.decision_id[:26], mono=True),
             kv("Model", d.model_version),
             kv("Seed", str(seed)),
             kv("Amount at risk", rupees(result.attribution.amount_at_risk_paise)),
-        ]))
+        ])), unsafe_allow_html=True)
+
+    # --- the evidence, full width ------------------------------------------
+    st.write("")
+    st.markdown("##### Every candidate, ranked by expected value")
+    rows = []
+    for c in d.candidate_scores:
+        rows.append({
+            "": "▶" if c.action_type == d.selected_action else "",
+            "Action": c.action_type.value.replace("_", " ").title(),
+            "P(recover | action)": c.raw_probability * 100,
+            "P(no action)": c.baseline_probability * 100,
+            "Uplift": c.incremental_effect * 100,
+            "Expected value": c.expected_value_paise / 100,
+            "Cost": c.action_cost_paise / 100,
+            "Status": ("Eligible" if c.eligibility == EligibilityStatus.ELIGIBLE
+                       else c.reject_reason.value.replace("_", " ").title()),
+        })
+    st.dataframe(
+        pd.DataFrame(rows), use_container_width=True, hide_index=True,
+        column_config={
+            "": st.column_config.TextColumn(width="small"),
+            "P(recover | action)": st.column_config.NumberColumn(format="%.1f%%"),
+            "P(no action)": st.column_config.NumberColumn(format="%.1f%%"),
+            "Uplift": st.column_config.NumberColumn(format="%+.1f%%"),
+            "Expected value": st.column_config.NumberColumn(format="₹%.2f"),
+            "Cost": st.column_config.NumberColumn(format="₹%.2f"),
+        },
+    )
+    st.markdown(
+        '<div class="note">Uplift is <code>p̂(x,a) − p̂(x, NO_ACTION)</code> — an <b>estimated '
+        "incremental effect under the simulator's data-generating process</b>, used for ranking "
+        'only. It is not a measured causal effect; those come from the arm comparison.</div>',
+        unsafe_allow_html=True,
+    )
 
     with st.expander("Raw records — decision, execution, observation"):
         a, b = st.columns(2)
@@ -442,18 +532,68 @@ def section_experiment() -> None:
 
     p = summary.primary_comparison
     inconclusive = p.status != StatisticalStatus.STATISTICALLY_SIGNIFICANT
-    tone = "warn" if inconclusive else "ok"
 
+    def tile(key: str, value: str) -> str:
+        return f'<div class="tile"><div class="k">{key}</div><div class="v">{value}</div></div>'
+
+    total_opps = sum(m.total_opportunities for m in summary.arm_metrics.values())
+    at_risk = max((getattr(m, "total_at_risk_paise", 0) for m in summary.arm_metrics.values()),
+                  default=0)
     st.markdown(
-        f'<div class="verdict">'
-        f'<div class="lab">Primary · {p.comparison_id} · pre-registered</div>'
-        f'<div class="big">{p.incremental_recovery_rate:+.2%} '
-        f'<span style="font-size:.9rem;font-weight:500;opacity:.7">incremental recovery rate</span></div>'
-        f'<div class="ci">95% CI [{p.confidence_interval_95[0]:+.2%}, {p.confidence_interval_95[1]:+.2%}] '
-        f'· p = {p.p_value:.4f} &nbsp; {pill(p.status.value.replace("_", " "), tone)}</div>'
-        f'</div>', unsafe_allow_html=True,
+        '<div class="tiles">'
+        + tile("Opportunities", f"{total_opps:,}")
+        + tile("Seeds", str(len(getattr(summary, "seeds", []) or [])
+                            or int(seed_end) - int(seed_start) + 1))
+        + tile("Arms", str(len(summary.arm_metrics)))
+        + tile("At risk", rupees(at_risk))
+        + '</div>',
+        unsafe_allow_html=True,
+    )
+
+    # The verdict, stated at the size it deserves. An INCONCLUSIVE primary is the honest
+    # outcome of this experiment and is shown as prominently as a win would have been.
+    colour = "#D97706" if inconclusive else "#059669"
+    st.markdown(
+        f'<div class="ans" style="border-color:{colour}55;background:{colour}0F;">'
+        f'<div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;">'
+        f'  <div>'
+        f'    <div class="h">Primary comparison · {p.comparison_id} · pre-registered</div>'
+        f'    <div class="big">{p.incremental_recovery_rate:+.2%}</div>'
+        f'    <div class="formula">95% CI [{p.confidence_interval_95[0]:+.4f}, '
+        f'{p.confidence_interval_95[1]:+.4f}] · p = {p.p_value:.4f}</div>'
+        f'  </div>'
+        f'  <div class="chip" style="color:{colour};background:{colour}1A;'
+        f'border:1px solid {colour}66;font-size:.8rem;padding:.5rem 1rem;">'
+        f'{p.status.value.replace("_", " ")}</div>'
+        f'</div></div>', unsafe_allow_html=True,
     )
     st.markdown(f'<div class="note">{p.explanation}</div>', unsafe_allow_html=True)
+
+    # Every comparison, each with its own verdict. Shown in full because reporting only the
+    # favourable ones is how an honest experiment becomes a marketing chart.
+    others = [c for c in getattr(summary, "comparisons", []) or []
+              if c.comparison_id != p.comparison_id]
+    if others:
+        st.write("")
+        rows = ""
+        for c in others:
+            sig = c.status == StatisticalStatus.STATISTICALLY_SIGNIFICANT
+            col = "#059669" if sig else "#D97706"
+            rows += (
+                f'<div class="rej" style="align-items:center;">'
+                f'<span class="a" style="flex:0 0 22%;">{c.comparison_id}</span>'
+                f'<span style="flex:0 0 14%;font-variant-numeric:tabular-nums;">'
+                f'{c.incremental_recovery_rate:+.2%}</span>'
+                f'<span style="flex:1;opacity:.55;font-size:.74rem;'
+                f'font-family:ui-monospace,Menlo,monospace;">'
+                f'95% CI [{c.confidence_interval_95[0]:+.4f}, {c.confidence_interval_95[1]:+.4f}]'
+                f' · p = {c.p_value:.4f}</span>'
+                f'<span class="chip" style="color:{col};background:{col}1A;'
+                f'border:1px solid {col}55;margin:0;">{c.status.value.replace("_", " ")}</span>'
+                f'</div>'
+            )
+        st.markdown(f'<div class="ans"><div class="h">Every comparison</div>{rows}</div>',
+                    unsafe_allow_html=True)
     st.write("")
 
     st.markdown("##### Money — ₹ recovered vs ₹ at risk, and cost per recovery")
