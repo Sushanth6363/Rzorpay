@@ -81,34 +81,58 @@ STYLES = """
   .verdict .ci  { font-size:.8rem; opacity:.7; font-variant-numeric:tabular-nums; }
 
   /* --- case board: a card per customer, not a spreadsheet ------------------------- */
+  /* Three columns: who they are, how far up the ladder, what they owe. The ladder sits
+     INLINE rather than on its own row - it halves the card height, which is the
+     difference between four cases on screen and two. */
   .case { position:relative; border:1px solid rgba(128,128,128,.20); border-radius:12px;
-          padding:.82rem 1rem .72rem 1.15rem; margin-bottom:.5rem; overflow:hidden;
-          background:linear-gradient(90deg, var(--tint) 0%, rgba(128,128,128,.028) 42%); }
-  .case::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px;
+          padding:1rem 1.15rem .85rem 1.35rem; margin-bottom:.6rem; overflow:hidden;
+          background:linear-gradient(100deg, var(--tint) 0%, rgba(128,128,128,.025) 38%); }
+  .case::before { content:""; position:absolute; left:0; top:0; bottom:0; width:5px;
                   background:var(--c); }
-  .case .top { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; }
-  .case .who { font-size:.99rem; font-weight:650; letter-spacing:-.012em; line-height:1.25; }
-  .case .con { font-size:.745rem; opacity:.52; margin-top:.14rem;
-               font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
-  .case .amt { font-size:1.14rem; font-weight:680; letter-spacing:-.02em;
-               font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap; }
-  .case .due { font-size:.715rem; opacity:.55; text-align:right; margin-top:.1rem;
-               white-space:nowrap; }
-  .case .stg { font-size:.845rem; opacity:.9; margin:.15rem 0 .1rem; line-height:1.45; }
-  .case .meta { display:flex; gap:.4rem; flex-wrap:wrap; align-items:center; margin-top:.5rem; }
-  .case .meta .m { font-size:.725rem; opacity:.55; }
-  .case .meta .dot { opacity:.3; }
+  .case .row { display:flex; align-items:flex-start; gap:1.2rem; }
+  .case .idc { flex:1 1 30%; min-width:0; }
+  .case .ladc { flex:0 1 auto; padding-top:.28rem; }
+  .case .amtc { flex:0 0 auto; margin-left:auto; text-align:right; }
+
+  .case .who { font-size:1.02rem; font-weight:680; letter-spacing:-.014em; line-height:1.3;
+               display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; }
+  .case .con { font-size:.755rem; opacity:.5; margin-top:.22rem;
+               font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+               overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .case .amt { font-size:1.26rem; font-weight:700; letter-spacing:-.025em;
+               font-variant-numeric:tabular-nums; white-space:nowrap; line-height:1.15; }
+  .case .due { font-size:.715rem; opacity:.5; margin-top:.25rem; white-space:nowrap; }
+  .case .stg { font-size:.865rem; opacity:.92; margin:.7rem 0 0; line-height:1.45; }
+  .case .meta { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin-top:.55rem; }
+  .case .meta .m { font-size:.725rem; opacity:.5; }
+  .case .meta .dot { opacity:.28; }
 
   /* the escalation ladder: which rungs this customer has actually been through */
-  .lad { display:flex; align-items:center; margin:.6rem 0 .1rem; }
-  .lad .r { font-size:.645rem; letter-spacing:.055em; font-weight:700; padding:.15rem .42rem;
-            border-radius:5px; border:1px solid rgba(128,128,128,.28); opacity:.3;
+  .lad { display:flex; align-items:center; }
+  .lad .r { font-size:.66rem; letter-spacing:.06em; font-weight:700; padding:.3rem .62rem;
+            border-radius:7px; border:1px solid rgba(128,128,128,.26); opacity:.34;
             white-space:nowrap; }
-  .lad .r.done { opacity:1; color:#059669; border-color:rgba(5,150,105,.45);
-                 background:rgba(5,150,105,.10); }
-  .lad .r.next { opacity:.95; color:#4338CA; border-color:rgba(67,56,202,.5);
-                 border-style:dashed; background:rgba(67,56,202,.08); }
-  .lad .sep { width:13px; height:1px; background:rgba(128,128,128,.28); flex:0 0 13px; }
+  .lad .r.done { opacity:1; color:#10B981; border-color:rgba(16,185,129,.55);
+                 background:rgba(16,185,129,.10); }
+  .lad .r.next { opacity:1; color:#818CF8; border-color:rgba(129,140,248,.75);
+                 border-style:dashed; background:rgba(67,56,202,.10); }
+  .lad .sep { width:16px; height:1px; background:rgba(128,128,128,.26); flex:0 0 16px; }
+
+  /* headline tiles, bordered rather than floating - they read as one instrument panel */
+  .tiles { display:flex; gap:.7rem; margin:.2rem 0 .9rem; flex-wrap:wrap; }
+  .tile { flex:1 1 0; min-width:150px; border:1px solid rgba(128,128,128,.22);
+          border-radius:11px; padding:.75rem .9rem .8rem; background:rgba(128,128,128,.03); }
+  .tile .k { font-size:.68rem; letter-spacing:.09em; text-transform:uppercase; opacity:.55;
+             font-weight:600; }
+  .tile .v { font-size:1.62rem; font-weight:700; letter-spacing:-.03em; margin-top:.3rem;
+             font-variant-numeric:tabular-nums; line-height:1.1; }
+  .tile .d { font-size:.72rem; margin-top:.2rem; font-variant-numeric:tabular-nums; }
+
+  /* status chips carry a colour dot, so the legend reads at a glance */
+  .chip { display:inline-flex; align-items:center; gap:.4rem; padding:.32rem .72rem;
+          border-radius:999px; font-size:.71rem; font-weight:700; letter-spacing:.045em;
+          margin-right:.5rem; }
+  .chip .b { width:7px; height:7px; border-radius:2px; display:inline-block; }
 
   /* the decision trail, as a rail rather than a list of rows */
   .tl { border-left:2px solid rgba(128,128,128,.22); margin:.15rem 0 .2rem .38rem;
@@ -600,7 +624,12 @@ def _due_line(row) -> str:
 
 
 def _case_card(row) -> str:
-    """One customer as a card: who, how much, how far up the ladder, and what happens next."""
+    """One customer as a card: who, how far up the ladder, and what they owe.
+
+    Three columns rather than three stacked rows. The ladder inline with the identity
+    halves the card height, which is the difference between four cases visible at once
+    and two - and the board's whole job is letting a merchant scan fifty of them.
+    """
     colour, tint, label = FLAG_STYLE.get(row.flag, ("#6B7280", "rgba(128,128,128,.08)", row.flag))
 
     meta = [f'{row.contacts_made} confirmed contact{"" if row.contacts_made == 1 else "s"}']
@@ -615,20 +644,20 @@ def _case_card(row) -> str:
 
     return (
         f'<div class="case" style="--c:{colour};--tint:{tint};">'
-        f'  <div class="top">'
-        f'    <div>'
-        f'      <div class="who">{row.name or row.customer_id} '
+        f'  <div class="row">'
+        f'    <div class="idc">'
+        f'      <div class="who">{row.name or row.customer_id}'
         f'        <span class="pill" style="color:{colour};background:{tint};'
-        f'border:1px solid {colour}55;margin-left:.3rem;vertical-align:.08em;">{label}</span>'
+        f'border:1px solid {colour}55;">{label}</span>'
         f'      </div>'
         f'      <div class="con">{row.contact or "no contact on file"}</div>'
         f'    </div>'
-        f'    <div>'
+        f'    <div class="ladc">{_ladder(row)}</div>'
+        f'    <div class="amtc">'
         f'      <div class="amt">{rupees(row.amount_paise)}</div>'
         f'      <div class="due">{_due_line(row)}</div>'
         f'    </div>'
         f'  </div>'
-        f'  {_ladder(row)}'
         f'  <div class="stg">{row.stage}</div>'
         f'  <div class="meta">{meta_html}</div>'
         f'</div>'
@@ -664,22 +693,33 @@ def section_case_board() -> None:
         return
 
     s = summarise(rows)
-    c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric("Cases", s["cases"])
-    c2.metric("At risk", rupees(s["total_paise"]))
-    c3.metric("Recovered", rupees(s["recovered_paise"]),
-              delta=f"{s['recovery_rate']:.0%} of value", delta_color="normal")
-    c4.metric("Contacts sent", s["contacts_made"])
-    c5.metric("Needs attention", s["needs_attention"],
-              delta="red rows" if s["needs_attention"] else None, delta_color="inverse")
+
+    def tile(key: str, value: str, delta: str = "", delta_colour: str = "") -> str:
+        d = (f'<div class="d" style="color:{delta_colour};">{delta}</div>') if delta else ""
+        return f'<div class="tile"><div class="k">{key}</div><div class="v">{value}</div>{d}</div>'
+
+    st.markdown(
+        '<div class="tiles">'
+        + tile("Cases", str(s["cases"]))
+        + tile("At risk", rupees(s["total_paise"]))
+        + tile("Recovered", rupees(s["recovered_paise"]),
+               f"↑ {s['recovery_rate']:.0%} of value", "#10B981")
+        + tile("Contacts sent", str(s["contacts_made"]))
+        + tile("Needs attention", str(s["needs_attention"]),
+               ("↑ needs a human" if s["needs_attention"] else "none"),
+               "#F87171" if s["needs_attention"] else "#10B981")
+        + '</div>',
+        unsafe_allow_html=True,
+    )
 
     chips = "".join(
-        f'<span class="pill" style="color:{FLAG_STYLE[f][0]};background:{FLAG_STYLE[f][1]};'
-        f'border:1px solid {FLAG_STYLE[f][0]}55;margin-right:.4rem;">'
+        f'<span class="chip" style="color:{FLAG_STYLE[f][0]};background:{FLAG_STYLE[f][1]};'
+        f'border:1px solid {FLAG_STYLE[f][0]}66;">'
+        f'<span class="b" style="background:{FLAG_STYLE[f][0]};"></span>'
         f'{FLAG_STYLE[f][2]} · {n}</span>'
         for f, n in sorted(s["by_flag"].items()) if f in FLAG_STYLE
     )
-    st.markdown(f'<div style="margin:.5rem 0 .8rem;">{chips}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="margin:.2rem 0 1rem;">{chips}</div>', unsafe_allow_html=True)
 
     st.caption(
         "Sorted by who needs a human first, not by upload order. "
