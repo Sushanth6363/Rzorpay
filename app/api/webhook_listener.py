@@ -42,12 +42,14 @@ from typing import Any, Dict, Optional
 from starlette.applications import Starlette
 from starlette.background import BackgroundTask
 from starlette.requests import Request
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, PlainTextResponse, Response
 from starlette.routing import Route
 
 from app.domain.enums import ActionType, LedgerStatus
 from app.integrations.razorpay_client import RazorpayIntegrationClient
 from app.orchestration.recovery_orchestrator import RecoveryOrchestrator
+from app.cases.repository import CaseRepository
+from app.dispatch import voice
 from app.realtime import config, followup, ingest, reliability
 from app.realtime.downtime_live import LiveRazorpayDowntimeProvider
 from app.realtime.event_mapper import (
@@ -481,11 +483,46 @@ async def metrics(request: Request) -> JSONResponse:
     })
 
 
+async def twiml_recovery(request: Request) -> Response:
+    """TwiML for one case, fetched by Twilio when it places the call (ADR-0021).
+
+    PUBLIC BUT NOT OPEN
+        Twilio has to reach this without credentials, so it is unauthenticated by
+        necessity. The case id alone would therefore let anyone who guessed one hear a
+        customer's name and the amount they owe read aloud. The HMAC in the URL is what
+        keeps it a phone system rather than a disclosure endpoint.
+
+        A wrong or missing signature returns 403 with no detail. Saying which part failed
+        would help an attacker enumerate; the engine that minted the URL never gets it
+        wrong.
+    """
+    case_id = request.query_params.get("case", "")
+    signature = request.query_params.get("sig", "")
+
+    if not voice.verify_case(case_id, signature):
+        logger.warning("rejected unsigned TwiML request for %r", case_id[:40])
+        return PlainTextResponse("forbidden", status_code=403)
+
+    repo = CaseRepository(ingest.get_conn())
+    case = repo.get_case(case_id)
+    if case is None:
+        return PlainTextResponse("not found", status_code=404)
+
+    customer = repo.get_customer(case.merchant_id, case.customer_id)
+    message = voice.spoken_message(
+        name=(customer.name if customer else ""),
+        amount_paise=case.amount_paise,
+        due_date=case.due_date,
+    )
+    return Response(voice.twiml_for(message), media_type="application/xml")
+
+
 routes = [
     Route("/health", endpoint=health_check, methods=["GET"]),
     Route("/feed", endpoint=live_feed, methods=["GET"]),
     Route("/metrics", endpoint=metrics, methods=["GET"]),
     Route("/webhooks/razorpay", endpoint=handle_razorpay_webhook, methods=["POST"]),
+    Route("/twiml/recovery", endpoint=twiml_recovery, methods=["GET", "POST"]),
 ]
 
 _worker: Optional[reliability.BackgroundWorker] = None

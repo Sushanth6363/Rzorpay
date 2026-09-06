@@ -49,7 +49,7 @@ def env(monkeypatch):
 
     sent = {"calls": [], "sms": []}
 
-    def fake_call(to, spoken):
+    def fake_call(to, spoken, twiml_url=""):
         sent["calls"].append((to, spoken))
         return channels.DispatchResult("TWILIO_VOICE", "SENT", "call placed", provider_id="CA1")
 
@@ -111,7 +111,7 @@ def test_a_call_that_was_never_placed_gets_no_sms(env, monkeypatch):
     """Substituting a channel is a policy decision. The dispatcher carries out the engine's
     instruction; it does not quietly choose a different one when that instruction fails."""
     monkeypatch.setattr(channels, "send_ivr_call",
-                        lambda to, spoken: channels.DispatchResult(
+                        lambda to, spoken, twiml_url="": channels.DispatchResult(
                             "TWILIO_VOICE", "NOT_CONFIGURED", "set TWILIO_VOICE_FROM"))
 
     out = _dispatch(env)
@@ -136,8 +136,8 @@ def test_a_payment_landing_between_call_and_sms_stops_the_sms(env, monkeypatch):
     always wins applies to the companion too, not just to the action that was decided."""
     real_call = channels.send_ivr_call
 
-    def call_then_pay(to, spoken):
-        result = real_call(to, spoken)
+    def call_then_pay(to, spoken, twiml_url=""):
+        result = real_call(to, spoken, twiml_url)
         env["repo"].set_status("case_1", CaseStatus.PAID, reason="paid mid-dispatch")
         return result
 

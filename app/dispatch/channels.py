@@ -329,17 +329,33 @@ def send_whatsapp(to_number: str, body: str) -> DispatchResult:
     return send_whatsapp_twilio(to_number, body)
 
 
-def send_ivr_call(to_number: str, spoken_message: str) -> DispatchResult:
-    """Place a real voice call that speaks the recovery message. This is the IVR channel."""
+def send_ivr_call(
+    to_number: str,
+    spoken_message: str,
+    twiml_url: str = "",
+) -> DispatchResult:
+    """Place a real voice call that speaks the recovery message. This is the IVR channel.
+
+    TWO FORMS, BECAUSE A TRIAL ACCOUNT ONLY ACCEPTS ONE
+        Inline `Twiml` is rejected on a trial: "trial accounts have limited parameter
+        access". A hosted `Url` is accepted and the call connects - verified against a real
+        trial, 5 seconds, handset rang.
+
+        So a URL is used when the engine is publicly reachable, and inline TwiML otherwise,
+        which keeps paid accounts working with no configuration at all.
+    """
     sender = os.environ.get("TWILIO_VOICE_FROM", os.environ.get("TWILIO_SMS_FROM", ""))
     if not sender:
         return _missing("TWILIO_VOICE", "TWILIO_VOICE_FROM")
     if not to_number:
         return DispatchResult("TWILIO_VOICE", "SKIPPED", "row has no phone number")
-    twiml = f'<Response><Say voice="alice">{spoken_message}</Say></Response>'
-    return _twilio_post(
-        "Calls.json", {"To": to_number, "From": sender, "Twiml": twiml}, "TWILIO_VOICE"
-    )
+
+    payload = {"To": to_number, "From": sender}
+    if twiml_url:
+        payload["Url"] = twiml_url
+    else:
+        payload["Twiml"] = f'<Response><Say voice="alice">{spoken_message}</Say></Response>'
+    return _twilio_post("Calls.json", payload, "TWILIO_VOICE")
 
 
 def configured_channels() -> Dict[str, bool]:

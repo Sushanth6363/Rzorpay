@@ -44,7 +44,7 @@ from typing import Any, Dict, Optional
 
 from app.cases.models import Case, CaseEvent, CaseEventKind, CaseStatus, now_iso
 from app.cases.repository import CaseRepository
-from app.dispatch import channels
+from app.dispatch import channels, voice
 from app.domain.enums import ActionType
 
 logger = logging.getLogger("recovery.dispatcher")
@@ -319,7 +319,8 @@ class ChannelDispatcher:
                 self.repo.set_status(case_id, CaseStatus.IN_PROGRESS, reason="contacted")
             return outcome
 
-        result = self._send(action, name, email, phone, subject, body, html_body, spoken)
+        result = self._send(action, name, email, phone, subject, body, html_body, spoken,
+                            case_id=case_id)
         outcome = DispatchOutcome(
             allowed=True,
             status=result.status,
@@ -372,6 +373,7 @@ class ChannelDispatcher:
         body: str,
         html_body: str,
         spoken: str,
+        case_id: str = "",
     ) -> channels.DispatchResult:
         """Route to the adapter. Adapters own all provider-specific detail."""
         if action == ActionType.EMAIL_LINK:
@@ -381,5 +383,9 @@ class ChannelDispatcher:
         if action == ActionType.WHATSAPP_LINK:
             return channels.send_whatsapp(phone, body)
         if action in (ActionType.IVR_CALL, ActionType.AGENT_DIAL):
-            return channels.send_ivr_call(phone, spoken or body)
+            # A hosted TwiML URL when this engine is publicly reachable, because a trial
+            # Twilio account refuses inline TwiML. Empty is fine: the adapter falls back.
+            return channels.send_ivr_call(
+                phone, spoken or body, twiml_url=voice.twiml_url(case_id) or "",
+            )
         return channels.DispatchResult("NONE", "SKIPPED", "no adapter for this action")
