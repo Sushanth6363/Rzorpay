@@ -195,3 +195,53 @@ def test_a_missing_due_date_simply_omits_the_sentence():
     message = build_message(ActionType.EMAIL_LINK, 100, "Rahul", due_date="")
 
     assert "due on" not in message.body
+
+
+# --- what the debt is FOR (distinct from why it is unpaid) ----------------------------------
+
+
+def test_the_description_column_says_what_is_owed_for():
+    """A merchant knows what an invoice covers - it is on the invoice. That is a different
+    question from WHY it is unpaid, which they cannot know and Stage 1 diagnoses (ADR-0025).
+    Someone who owes several invoices cannot act on "an outstanding payment of Rs 25,000";
+    they need to know which one."""
+    report = parse_csv(
+        "customer_id,name,email,amount,due_date,description\n"
+        "C1,Aarti,a@example.com,25000,2026-08-24,Invoice INV-2043 - October consulting\n"
+    )
+
+    assert report.valid[0].description == "Invoice INV-2043 - October consulting"
+
+
+def test_the_description_is_optional():
+    """A merchant without invoice particulars must still be able to upload."""
+    report = parse_csv(
+        "customer_id,name,email,amount,due_date\nC1,Aarti,a@example.com,25000,2026-08-24\n"
+    )
+
+    assert report.valid[0].description == ""
+
+
+def test_common_column_names_for_it_are_accepted():
+    for header in ("particulars", "invoice", "for", "item", "details"):
+        report = parse_csv(
+            f"customer_id,name,email,amount,{header}\nC1,A,a@example.com,100,INV-1\n"
+        )
+        assert report.valid[0].description == "INV-1", header
+
+
+def test_the_description_reaches_the_case():
+    """A column that changes nothing downstream is decoration."""
+    import sqlite3
+
+    from app.cases.repository import CaseRepository
+    from app.db.init import init_db
+
+    repo = CaseRepository(init_db(":memory:"))
+    rows = parse_csv(
+        "customer_id,name,email,amount,due_date,description\n"
+        "C1,Aarti,a@example.com,25000,2026-08-24,Invoice INV-2043\n"
+    ).valid
+    case = create_cases(repo, rows, merchant_id="m1")[0]
+
+    assert repo.get_case(case.case_id).description == "Invoice INV-2043"

@@ -144,6 +144,7 @@ def build_message(
     payment_link: str = "",
     attempt: int = 0,
     due_date: str = "",
+    description: str = "",
 ) -> Message:
     """Compose copy whose TONE follows the earned rung and whose ASK follows the diagnosis."""
     amount = f"Rs {amount_paise / 100:,.2f}"
@@ -167,10 +168,21 @@ def build_message(
     if is_b2b:
         subject = f"Outstanding invoice — {amount}"
 
+    # WHAT the money is for, in the merchant's own words. A person who owes several
+    # invoices cannot act on "an outstanding payment of Rs 25,000" - they need to know
+    # WHICH one. Naming it is also what separates a legitimate reminder from something
+    # that reads like a phishing attempt.
+    subject_for = f" · {description}" if description else ""
+    subject = f"{subject}{subject_for}"
+
     overdue = due_context(due_date)
     ask_block = f"{ask} {overdue}".strip() if overdue else ask
+    for_line = f"This is for: {description}." if description else ""
 
-    body_parts = [greeting, "", opener, ask_block]
+    body_parts = [greeting, "", opener]
+    if for_line:
+        body_parts.append(for_line)
+    body_parts.append(ask_block)
     if link_line:
         body_parts += ["", link_line]
     body_parts += ["", closer, "", SIGNATURE]
@@ -180,7 +192,9 @@ def build_message(
     # plainly. It never speaks a URL — nobody can write one down from a phone call.
     spoken = (
         f"Hello. This is an automated call regarding an outstanding payment of "
-        f"{amount_paise // 100} rupees. "
+        f"{amount_paise // 100} rupees"
+        + (f", for {description}. " if description else ". ")
+        + 
         f"{ask} "
         f"Please check your email or messages for a secure payment link. Thank you."
     )

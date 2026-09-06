@@ -197,11 +197,18 @@ class RecoveryPipeline:
                 history = self.db.get_customer_ledger_history(history_key)
             except Exception:
                 history = []
+            # Contact facts, when the caller knows them. Absent for every synthetic event
+            # in the experiment, and absent means "not known", which leaves the ladder
+            # exactly as it was. The live path supplies them, so a phone-only customer is
+            # met at SMS instead of being offered an email they can never receive.
+            context = opportunity.context_data or {}
             filtered_candidates, escalation_assessment = self.escalation_policy.apply(
                 candidates=filtered_candidates,
                 history=history,
                 decision_timestamp=eval_time,
                 event_type_value=opportunity.event_type.value,
+                has_email=context.get("has_email"),
+                has_phone=context.get("has_phone"),
             )
 
         # 6. Feature Snapshot Construction (Point-in-Time Safe)

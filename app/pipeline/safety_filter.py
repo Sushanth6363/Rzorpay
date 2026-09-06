@@ -27,6 +27,27 @@ class HardSafetyFilter:
         """Apply non-negotiable safety rules to mark candidates ELIGIBLE or SAFETY_REJECTED."""
         filtered: List[ActionCandidate] = []
 
+        # CAN THIS ACTION PHYSICALLY ARRIVE?
+        #
+        # A channel the customer has no address on is not a policy question, it is an
+        # impossibility - and choosing it means contacting nobody. Before this check, a
+        # customer with a valid phone and no email was offered EMAIL_LINK on every cycle:
+        # the send was skipped, so the contact was never confirmed, so the escalation
+        # ceiling never rose, so they were never contacted at all. Zero contacts,
+        # indefinitely, while the debt sat recoverable.
+        #
+        # `None` means not known, which is the case for every synthetic event in the
+        # experiment. Unknown is left alone, so the evaluated path is unchanged.
+        context = opportunity.context_data or {}
+        has_email = context.get("has_email")
+        has_phone = context.get("has_phone")
+        unreachable = set()
+        if has_email is False:
+            unreachable.add(ActionType.EMAIL_LINK)
+        if has_phone is False:
+            unreachable.update({ActionType.SMS_LINK, ActionType.WHATSAPP_LINK,
+                                ActionType.IVR_CALL, ActionType.AGENT_DIAL})
+
         # Check downtime status
         gateway_name = opportunity.context_data.get("gateway", "razorpay")
         method = opportunity.context_data.get("method")
@@ -45,6 +66,24 @@ class HardSafetyFilter:
         is_budget_exhausted = contact_budget.is_cap_exhausted() if contact_budget else False
 
         for candidate in candidates:
+            if candidate.action_type in unreachable:
+                needed = ("email address" if candidate.action_type == ActionType.EMAIL_LINK
+                          else "phone number")
+                filtered.append(
+                    ActionCandidate(
+                        action_type=candidate.action_type,
+                        eligibility=EligibilityStatus.SAFETY_REJECTED,
+                        reject_reason=SafetyRejectReason.CHANNEL_UNREACHABLE,
+                        reason_explanation=(
+                            f"Action '{candidate.action_type.value}' rejected: the customer "
+                            f"has no {needed}, so it could not reach them."
+                        ),
+                        evidence={"has_email": has_email, "has_phone": has_phone},
+                        is_counterfactual=False,
+                    )
+                )
+                continue
+
             # 1. NO_ACTION is ALWAYS ELIGIBLE (Counterfactual Safety Anchor)
             if candidate.action_type == ActionType.NO_ACTION:
                 filtered.append(

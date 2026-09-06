@@ -146,7 +146,13 @@ class RecoveryAgent:
     def build_event(self, case: Case) -> Dict[str, Any]:
         """Translate a Case into the raw event the existing pipeline consumes."""
         now = datetime.now(timezone.utc).isoformat()
+        # What we can actually reach this customer on. Without these the ladder would
+        # offer a phone-only customer an email forever: the send is skipped, the contact
+        # is never confirmed, the ceiling never rises, and they are never contacted at all.
+        customer = self.repo.get_customer(case.merchant_id, case.customer_id)
         return {
+            "has_email": bool(customer and customer.email),
+            "has_phone": bool(customer and customer.phone),
             "merchant_id": case.merchant_id,
             "customer_id": case.customer_id,
             "event_id": case.source_event_id or case.case_id,
@@ -246,6 +252,7 @@ class RecoveryAgent:
             diagnosis_code=result.diagnosis,
             payment_link=link.short_url,
             due_date=case.due_date,
+            description=case.description,
         )
 
         dispatch = self.dispatcher.dispatch(

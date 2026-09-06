@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS cases (
     amount_paise    INTEGER NOT NULL CHECK (amount_paise >= 0),
     currency        TEXT NOT NULL DEFAULT 'INR',
     due_date        TEXT DEFAULT '',
+    description     TEXT DEFAULT '',
     source_event_id TEXT DEFAULT '',
     opportunity_id  TEXT DEFAULT '',
     event_type      TEXT DEFAULT 'OVERDUE_B2B_INVOICE',
@@ -124,6 +125,11 @@ class CaseRepository:
                 )
             except sqlite3.OperationalError:
                 pass  # already present
+            # Additive migration for databases created before description existed.
+            try:
+                self.conn.execute("ALTER TABLE cases ADD COLUMN description TEXT DEFAULT '';")
+            except sqlite3.OperationalError:
+                pass  # already present
             self.conn.commit()
 
     # --- customers -----------------------------------------------------------------
@@ -163,11 +169,13 @@ class CaseRepository:
             """INSERT OR REPLACE INTO cases (
                    case_id, merchant_id, customer_id, amount_paise, currency, due_date,
                    source_event_id, opportunity_id, event_type, status, promised_date,
+                   description,
                    close_reason, created_at, updated_at, closed_at
-               ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);""",
+               ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);""",
             (case.case_id, case.merchant_id, case.customer_id, case.amount_paise,
              case.currency, case.due_date, case.source_event_id, case.opportunity_id,
-             case.event_type, case.status.value, case.promised_date, case.close_reason,
+             case.event_type, case.status.value, case.promised_date, case.description,
+             case.close_reason,
              case.created_at, case.updated_at, case.closed_at),
         )
         self.conn.commit()
@@ -188,6 +196,7 @@ class CaseRepository:
             event_type=(row["event_type"] if "event_type" in row.keys() else None)
                        or "OVERDUE_B2B_INVOICE",
             status=CaseStatus(row["status"]), promised_date=row["promised_date"] or "",
+            description=(row["description"] if "description" in row.keys() else "") or "",
             close_reason=row["close_reason"] or "", created_at=row["created_at"],
             updated_at=row["updated_at"], closed_at=row["closed_at"] or "",
         )

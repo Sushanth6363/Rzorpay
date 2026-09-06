@@ -50,6 +50,40 @@ ESCALATION_LADDER: List[ActionType] = [
     ActionType.AGENT_DIAL,      # rung 4 - a person calls a person
 ]
 
+# What each rung physically requires to reach a person. A ladder that ignores this walks
+# a phone-only customer up to a rung they can never receive and then stops forever: the
+# contact is never confirmed, so the ceiling never rises, so nothing is ever sent. Observed
+# before this was added - a customer with a valid phone and no email was contacted zero
+# times, indefinitely, while their debt sat recoverable.
+RUNG_REQUIRES: Dict[ActionType, str] = {
+    ActionType.EMAIL_LINK: "email",
+    ActionType.SMS_LINK: "phone",
+    ActionType.WHATSAPP_LINK: "phone",
+    ActionType.IVR_CALL: "phone",
+    ActionType.AGENT_DIAL: "phone",
+}
+
+
+def reachable_rungs(has_email: Optional[bool], has_phone: Optional[bool]) -> List[int]:
+    """Rungs this customer can actually receive, lowest first.
+
+    Either argument being None means "not known" - which is the case for every synthetic
+    event in the experiment, none of which carry contact details. Unknown is treated as
+    reachable, so the evaluated path behaves exactly as it did before reachability existed.
+    """
+    if has_email is None and has_phone is None:
+        return list(range(len(ESCALATION_LADDER)))
+    out: List[int] = []
+    for rung, action in enumerate(ESCALATION_LADDER):
+        need = RUNG_REQUIRES.get(action)
+        if need == "email" and has_email is False:
+            continue
+        if need == "phone" and has_phone is False:
+            continue
+        out.append(rung)
+    return out
+
+
 RUNG_OF: Dict[ActionType, int] = {a: i for i, a in enumerate(ESCALATION_LADDER)}
 TOP_RUNG = len(ESCALATION_LADDER) - 1
 
@@ -161,9 +195,22 @@ class EscalationPolicy:
         history: Sequence[ContactLedgerEntry],
         decision_timestamp: str,
         event_type_value: Optional[str] = None,
+        has_email: Optional[bool] = None,
+        has_phone: Optional[bool] = None,
     ) -> EscalationAssessment:
-        """Compute the permitted ceiling from confirmed contact history."""
+        """Compute the permitted ceiling from confirmed contact history.
+
+        `has_email` / `has_phone` bound the ladder to rungs that can actually reach this
+        customer. Both default to None - not known - which preserves the previous
+        behaviour exactly for callers that do not know, including every experiment arm.
+        """
+        reachable = reachable_rungs(has_email, has_phone)
         entry_rung = entry_rung_for_stream(event_type_value)
+        # An unreachable entry rung is not a reason to contact nobody. Meet the customer at
+        # the lowest rung that can actually reach them.
+        if entry_rung not in reachable and reachable:
+            entry_rung = min(r for r in reachable if r >= entry_rung) if any(
+                r >= entry_rung for r in reachable) else max(reachable)
         highest = -1
         confirmed = 0
         last_at: Optional[str] = None
@@ -225,7 +272,11 @@ class EscalationPolicy:
                 f"{self.cooldown_hours}h quiet period. Intensity is held; no escalation."
             )
         else:
-            ceiling = min(highest + 1, TOP_RUNG)
+            # The next rung the customer can actually receive, not merely the next
+            # number. Skipping an unreachable rung is not escalating by two: the skipped
+            # rung could never have delivered anything.
+            above = [r for r in reachable if r > highest]
+            ceiling = min(above) if above else min(highest, TOP_RUNG)
             if ceiling == highest:
                 explanation = (
                     f"Already at the top of the ladder "
@@ -256,13 +307,16 @@ class EscalationPolicy:
         history: Sequence[ContactLedgerEntry],
         decision_timestamp: str,
         event_type_value: Optional[str] = None,
+        has_email: Optional[bool] = None,
+        has_phone: Optional[bool] = None,
     ) -> tuple:
         """Return (candidates_with_ceiling_applied, assessment).
 
         SUBTRACTIVE ONLY (INV-1 of this module): a candidate that is already
         SAFETY_REJECTED is passed through unchanged. This policy never promotes.
         """
-        assessment = self.assess(history, decision_timestamp, event_type_value)
+        assessment = self.assess(history, decision_timestamp, event_type_value,
+                                 has_email=has_email, has_phone=has_phone)
         ceiling = assessment.allowed_max_rung
         suppressed: List[str] = []
         out: List[ActionCandidate] = []

@@ -158,6 +158,9 @@ class SafetyRejectReason(str, Enum):
     # confirmed contact, and never inside the quiet period.
     ESCALATION_CEILING = "ESCALATION_CEILING"
     ESCALATION_COOLDOWN = "ESCALATION_COOLDOWN"
+    # The customer has no address on this channel. Distinct from a policy rejection: this
+    # action could not physically arrive, and a decision that picks it contacts nobody.
+    CHANNEL_UNREACHABLE = "CHANNEL_UNREACHABLE"
 
 
 class DataProvenance(str, Enum):

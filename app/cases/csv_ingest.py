@@ -43,6 +43,10 @@ COLUMN_ALIASES: Dict[str, Tuple[str, ...]] = {
     "phone": ("phone", "mobile", "contact", "phone_number", "msisdn"),
     "amount": ("amount", "amount_rupees", "amount_due", "outstanding", "value"),
     "due_date": ("due_date", "duedate", "due", "date"),
+    # WHAT the debt is for. The merchant knows this; it is on their invoice. It is NOT the
+    # reason for non-payment, which they cannot know and which Stage 1 diagnoses.
+    "description": ("description", "particulars", "details", "invoice", "invoice_no",
+                    "invoice_number", "item", "for", "reason", "notes", "memo"),
 }
 
 # DELIBERATELY NOT CSV COLUMNS: event_type and failure_reason.
@@ -70,9 +74,9 @@ MAX_ROWS = 500
 # The template a merchant downloads. Exactly the six columns they can actually know -
 # no reason field, because they do not know why a customer has not paid and the engine
 # diagnoses that itself. Replace the addresses with your own before sending anything.
-SAMPLE_CSV = """customer_id,name,email,phone,amount,due_date
-CUST001,Your Name,you@example.com,9876543210,25000,2026-08-24
-CUST002,Second Customer,someone@example.com,9812345678,1299.50,15/08/2026
+SAMPLE_CSV = """customer_id,name,email,phone,amount,due_date,description
+CUST001,Your Name,you@example.com,9876543210,25000,2026-08-24,Invoice INV-2043 - October consulting
+CUST002,Second Customer,someone@example.com,9812345678,1299.50,15/08/2026,Annual subscription renewal
 """
 
 
@@ -95,6 +99,7 @@ class ValidRow:
     phone: str
     amount_paise: int
     due_date: str
+    description: str = ""
 
     @property
     def days_overdue(self) -> int:
@@ -111,6 +116,7 @@ class ValidRow:
             "Line": self.line, "Customer": self.customer_id, "Name": self.name,
             "Email": self.email, "Phone": self.phone,
             "Amount": self.amount_paise / 100, "Due": self.due_date or "-",
+            "For": self.description or "-",
             "Days overdue": self.days_overdue,
         }
 
@@ -285,7 +291,7 @@ def parse_csv(raw: bytes | str) -> IngestReport:
         report.valid.append(ValidRow(
             line=i, customer_id=customer_id, name=row.get("name", ""),
             email=email, phone=phone or "", amount_paise=amount_paise,
-            due_date=due_iso or "",
+            due_date=due_iso or "", description=row.get("description", ""),
         ))
 
     return report
@@ -311,6 +317,7 @@ def create_cases(
             customer_id=row.customer_id,
             amount_paise=row.amount_paise,
             due_date=row.due_date,
+            description=row.description,
             source_event_id=f"csv_{merchant_id}_{row.customer_id}_{stamp}_{row.line}",
             event_type=RECEIVABLE_STREAM,
             status=CaseStatus.OPEN,

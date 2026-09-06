@@ -125,6 +125,11 @@ class Case:
     event_type: str = "OVERDUE_B2B_INVOICE"
     status: CaseStatus = CaseStatus.OPEN
     promised_date: str = ""
+    # What the money is FOR, in the merchant's own words - an invoice number, a
+    # service, a period. Distinct from WHY it is unpaid, which the merchant does not
+    # know and Stage 1 diagnoses (ADR-0025). This makes the ask concrete: "your
+    # invoice INV-2043 for October consulting" rather than "an outstanding payment".
+    description: str = ""
     close_reason: str = ""
     created_at: str = field(default_factory=now_iso)
     updated_at: str = field(default_factory=now_iso)

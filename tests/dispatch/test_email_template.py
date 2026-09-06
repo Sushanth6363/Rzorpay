@@ -153,3 +153,35 @@ def test_non_email_channels_get_no_html(action):
     m = build_message(action, 100_000, "Sam", DiagnosisCode.UNKNOWN.value, payment_link=LINK)
 
     assert m.html == ""
+
+
+def test_the_message_names_what_the_money_is_for():
+    """"An outstanding payment of Rs 25,000" is unactionable for someone who owes several
+    invoices. Naming it is also what separates a reminder from a phishing attempt."""
+    from app.dispatch.copy import build_message
+    from app.domain.enums import ActionType
+
+    message = build_message(
+        ActionType.EMAIL_LINK, 2_500_000, "Aarti", diagnosis_code="INVOICE_OVERDUE",
+        payment_link="https://rzp.io/rzp/X", due_date="2026-08-24",
+        description="Invoice INV-2043 - October consulting",
+    )
+
+    assert "INV-2043" in message.subject
+    assert "INV-2043" in message.body
+    assert "INV-2043" in message.spoken
+
+
+def test_a_message_without_a_description_reads_normally():
+    """The column is optional, so its absence must not leave dangling punctuation."""
+    from app.dispatch.copy import build_message
+    from app.domain.enums import ActionType
+
+    message = build_message(
+        ActionType.EMAIL_LINK, 2_500_000, "Aarti", diagnosis_code="INVOICE_OVERDUE",
+        payment_link="https://rzp.io/rzp/X", due_date="2026-08-24",
+    )
+
+    assert "This is for:" not in message.body
+    assert " · " not in message.subject
+    assert ", for ." not in message.spoken
