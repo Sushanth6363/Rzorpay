@@ -122,7 +122,8 @@ class RecoveryAgent:
 
     # -- observe ---------------------------------------------------------------------
 
-    def _record_real_ledger_outcome(self, outcome, dispatch, merchant_id: str) -> None:
+    def _record_real_ledger_outcome(self, outcome, dispatch, merchant_id: str,
+                                    sent_action: Optional[ActionType] = None) -> None:
         """Write the dispatcher's real result into the contact ledger.
 
         WHY THIS IS NOT COSMETIC
@@ -156,6 +157,24 @@ class RecoveryAgent:
         }
         try:
             if dispatch.status == "SENT":
+                # THE LEDGER MUST NAME THE RUNG THAT ACTUALLY WENT.
+                #
+                # The reservation is created by the orchestrator against the action IT
+                # chose. Under the scripted demo ladder the agent then sends a different
+                # rung, so the row said EMAIL_LINK while an SMS went out. The escalation
+                # ceiling reads `highest confirmed rung`, so it never saw the SMS, never
+                # rose to WhatsApp, and the ladder stalled one step up.
+                #
+                # This is not demo-only bookkeeping: a ledger row naming a channel other
+                # than the one used is wrong under any mode, and every control that reads
+                # this table - ceiling, contact budget, handoff report - would inherit it.
+                if sent_action is not None and sent_action.value != entry.action_type.value:
+                    self.conn.execute(
+                        "UPDATE contact_ledger SET action_type=? WHERE ledger_id=?;",
+                        (sent_action.value, entry.ledger_id),
+                    )
+                    self.conn.commit()
+                    detail["reserved_as"] = entry.action_type.value
                 engine.record_execution_result(
                     ledger_id=entry.ledger_id, success=True, metadata=detail,
                 )
@@ -336,7 +355,8 @@ class RecoveryAgent:
 
         # The ledger now learns what ACTUALLY happened, from the dispatcher rather than
         # from a simulator. This is what makes the audit trail true on the live path.
-        self._record_real_ledger_outcome(outcome, dispatch, case.merchant_id)
+        self._record_real_ledger_outcome(outcome, dispatch, case.merchant_id,
+                                         sent_action=action)
 
         # SCHEDULE THE NEXT LOOK. Without this a CSV-originated case gets exactly ONE
         # contact and then nothing ever happens again - no second touch, no escalation to

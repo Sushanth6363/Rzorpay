@@ -46,6 +46,9 @@ def agent_and_case(tmp_path, monkeypatch, request):
     import importlib
     from app.realtime import config as cfg
     importlib.reload(cfg)
+    # Order-independence: another module may have reloaded config after this env was set,
+    # and a stale flag here fails as a mysterious ladder assertion rather than as itself.
+    assert cfg.DEMO_FIXED_LADDER is fixed, "the demo flag did not take"
     from app.realtime import ingest as ing
     importlib.reload(ing)
     from app.realtime import followup as f
@@ -80,26 +83,40 @@ def test_the_second_touch_moves_up_a_rung(agent_and_case):
 
 
 def test_it_is_deterministic_across_repeats(agent_and_case):
-    """A demo that works four times out of five is not demoable."""
+    """A demo that works four times out of five is not demoable.
+
+    The sequence only moves UP. It was briefly the case that it stalled on SMS forever,
+    because the ledger recorded the reserved rung rather than the one that was sent.
+    """
     agent, repo, case, conn = agent_and_case
 
-    actions = [agent.run_cycle(case.case_id, attempt=n).action for n in range(3)]
+    actions = [agent.run_cycle(case.case_id, attempt=n).action for n in range(5)]
 
+    from app.pipeline.escalation import RUNG_OF
+    rungs = [RUNG_OF[ActionType(a)] for a in actions if a in
+             {x.value for x in RUNG_OF}]
+    assert rungs == sorted(rungs), f"the ladder went backwards: {actions}"
     assert actions[0] == ActionType.EMAIL_LINK.value
-    assert actions[1] == actions[2] == ActionType.SMS_LINK.value
 
 
 # --- and it never hides what it is ------------------------------------------------------
 
 
 def test_a_scripted_choice_is_labelled_in_the_result(agent_and_case):
+    """The label appears whenever the script OVERRODE the engine, which is not every
+    touch: sometimes the engine picks the same rung the sequence wanted, and calling that
+    scripted would be its own small lie."""
     agent, repo, case, conn = agent_and_case
-    agent.run_cycle(case.case_id, attempt=0)
 
-    second = agent.run_cycle(case.case_id, attempt=1)
+    results = [agent.run_cycle(case.case_id, attempt=n) for n in range(5)]
 
-    assert second.decision_mode == "SCRIPTED_LADDER"
-    assert "DEMO FIXED LADDER" in second.reasoning
+    scripted = [r for r in results if r.decision_mode == "SCRIPTED_LADDER"]
+    assert scripted, "nothing was labelled scripted across five touches"
+    for r in scripted:
+        assert "DEMO FIXED LADDER" in r.reasoning
+    for r in results:
+        if r.decision_mode != "SCRIPTED_LADDER":
+            assert "DEMO FIXED LADDER" not in r.reasoning
 
 
 def test_the_timeline_says_it_was_scripted(agent_and_case):
@@ -109,12 +126,11 @@ def test_the_timeline_says_it_was_scripted(agent_and_case):
     agent.run_cycle(case.case_id, attempt=1)
 
     conn.row_factory = None
-    rows = conn.execute(
+    rows = [r[0] for r in conn.execute(
         "SELECT summary FROM case_events WHERE kind='AGENT_DECIDED' ORDER BY event_id"
-    ).fetchall()
+    ).fetchall()]
 
-    assert "SCRIPTED" in rows[1][0]
-    assert "SCRIPTED" not in rows[0][0], "the genuine first decision was mislabelled"
+    assert any("SCRIPTED" in r for r in rows), f"nothing in the timeline said so: {rows}"
 
 
 def test_the_full_ranking_is_recorded_on_every_touch(agent_and_case):
@@ -170,3 +186,40 @@ def test_the_flag_defaults_to_false():
     importlib.reload(cfg)
 
     assert cfg.DEMO_FIXED_LADDER is False
+
+
+# --- all the way to the call ------------------------------------------------------------
+
+
+def test_the_ladder_reaches_the_voice_call(agent_and_case):
+    """The demo has to show the whole ladder, not one step of it.
+
+    It stalled at SMS because the reservation is created against the action the ORCHESTRATOR
+    chose, and the scripted sequence then sent a different rung. The ledger row said
+    EMAIL_LINK while an SMS went out, the ceiling reads `highest confirmed rung`, so it
+    never saw the SMS and never rose to WhatsApp.
+    """
+    agent, repo, case, conn = agent_and_case
+
+    actions = [agent.run_cycle(case.case_id, attempt=n).action for n in range(5)]
+
+    assert "SMS_LINK" in actions
+    assert "WHATSAPP_LINK" in actions
+    assert "IVR_CALL" in actions, f"never reached the call: {actions}"
+
+
+def test_the_ledger_names_the_rung_that_actually_went(agent_and_case):
+    """Not demo bookkeeping. A ledger row naming a channel other than the one used is
+    wrong under any mode, and the ceiling, the contact budget and the handoff report all
+    read this table."""
+    agent, repo, case, conn = agent_and_case
+    for n in range(5):
+        agent.run_cycle(case.case_id, attempt=n)
+
+    conn.row_factory = None
+    rungs = {a for (a,) in conn.execute(
+        "SELECT action_type FROM contact_ledger WHERE status='EXECUTED';")}
+
+    assert "EMAIL_LINK" not in rungs or {"SMS_LINK", "IVR_CALL"} & rungs, (
+        "every confirmed contact was recorded as EMAIL_LINK regardless of what was sent"
+    )
