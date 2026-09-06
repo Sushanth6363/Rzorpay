@@ -934,8 +934,17 @@ def _ladder(row) -> str:
     """
     done = {c.strip() for c in (row.channels_tried or "").split(",") if c.strip()}
     planned = "" if row.paid else ACTION_RUNG.get(row.last_action, "")
+
+    # A rung the engine has been told to walk past is not drawn at all. Leaving it in
+    # would put a chip on every card that can never light, which reads as a channel that
+    # keeps failing rather than one deliberately not in play.
+    from app.realtime import config as _rt_cfg
+    skipped = {ACTION_RUNG.get(name, "") for name in getattr(_rt_cfg, "DEMO_SKIP_RUNGS", set())}
+
     cells = []
     for key, label in LADDER:
+        if key in skipped and key not in done:
+            continue
         if key in done:
             cls = "r done"
         elif key == planned:
@@ -1347,7 +1356,7 @@ def section_live_test() -> None:
             "every decision. To send for real set: RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET "
             "(Razorpay delivers SMS + email itself), SMTP_USER / SMTP_PASSWORD for email, "
             "or TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN plus a TWILIO_*_FROM number for "
-            "SMS, WhatsApp and IVR calls."
+            "SMS and IVR calls."
         )
 
     st.download_button(
@@ -1436,7 +1445,7 @@ def section_live_test() -> None:
         'to protect a merchant&#39;s customers during a live campaign, not a reviewer '
         'testing on themselves. Stage 0, diagnosis, EV ranking, the hard safety filter and '
         'the one-rung escalation ladder all run exactly as in production — put the same '
-        'email on three rows and watch it climb EMAIL → SMS → WHATSAPP.</div>',
+        'email on three rows and watch it climb EMAIL → SMS → CALL.</div>',
         unsafe_allow_html=True,
     )
 

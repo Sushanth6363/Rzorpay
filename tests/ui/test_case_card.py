@@ -149,3 +149,59 @@ def test_within_a_flag_the_largest_exposure_comes_first():
     ordered = sorted(rows, key=lambda r: (FLAG_ORDER.get(r.flag, 9), -r.amount_paise))
 
     assert [r.case_id for r in ordered] == ["big", "small"]
+
+
+def test_a_skipped_rung_is_not_drawn_on_the_card(monkeypatch):
+    """A rung the engine was told to walk past must not appear as a chip that can never
+    light. Left in, it reads as a channel that keeps failing rather than one deliberately
+    not in play - which is the opposite of what skipping it was for."""
+    import importlib
+    from app.realtime import config as cfg
+    monkeypatch.setenv("RECOVERY_DEMO_SKIP_RUNGS", "WHATSAPP_LINK")
+    importlib.reload(cfg)
+
+    from app.ui.dashboard import _ladder
+
+    class _Row:
+        channels_tried = "EMAIL"
+        last_action = "SMS_LINK"
+        paid = False
+
+    html = _ladder(_Row())
+
+    assert "WHATSAPP" not in html
+    assert "EMAIL" in html and "SMS" in html and "CALL" in html
+
+
+def test_a_rung_already_used_is_still_drawn_even_if_skipped(monkeypatch):
+    """Hiding it must never erase history. If a contact really went out on that channel,
+    the card has to keep showing it."""
+    import importlib
+    from app.realtime import config as cfg
+    monkeypatch.setenv("RECOVERY_DEMO_SKIP_RUNGS", "WHATSAPP_LINK")
+    importlib.reload(cfg)
+
+    from app.ui.dashboard import _ladder
+
+    class _Row:
+        channels_tried = "EMAIL,SMS,WHATSAPP"
+        last_action = "IVR_CALL"
+        paid = False
+
+    assert "WHATSAPP" in _ladder(_Row())
+
+
+def test_every_rung_is_drawn_when_nothing_is_skipped(monkeypatch):
+    import importlib
+    from app.realtime import config as cfg
+    monkeypatch.delenv("RECOVERY_DEMO_SKIP_RUNGS", raising=False)
+    importlib.reload(cfg)
+
+    from app.ui.dashboard import _ladder
+
+    class _Row:
+        channels_tried = "EMAIL"
+        last_action = "SMS_LINK"
+        paid = False
+
+    assert "WHATSAPP" in _ladder(_Row())
