@@ -224,7 +224,89 @@ def send_sms(to_number: str, body: str) -> DispatchResult:
     )
 
 
-def send_whatsapp(to_number: str, body: str) -> DispatchResult:
+# --- WhatsApp: Meta Cloud API, or Twilio ---------------------------------------------------
+#
+# TWO PROVIDERS, BECAUSE ONE OF THEM CANNOT BE TESTED FOR FREE
+#     Twilio's WhatsApp requires a paid account for any message the API composes itself: a
+#     trial rejects freeform text with `ContentSid Required` and refuses Content Templates
+#     with "not available on a Trial account". So on a trial the rung is unreachable, and
+#     the only way to see it work is to pay.
+#
+#     Meta's Cloud API gives a free test business number and up to five verified
+#     recipients, and freeform text works. It is also the API Twilio is itself wrapping.
+#
+#     Meta is preferred when configured. Twilio remains for accounts that already pay for
+#     it, so nobody's working setup is taken away by this change.
+#
+# THE 24-HOUR WINDOW IS NOT OURS TO OPT OUT OF
+#     WhatsApp only permits freeform business messages inside 24 hours of the customer's
+#     last message. Outside it, only pre-approved templates are delivered. That is a
+#     WhatsApp policy, not a provider limitation, and it applies to production accounts
+#     exactly as it applies here. Error 131047 is named explicitly below, because "failed"
+#     with no explanation would send someone hunting through their credentials for a
+#     problem that is really a closed conversation window.
+
+META_GRAPH_VERSION = "v23.0"
+
+
+def _meta_whatsapp_creds() -> Optional[tuple]:
+    phone_id = os.environ.get("WHATSAPP_PHONE_NUMBER_ID", "").strip()
+    token = os.environ.get("WHATSAPP_ACCESS_TOKEN", "").strip()
+    return (phone_id, token) if phone_id and token else None
+
+
+def send_whatsapp_meta(to_number: str, body: str) -> DispatchResult:
+    """Send via Meta's WhatsApp Cloud API."""
+    creds = _meta_whatsapp_creds()
+    if not creds:
+        return _missing("META_WHATSAPP", "WHATSAPP_PHONE_NUMBER_ID", "WHATSAPP_ACCESS_TOKEN")
+    if not to_number:
+        return DispatchResult("META_WHATSAPP", "SKIPPED", "row has no phone number")
+
+    phone_id, token = creds
+    # Meta wants the number without a leading '+'.
+    recipient = to_number.lstrip("+")
+    try:
+        res = requests.post(
+            f"https://graph.facebook.com/{META_GRAPH_VERSION}/{phone_id}/messages",
+            headers={"Authorization": f"Bearer {token}",
+                     "Content-Type": "application/json"},
+            json={"messaging_product": "whatsapp", "recipient_type": "individual",
+                  "to": recipient, "type": "text", "text": {"body": body}},
+            timeout=20,
+        )
+    except Exception as exc:
+        return DispatchResult("META_WHATSAPP", "FAILED", str(exc)[:200])
+
+    if res.status_code not in (200, 201):
+        detail = res.text[:200]
+        try:
+            error = res.json().get("error", {})
+            code = error.get("code")
+            if code == 131047:
+                detail = ("outside WhatsApp's 24-hour window - the customer must message "
+                          "first, or the message must use an approved template")
+            elif code == 190:
+                detail = "access token expired or invalid (temporary tokens last 24 hours)"
+            elif code == 131030:
+                detail = f"{recipient} is not in the test number's allow-list"
+            else:
+                detail = f"{code}: {str(error.get('message'))[:150]}"
+        except ValueError:
+            pass
+        return DispatchResult("META_WHATSAPP", "FAILED", f"{res.status_code}: {detail}")
+
+    try:
+        message_id = (res.json().get("messages") or [{}])[0].get("id", "")
+    except (ValueError, IndexError):
+        message_id = ""
+    return DispatchResult(
+        "META_WHATSAPP", "SENT", f"accepted by Meta for {to_number}",
+        provider_id=str(message_id),
+    )
+
+
+def send_whatsapp_twilio(to_number: str, body: str) -> DispatchResult:
     sender = os.environ.get("TWILIO_WHATSAPP_FROM", "")
     if not sender:
         return _missing("TWILIO_WHATSAPP", "TWILIO_WHATSAPP_FROM")
@@ -238,6 +320,13 @@ def send_whatsapp(to_number: str, body: str) -> DispatchResult:
         {"To": f"whatsapp:{to_number}", "From": f"whatsapp:{sender}", "Body": body},
         "TWILIO_WHATSAPP",
     )
+
+
+def send_whatsapp(to_number: str, body: str) -> DispatchResult:
+    """Meta if it is configured, Twilio otherwise. The caller never has to know which."""
+    if _meta_whatsapp_creds():
+        return send_whatsapp_meta(to_number, body)
+    return send_whatsapp_twilio(to_number, body)
 
 
 def send_ivr_call(to_number: str, spoken_message: str) -> DispatchResult:
