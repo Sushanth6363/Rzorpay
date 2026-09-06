@@ -400,6 +400,27 @@ class CaseRepository:
             schedule, not from a button. This exists so a demo can be reset between runs
             without hand-editing SQLite, and it is labelled that way in the UI.
 
+        A RESET MUST ACTUALLY RESET
+            Two things used to survive this and made "Delete all" a lie:
+
+            1. FOLLOW-UP OPPORTUNITY IDS ARE SUFFIXED. A follow-up deliberately carries a
+               new id, `<opportunity_id>#f1`, so the escalation ladder reads real contact
+               history instead of colliding with the original's idempotency key. Matching
+               on equality therefore missed every follow-up ever scheduled. On the machine
+               where this was found, 333 of 334 queued follow-ups pointed at cases that no
+               longer existed, waking the worker for nothing.
+
+            2. THE CONTACT BUDGET IS A SEPARATE COUNTER. `contact_budgets` holds
+               reserved/consumed per (merchant, customer) and nothing here touched it. So
+               a demo customer stayed permanently capped: the cases went, the memory of
+               having contacted them did not, and the next upload silently abstained with
+               CONTACT_BUDGET_UNAVAILABLE. That is the correct answer to the wrong
+               question, and it is indistinguishable from the engine being broken.
+
+            The counter is only cleared for customers left with NO remaining cases. A
+            customer who still has live work keeps their contact history, because
+            forgetting it would let the engine contact them past the cap.
+
         WHAT IT DELIBERATELY DOES NOT DO
             It does not cancel payment links at the provider. A live link whose case has
             been deleted is a link a customer can still pay, with nothing left to record
@@ -425,6 +446,12 @@ class CaseRepository:
             # A CSV case schedules its follow-up under the case id itself.
             opp_ids.extend(ids)
 
+            # Who these cases belonged to, read BEFORE the rows are gone.
+            owners = self.conn.execute(
+                f"SELECT DISTINCT merchant_id, customer_id FROM cases "
+                f"WHERE case_id IN ({marks});", ids
+            ).fetchall()
+
             # dispatch_log is created by ChannelDispatcher on first use, so a database
             # that has never sent anything does not have it. Absent is not an error here.
             for table, column in (("case_events", "case_id"),
@@ -439,15 +466,39 @@ class CaseRepository:
                     pass  # table absent in this database
 
             if opp_ids:
+                # Equality for the original, prefix for every follow-up spawned from it.
+                # `#` is not produced by any id builder here, so the LIKE cannot widen
+                # beyond the follow-up chain of these same opportunities.
                 opp_marks = ",".join("?" for _ in opp_ids)
+                like_clause = " OR ".join("opportunity_id LIKE ?" for _ in opp_ids)
+                like_args = [f"{opp}#%" for opp in opp_ids]
                 for table in ("followup_queue", "contact_ledger", "opportunities"):
                     try:
                         cur = self.conn.execute(
-                            f"DELETE FROM {table} WHERE opportunity_id IN ({opp_marks});",
-                            opp_ids)
+                            f"DELETE FROM {table} "
+                            f"WHERE opportunity_id IN ({opp_marks}) OR {like_clause};",
+                            opp_ids + like_args)
                         removed[table] = cur.rowcount
                     except sqlite3.OperationalError:
                         pass  # table absent in this database
+
+            # The contact budget, last, and only where nothing is left to protect.
+            cleared = 0
+            for merchant_id, customer_id in owners:
+                still_open = self.conn.execute(
+                    "SELECT 1 FROM cases WHERE merchant_id=? AND customer_id=? LIMIT 1;",
+                    (merchant_id, customer_id),
+                ).fetchone()
+                if still_open:
+                    continue
+                try:
+                    cur = self.conn.execute(
+                        "DELETE FROM contact_budgets WHERE merchant_id=? AND customer_id=?;",
+                        (merchant_id, customer_id))
+                    cleared += cur.rowcount
+                except sqlite3.OperationalError:
+                    break  # table absent in this database
+            removed["contact_budgets"] = cleared
 
             self.conn.commit()
         return removed
