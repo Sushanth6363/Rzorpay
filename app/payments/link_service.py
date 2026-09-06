@@ -63,8 +63,21 @@ class PaymentLinkService:
 
     @property
     def is_configured(self) -> bool:
-        """False when only placeholder credentials are present."""
-        return not str(getattr(self.client, "key_id", "")).startswith(MOCK_KEY_PREFIX)
+        """False when only placeholder credentials are present.
+
+        A mock key normally counts as unconfigured, because the links it produces cannot
+        be paid and fire no webhook. RECOVERY_ALLOW_SIMULATED_LINKS is the operator saying
+        they know that and want the rest of the engine anyway - so it has to be honoured
+        HERE too, not only at the simulated-link check further down. Honouring it in one
+        place and not the other just moves the refusal earlier and makes the flag look
+        broken.
+        """
+        if not str(getattr(self.client, "key_id", "")).startswith(MOCK_KEY_PREFIX):
+            return True
+
+        from app.realtime import config as _rt_config
+
+        return bool(getattr(_rt_config, "ALLOW_SIMULATED_LINKS", False))
 
     @property
     def is_test_mode(self) -> bool:

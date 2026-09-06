@@ -219,3 +219,45 @@ def test_the_flag_is_off_unless_it_is_set():
     importlib.reload(rt_config)
 
     assert rt_config.ALLOW_SIMULATED_LINKS is False
+
+
+def test_a_mock_key_is_unconfigured_by_default(tmp_path):
+    """Default behaviour is unchanged: a mock key produces links nobody can pay."""
+    from app.db.init import init_db
+    from app.realtime import config as rt_config
+
+    class _Mock:
+        key_id = "rzp_test_mock"
+
+    assert rt_config.ALLOW_SIMULATED_LINKS is False
+    service = PaymentLinkService(init_db(":memory:"), client=_Mock())
+
+    assert service.is_configured is False
+
+
+def test_the_opt_in_is_honoured_at_the_configuration_gate_too(monkeypatch):
+    """The bug in the first attempt at this flag. It was honoured at the simulated-link
+    check but not at is_configured, so the refusal simply moved earlier and the flag
+    looked broken: NOT_CONFIGURED instead of the link it was meant to allow."""
+    from app.db.init import init_db
+    from app.realtime import config as rt_config
+    monkeypatch.setattr(rt_config, "ALLOW_SIMULATED_LINKS", True, raising=False)
+
+    class _Mock:
+        key_id = "rzp_test_mock"
+
+    service = PaymentLinkService(init_db(":memory:"), client=_Mock())
+
+    assert service.is_configured is True
+
+
+def test_a_real_key_is_configured_either_way(monkeypatch):
+    from app.db.init import init_db
+    from app.realtime import config as rt_config
+
+    class _Real:
+        key_id = "rzp_test_ABC123"
+
+    for flag in (True, False):
+        monkeypatch.setattr(rt_config, "ALLOW_SIMULATED_LINKS", flag, raising=False)
+        assert PaymentLinkService(init_db(":memory:"), client=_Real()).is_configured is True
