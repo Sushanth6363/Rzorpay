@@ -248,8 +248,12 @@ Real bugs from this project. Your strongest material, and they cost time.
 **No escalation shows up.** Check `/health`. If it says 3600 the clock isn't sped up.
 > "This one is at real world timing, so the next check is scheduled rather than immediate."
 
-**WhatsApp shows FAILED.** Use it.
-> "That is Twilio refusing. It is a paid feature. The engine records the failure and does
+**WhatsApp shows FAILED.** Use it. The error is `21654 ContentSid Required`.
+> "That is Twilio refusing, and the reason is worth a sentence. WhatsApp needs a
+> pre-approved template. Creating one needs Twilio's Content API. That API is not available
+> on a trial account. So it is a closed door, not a setting I forgot.
+>
+> What matters is what the engine does with it. It records the real error code, and it does
 > not move up the ladder, because a step only turns green when a message really went."
 
 **The SMS wording looks odd.**
