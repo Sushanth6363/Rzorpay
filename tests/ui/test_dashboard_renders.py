@@ -62,4 +62,7 @@ def test_the_safety_checks_actually_executed(app):
     text = " ".join(m.value for m in app.markdown)
 
     assert "INV-7" in text
-    assert "executed checks passing" in text
+    # The page must SAY these ran now. Wording may change; the claim may not, so the
+    # assertion is on the claim rather than on one phrasing of it.
+    assert "checks executed on this page load" in text
+    assert "safety invariants passed" in text

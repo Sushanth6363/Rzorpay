@@ -158,6 +158,30 @@ STYLES = """
   .rej .a { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; opacity:.85; }
   .rej .w { font-size:.71rem; font-weight:700; letter-spacing:.04em; white-space:nowrap; }
 
+  /* --- safety checks: an executed result per row, not a checklist ----------------- */
+  .sumbar { display:flex; align-items:center; justify-content:space-between; gap:1rem;
+            border:1px solid var(--sc); background:var(--st); border-radius:11px;
+            padding:.8rem 1.1rem; margin-bottom:.8rem; }
+  .sumbar .l { display:flex; align-items:center; gap:.7rem; font-size:1rem; font-weight:650; }
+  .sumbar .r { font-size:.78rem; opacity:.6; font-variant-numeric:tabular-nums; }
+  .dotico { width:22px; height:22px; border-radius:50%; display:inline-flex;
+            align-items:center; justify-content:center; font-size:.72rem; font-weight:800;
+            color:#fff; flex:0 0 22px; }
+
+  .chk { display:flex; align-items:flex-start; gap:.85rem; border-radius:10px;
+         border:1px solid rgba(128,128,128,.2); background:rgba(128,128,128,.03);
+         padding:.72rem .95rem; margin-bottom:.5rem; }
+  .chk.bad { border-color:rgba(220,38,38,.45); background:rgba(220,38,38,.07); }
+  .chk .code { flex:0 0 auto; font-size:.7rem; font-weight:700; letter-spacing:.04em;
+               padding:.22rem .5rem; border-radius:6px; margin-top:.05rem;
+               border:1px solid rgba(128,128,128,.3); background:rgba(128,128,128,.08);
+               font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .chk .bd { flex:1; min-width:0; }
+  .chk .t { font-size:.92rem; font-weight:650; letter-spacing:-.008em; }
+  .chk .e { font-size:.755rem; opacity:.58; margin-top:.22rem; line-height:1.5;
+            font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+            word-break:break-word; }
+
   /* headline tiles, bordered rather than floating - they read as one instrument panel */
   .tiles { display:flex; gap:.7rem; margin:.2rem 0 .9rem; flex-wrap:wrap; }
   .tile { flex:1 1 0; min-width:150px; border:1px solid rgba(128,128,128,.22);
@@ -1139,18 +1163,31 @@ def section_safety() -> None:
 
     checks = run_invariant_checks()
     passed = sum(1 for c in checks if c["passed"])
+    all_ok = passed == len(checks)
+    colour = "#059669" if all_ok else "#DC2626"
+
     st.markdown(
-        f'{pill(f"{passed}/{len(checks)} executed checks passing", "ok" if passed == len(checks) else "stop")}',
-        unsafe_allow_html=True,
+        f'<div class="sumbar" style="--sc:{colour}66;--st:{colour}12;">'
+        f'  <div class="l">'
+        f'    <span class="dotico" style="background:{colour};">{"✓" if all_ok else "✕"}</span>'
+        f'    {passed}/{len(checks)} safety invariants passed'
+        f'  </div>'
+        f'  <div class="r">{len(checks)} checks executed on this page load</div>'
+        f'</div>', unsafe_allow_html=True,
     )
-    st.write("")
 
     for c in checks:
+        ok = c["passed"]
+        ico = "#059669" if ok else "#DC2626"
         st.markdown(
-            f'<div class="urx-card">'
-            f'<h4>{c["id"]} · {c["name"]} &nbsp; {pill("PASS" if c["passed"] else "FAIL", "ok" if c["passed"] else "stop")}</h4>'
-            f'<div class="note">{c["evidence"]}</div></div>',
-            unsafe_allow_html=True,
+            f'<div class="chk{"" if ok else " bad"}">'
+            f'  <span class="dotico" style="background:{ico};">{"✓" if ok else "✕"}</span>'
+            f'  <span class="code" style="color:{ico};border-color:{ico}55;">{c["id"]}</span>'
+            f'  <div class="bd">'
+            f'    <div class="t">{c["name"]}</div>'
+            f'    <div class="e">evidence: {c["evidence"]}</div>'
+            f'  </div>'
+            f'</div>', unsafe_allow_html=True,
         )
 
     st.markdown("##### Enforced structurally, verified in the test suite")
