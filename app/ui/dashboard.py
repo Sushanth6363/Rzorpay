@@ -298,6 +298,22 @@ def run_invariant_checks() -> List[Dict[str, Any]]:
 # sections
 # ---------------------------------------------------------------------------
 
+def _scorer_is_fitted() -> bool:
+    """Whether the trace tab's scorer is the trained model or an unfitted fallback.
+
+    Read from the object rather than assumed, so the label cannot drift from reality if
+    the scenario runner is later wired to the fitted orchestrator.
+    """
+    try:
+        from app.orchestration.recovery_orchestrator import RecoveryOrchestrator
+
+        learner = RecoveryOrchestrator().ai_engine.learner
+        flag = getattr(learner, "is_fitted", False)
+        return bool(flag() if callable(flag) else flag)
+    except Exception:  # noqa: BLE001 - a label must never break the page
+        return False
+
+
 def _escalation_step(result: Any, n: int) -> str:
     """Render the compliant-escalation ceiling as one pipeline step.
 
@@ -439,12 +455,43 @@ def section_trace(seed: int, outage_toggle: bool, exhaust_toggle: bool) -> None:
             )
             st.markdown(answer_card("Rejected before scoring", rows), unsafe_allow_html=True)
 
+        # WHICH SCORER PRODUCED THIS TRACE, STATED PLAINLY
+        #
+        # This tab runs the golden scenarios through a fresh orchestrator whose CatBoost
+        # learner is UNFITTED, so probabilities fall back to base rates. The live CSV path
+        # builds arm A5 with the FITTED model. Both are honest engines; they are not the
+        # same one, and a screen that says only "v1.0.0-baseline" invites a reader to
+        # assume the model decided this.
+        #
+        # Measured, across all seven golden scenarios: the fitted model selects the
+        # IDENTICAL action in every one. That is this project's central finding showing up
+        # again - by the time scoring happens, the safety filter and the escalation ceiling
+        # have bounded the action space so tightly that the scorer rarely changes the
+        # answer. So the trace is representative; it just is not the fitted model, and the
+        # honest move is to say so rather than to quietly swap it in.
+        fitted = _scorer_is_fitted()
+        scorer_note = (
+            "CatBoost S-learner (fitted)" if fitted
+            else "baseline priors — unfitted learner"
+        )
         st.markdown(answer_card("Provenance", "".join([
             kv("Decision", d.decision_id[:26], mono=True),
             kv("Model", d.model_version),
+            kv("Scored by", scorer_note),
             kv("Seed", str(seed)),
             kv("Amount at risk", rupees(result.attribution.amount_at_risk_paise)),
         ])), unsafe_allow_html=True)
+
+        if not fitted:
+            st.markdown(
+                '<div class="note">This trace is scored by <b>base rates, not the trained '
+                'model</b> — the scenario runner builds an unfitted learner. The live CSV '
+                'path uses the fitted CatBoost model. Across all seven golden scenarios '
+                'the fitted model selects the <b>identical action</b>, which is the point: '
+                'by the time scoring happens the safety filter and escalation ceiling have '
+                'already bounded the choice.</div>',
+                unsafe_allow_html=True,
+            )
 
     # --- the evidence, full width ------------------------------------------
     st.write("")

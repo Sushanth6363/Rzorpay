@@ -3,13 +3,11 @@
 **Unified Recovery Engine · Razorpay AI Buildathon 2026 · Track 3**
 
 ```
-0:00 – 1:00   Tour: what each screen is, and why it exists
-1:00 – 1:30   Experiment: the result, including the one that went against us
-1:30 – 2:15   Upload a CSV, a real email goes out
-2:15 – 3:00   Decision trace: WHY it chose that
-3:00 – 4:00   It escalates on its own, one rung at a time
-4:00 – 4:35   Payment always wins
-4:35 – 5:00   Safety, and the honest close
+0:00 – 0:50   GitHub: the README and the architecture
+0:50 – 1:10   Decision trace, in two sentences
+1:10 – 1:45   Experiment: the result, including the one against us
+1:45 – 2:10   Safety and tests
+2:10 – 5:00   The live run
 ```
 
 ---
@@ -21,63 +19,78 @@ PORT=8555 .venv/Scripts/python.exe -m app.server    # dashboard + webhooks + wor
 ./scripts/start_tunnel.ps1                          # so Razorpay can reach you
 ```
 
-- [ ] `curl -s localhost:8555/health` shows `followup_hour_seconds: 0.05` and `worker_interval_seconds: 2`
-      — if it says `3600`/`60`, the server started before the demo settings and **your escalation will take 8 days on stage**
-- [ ] **Run the benchmark once now**, on the Experiment tab, so results are on screen when you get there
-- [ ] Board reset: *Reset the board* → tick confirm → **Clear N unpaid**. Keeps paid cases as evidence.
-- [ ] Inbox open on a second screen, phone visible
+- [ ] `curl -s localhost:8555/health` → `followup_hour_seconds: 0.05`, `worker_interval_seconds: 2`
+      — if it reads `3600`/`60` the server predates the demo settings and **escalation takes 8 days on stage**
+- [ ] **Run the Experiment benchmark once now** so results are on screen when you arrive
+- [ ] Board reset → tick confirm → **Clear N unpaid**. Keeps paid cases as evidence.
+- [ ] Tabs open: GitHub README, dashboard, inbox. Phone visible.
 - [ ] `demo_customers.csv` ready to drag
 
 > **Dispatch is live.** Every upload sends a real email. Only ever use a CSV with your own address.
 
 ---
 
-## 0:00 – 1:00 · What you're looking at
+## 0:00 – 0:50 · GitHub: README and architecture
 
-> "One engine that finds revenue at risk across four streams — failed payments, abandoned checkouts, failed renewals, overdue receivables — decides what to do about each one, and then runs the recovery to completion on its own.
+**Do:** open the repo README. Scroll to the **mermaid flow diagram**.
+
+> "One engine that finds revenue at risk across four streams — failed payments, abandoned checkouts, failed renewals, overdue receivables — decides what to do about each, and runs the recovery to completion on its own.
 >
-> Five screens, and each exists to answer a different question a reviewer would ask."
+> The architecture is one loop." *(trace the diagram with the cursor)*
+>
+> "An event arrives, from a webhook or a merchant CSV. **Stage 0** checks there's genuine recoverable exposure. **Stage 1** diagnoses why it's unpaid. **Candidate generation** lists what's even legal for this stream. **The safety filter** removes what isn't permitted — outage suppression, contact budget, the escalation ceiling. Whatever survives is **ranked by expected value**, and the best one is executed.
+>
+> Then it schedules its own next review and goes quiet. A background worker wakes it, it re-reads the case, and decides again — until the money arrives or a stopping rule ends it."
 
-**Do:** click each tab as you name it. About 10 seconds each.
+**Do:** scroll to the escalation ladder diagram.
 
-**Decision trace** — *"Why did it do that?"*
-> "One case, followed from raw event to final action. Eight stages, every value read from the executed decision record. This is where you audit a single choice."
-
-**Experiment** — *"Does it work, and how do you know?"*
-> "Five arms over an identical seeded batch, each isolating one capability. Confidence intervals and verdicts — including inconclusive ones."
-
-**Live test (CSV)** — *"Show me it actually running."*
-> "A merchant uploads their receivables and the real engine runs: diagnosis, expected-value ranking, safety filter — and then it actually sends what it chose. This is the one screen where a decision leaves the machine."
-
-**Safety** — *"What stops it doing something stupid?"*
-> "Invariants that execute when the page loads and report real pass or fail. Not a checklist — executed checks."
-
-**About** — *"What's not built, and what's simulated."*
-> "The limitations, stated by us rather than found by you."
+> "Contact climbs one rung at a time: email, SMS, WhatsApp, an IVR call, a human agent. And the ceiling is always the highest **confirmed** contact plus one — never plus two, whatever the score says.
+>
+> Everything below the fold is honesty: what's simulated, what's real, and the result that went against us."
 
 ---
 
-## 1:00 – 1:30 · The result, including the one that went against us
+## 0:50 – 1:10 · Decision trace, in two sentences
 
-**Do:** you are on **Experiment**, results already on screen from pre-flight.
+**Do:** dashboard → **Decision trace**.
 
-> "We pre-registered a hypothesis: that the machine-learning model would beat the transparent heuristic once outcomes depended on context.
+> "This screen answers one question — *why did the engine do that?* — for a single case, from raw event to final action, with every value read from the executed decision record.
 >
-> **It was falsified.** A5 versus A3 — inconclusive, p = 0.96." *(point at the row)*
->
-> "The finding is more useful than a win would have been: compliant escalation bounds the action space so tightly that scorer quality is nearly irrelevant. The two scorers disagree on **4 decisions in 1,000**.
->
-> The one statistically significant result is the engine against doing nothing." *(point at `A5_vs_CONTROL`)* "That's where the value is — safety, cross-stream arbitration and contact efficiency, not a model being cleverer than a rule.
->
-> Every comparison is on screen, including the four that are inconclusive. Showing only the flattering one is how an honest experiment becomes a marketing chart."
+> Eight stages, and you can see exactly where the decision was made and where things were removed." *(point at the amber SUPPRESSED steps)* "Three actions rejected before any scoring happened, all `ESCALATION_CEILING`: the engine is not allowed to open a relationship with a phone call."
 
 ---
 
-## 1:30 – 2:15 · Upload a CSV, a real email goes out
+## 1:10 – 1:45 · The result, including the one against us
 
-**Do:** **Live test (CSV)** tab. Drag `demo_customers.csv` in.
+**Do:** **Experiment**. Results already on screen.
 
-> "A merchant's receivables export. Six columns — and notice there is **no 'reason' column**. A merchant knows *what* is owed, not *why* it's unpaid. If they typed the reason in, the diagnosis would be a formality reading back its own input.
+> "Five arms over an identical seeded batch, each isolating one capability.
+>
+> We pre-registered a hypothesis: that the machine-learning model would beat the transparent heuristic. **It was falsified.** A5 versus A3 — inconclusive, p = 0.96." *(point)*
+>
+> "The finding is better than a win. Compliant escalation bounds the action space so tightly that scorer quality is nearly irrelevant — the two scorers disagree on **4 decisions in 1,000**. The one significant result is the engine against doing nothing.
+>
+> Every comparison is on screen, including the four inconclusive ones. Showing only the flattering one is how an honest experiment becomes a marketing chart."
+
+---
+
+## 1:45 – 2:10 · Safety and tests
+
+**Do:** **Safety**.
+
+> "These checks **executed when the page loaded** — that's what the count says, and a tick means it ran just now.
+>
+> Below them, six more enforced structurally and covered by the test suite, deliberately listed **without ticks**, because this page didn't run them. A green tick not backed by a live check is the thing this screen exists to avoid.
+>
+> **521 tests. 24 architecture decision records. The evaluation reproduces bit-for-bit on a fresh clone** — I cloned it cold this morning and got the identical batch hash."
+
+---
+
+## 2:10 – 3:00 · Live: upload a CSV, a real email goes out
+
+**Do:** **Live test (CSV)**. Drag `demo_customers.csv` in.
+
+> "A merchant's receivables export. Six columns — and notice there's **no 'reason' column**. A merchant knows *what* is owed, not *why* it's unpaid. If they typed the reason in, the diagnosis would be a formality reading back its own input.
 >
 > One row is deliberately malformed. Rejected with a reason, not silently skipped — a dropped row is revenue the merchant thinks is being chased and nothing is chasing."
 
@@ -87,57 +100,41 @@ PORT=8555 .venv/Scripts/python.exe -m app.server    # dashboard + webhooks + wor
 
 ---
 
-## 2:15 – 3:00 · Why it chose that
-
-**Do:** **Decision trace**.
-
-> "Stage 1 diagnoses the cause. Candidate generation offers only actions this stream can legally take — a merchant-uploaded debt has no stored instrument, so a **retry is never even a candidate**.
->
-> Then the safety filter." *(point at the amber SUPPRESSED steps)* "Three actions removed before any scoring — agent dial, WhatsApp, IVR — all `ESCALATION_CEILING`. The engine is not allowed to open a relationship with a phone call.
->
-> And the answer: expected value **₹5,250**, from `EV = round(Δ̂ × amount) − cost`. `NO_ACTION` scores exactly zero by construction, so when nothing clears the bar the engine contacts nobody. **That abstention is the product** — it's what stops a recovery engine becoming a harassment engine."
-
----
-
 ## 3:00 – 4:00 · It escalates on its own
 
 **Do:** back to the board. Wait ~10s, refresh. Again.
 
-> "Nothing external triggers the next step. The engine scheduled its own review and a background worker wakes it.
+> "Nothing external triggers the next step. The engine scheduled its own review; a background worker wakes it.
 >
 > Timing is **derived, not configured**: `base(diagnosis) × multiplier(channel) × backoff(attempt)`. A gateway blip is retried in about 4 hours; an overdue invoice waits about 8 days, because chasing a finance team daily gets your domain filtered.
 >
-> I've compressed the clock — one policy hour is 0.05 seconds. **Only the unit changes; every ratio is exact.**"
+> I've compressed the clock for this demo — one policy hour is 0.05 seconds. **Only the unit changes; every ratio is exact.**"
 
 **Do:** point at the ladder chips lighting.
 
-> "One rung at a time. The ceiling is always the highest **confirmed** contact plus one — never plus two, whatever the score says. A message that failed to send earns nothing, because a lit rung is a claim that something actually arrived."
+> "A lit rung means a message was **confirmed sent**. A message that failed earns nothing — so a broken channel can never walk the ladder up to a phone call."
 
-*(If the IVR rung fires, your phone rings. Let it. Best 10 seconds available.)*
+*(If the IVR rung fires, your phone rings. Let it.)*
 
 ---
 
-## 4:00 – 4:35 · Payment always wins
+## 4:00 – 4:40 · Payment always wins
 
 **Do:** point at the green `PAID` row, then click **Open**.
 
 > "A real ₹25,000 test payment. Razorpay's webhook hit this machine, HMAC-verified, and the case closed itself — PAID, open links cancelled, follow-ups stopped.
 >
-> Case state is re-read at the *moment of dispatch*, not when the action was queued. So money arriving cancels everything already in flight. A customer who has paid cannot be chased by something mid-air."
+> Case state is re-read at the *moment of dispatch*, not when the action was queued. Money arriving cancels everything already in flight."
 
 > "`CASE_CREATED → AGENT_DECIDED → PAYMENT_LINK_CREATED → MESSAGE_SENT → FOLLOWUP_SCHEDULED → PAYMENT_RECEIVED → CASE_CLOSED`"
 
 ---
 
-## 4:35 – 5:00 · The honest close
+## 4:40 – 5:00 · Close
 
-**Do:** **Safety**.
-
-> "These checks executed when the page loaded — that's what the count says. Below them, six more enforced structurally and covered by tests, listed deliberately **without ticks**, because this page didn't run them. A green tick not backed by a live check is the thing this screen exists to avoid.
+> "`NO_ACTION` scores exactly zero by construction, so when nothing clears the bar the engine contacts nobody. **That abstention is the product** — it's what stops a recovery engine becoming a harassment engine.
 >
-> Every figure in the experiment is simulated and labelled as such. What's real is the loop: a real link, a real email, a real webhook, a real case closing.
->
-> **521 tests. 24 architecture decision records. The evaluation reproduces bit-for-bit on a fresh clone.**"
+> Every figure in the experiment is simulated and labelled as such. What's real is the loop: a real link, a real email, a real webhook, a real case closing."
 
 ---
 
@@ -150,6 +147,7 @@ PORT=8555 .venv/Scripts/python.exe -m app.server    # dashboard + webhooks + wor
 | WhatsApp shows FAILED | **Use it.** "Twilio's actual refusal — `ContentSid Required`, a paid feature. The engine records FAILED and does **not** advance the ladder, because a rung only lights on confirmed delivery." |
 | SMS wording looks odd | "Trial accounts can only send predefined templates, so the link isn't included — and the record says exactly that rather than claiming success." |
 | Payment doesn't close a case | Run `scripts/send_test_webhook.py`; the receiving path is independently provable. |
+| Asked "is that your model deciding?" on the trace tab | "No — that screen says so. It's scored by base rates; the live CSV path uses the fitted CatBoost model. We measured it: across all seven scenarios the fitted model picks the identical action, because the safety filter already bounded the choice." |
 
 ---
 

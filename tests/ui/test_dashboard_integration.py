@@ -103,3 +103,49 @@ def test_the_experiment_summary_exposes_the_attributes_the_dashboard_reads():
 
     for required in ("arm_metrics", "primary_comparison", "secondary_comparisons"):
         assert required in fields, f"the dashboard reads {required} off the summary"
+
+
+def test_the_trace_tab_states_which_scorer_produced_it():
+    """The Decision trace tab runs an UNFITTED learner, so its probabilities are base
+    rates rather than model predictions. The live CSV path uses the fitted model.
+
+    Both are honest engines, but they are not the same one, and a screen showing only
+    "v1.0.0-baseline" invites a reader to assume the model decided. The label is read from
+    the object rather than hardcoded, so it cannot drift if the runner is later rewired.
+    """
+    from app.ui.dashboard import _scorer_is_fitted
+
+    assert _scorer_is_fitted() is False, (
+        "the scenario runner now uses a fitted learner - the disclosure on the trace tab "
+        "is stale and should be re-checked"
+    )
+
+
+def test_the_fitted_model_would_choose_the_same_actions_anyway():
+    """Why the disclosure is a footnote rather than a defect.
+
+    Across every golden scenario the fitted CatBoost model selects the identical action to
+    the unfitted baseline. That is this project's central finding restated: by the time
+    scoring happens, the safety filter and the escalation ceiling have bounded the action
+    space so tightly that scorer quality rarely changes the answer.
+    """
+    from app.db.init import init_db
+    from app.domain.enums import ExperimentArm
+    from app.experiment.policies import build_orchestrator_for_arm
+    from app.sandbox.scenarios import GOLDEN_DEMO_SCENARIOS, DemoScenarioSpec, ScenarioRunner
+
+    for spec in GOLDEN_DEMO_SCENARIOS.values():
+        exec_spec = DemoScenarioSpec(
+            scenario_id=spec.scenario_id, title=spec.title, description=spec.description,
+            raw_event=spec.raw_event,
+            simulate_outage_gateway=spec.simulate_outage_gateway,
+            exhaust_contact_budget_customer=spec.exhaust_contact_budget_customer,
+            force_sandbox_outcome=spec.force_sandbox_outcome,
+            force_mode=spec.force_mode, random_seed=42,
+        )
+        baseline = ScenarioRunner().run_scenario(exec_spec).decision.selected_action
+        fitted = ScenarioRunner(
+            orchestrator=build_orchestrator_for_arm(ExperimentArm.A5, db_conn=init_db(":memory:"))
+        ).run_scenario(exec_spec).decision.selected_action
+
+        assert baseline == fitted, f"{spec.title}: {baseline.value} vs {fitted.value}"
