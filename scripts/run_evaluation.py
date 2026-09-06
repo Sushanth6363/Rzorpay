@@ -178,6 +178,18 @@ def render_markdown(report: Dict[str, Any]) -> str:
         f"An inconclusive primary is an honest outcome, not a failure to demonstrate value — "
         f"the contact-efficiency and compliance results below are where this engine earns its keep."
     )
+    ce = next((c for c in report.get("contact_efficiency_comparisons", [])
+               if c["comparison_id"] == "A2_vs_A1_contacts"), None)
+    if ce and ce["verdict"] == "FEWER_CONTACTS_RECOVERY_HELD":
+        lines.append(
+            f"- **Where it does win: contact efficiency.** A2 contacted customers "
+            f"**{ce['relative_contact_reduction']:.1%} less often** than A1 "
+            f"({ce['treatment_contacts']:,} contacts vs {ce['baseline_contacts']:,}), "
+            f"p={ce['p_value']:.4g}, while the recovery-rate difference stayed "
+            f"inconclusive. Fewer messages, no detectable loss of recovery. "
+            f"**This test was NOT pre-registered** — see the section below for why it is "
+            f"reported anyway and what it does not prove."
+        )
     lines.append("- **Every number here is synthetic.** These are properties of an authored "
                  "simulation, not evidence of real-world recovery.")
     lines.append("")
@@ -326,6 +338,53 @@ def render_markdown(report: Dict[str, Any]) -> str:
             f"| {c['comparison_id']} | {c['incremental_recovery_rate']:+.4f} | "
             f"[{ci[0]:.4f}, {ci[1]:.4f}] | {c['p_value']:.4f} | {c['status']} |"
         )
+    lines.append("")
+    lines.append("## Contact efficiency — SECONDARY, NOT PRE-REGISTERED")
+    lines.append("")
+    lines.append("> **Read the label before the numbers.** The pre-registered primary is")
+    lines.append("> A2 vs A1 on *recovery rate*, and it came back INCONCLUSIVE. That verdict")
+    lines.append("> stands and nothing here revises it. The test below was added AFTER seeing")
+    lines.append("> the batch, so it is exploratory. What predates the batch is the design")
+    lines.append("> goal it tests, stated in this file before the test existed: *comparable")
+    lines.append("> recovery for materially fewer customer contacts*.")
+    lines.append("")
+    lines.append("**Why recovery rate could never have shown this.** A1 has no shared contact")
+    lines.append("ledger, so it cannot tell that a customer was already reached and simply")
+    lines.append("repeats the first touch. Every control this engine adds — contact budget,")
+    lines.append("quiet period, escalation ceiling, outage suppression, abstention — can only")
+    lines.append("ever *remove* a contact. On a metric that rewards contacting more people,")
+    lines.append("more safety can only ever look worse. Beating A1 there would have meant the")
+    lines.append("controls were not binding.")
+    lines.append("")
+    lines.append("**Both halves are required.** Contact rate alone is trivially gamed: CONTROL")
+    lines.append("contacts nobody, scores a perfect reduction, and recovers nothing. So a")
+    lines.append("verdict of `FEWER_CONTACTS_RECOVERY_HELD` needs a significant reduction in")
+    lines.append("contact rate **and** a recovery-rate CI that still includes zero.")
+    lines.append("")
+    lines.append("| Comparison | Contacts | Contact rate Δ | 95% CI | p | Recovery rate Δ | Verdict |")
+    lines.append("|---|---:|---:|---|---:|---:|---|")
+    for c in report.get("contact_efficiency_comparisons", []):
+        ci = c["confidence_interval_95"]
+        rci = c["recovery_confidence_interval_95"]
+        lines.append(
+            f"| {c['comparison_id'].replace('_contacts', '')} | "
+            f"{c['treatment_contacts']:,} vs {c['baseline_contacts']:,} | "
+            f"{c['contact_rate_difference']:+.4f} | [{ci[0]:.4f}, {ci[1]:.4f}] | "
+            f"{c['p_value']:.4g} | {c['recovery_rate_difference']:+.4f} "
+            f"[{rci[0]:.4f}, {rci[1]:.4f}] | **{c['verdict']}** |"
+        )
+    lines.append("")
+    for c in report.get("contact_efficiency_comparisons", []):
+        lines.append(f"- `{c['comparison_id']}` — {c['explanation']}")
+    lines.append("")
+    lines.append("**What this does NOT establish.** It is not a proven non-inferiority: no")
+    lines.append("non-inferiority margin was pre-registered, and choosing one after seeing the")
+    lines.append("batch would be the same offence as choosing the metric after seeing the")
+    lines.append("batch. \"No detectable loss\" means exactly that — the recovery CI includes")
+    lines.append("zero at this sample size, which is not the same as proving the two are equal.")
+    lines.append("Four arms are compared against one baseline and no multiplicity correction is")
+    lines.append("applied across this family, because it is exploratory rather than")
+    lines.append("confirmatory. And every figure remains synthetic.")
     lines.append("")
     lines.append("## Track 3 requirements — where each clause is answered")
     lines.append("")

@@ -4,7 +4,7 @@
 
 > Quote blocks are what you say. *Italics* are stage directions, don't read them.
 > Each section shows its word count so you can check your pace against a clock.
-> The whole script is 581 spoken words, which is five minutes at a slow, clear pace.
+> The whole script is 608 spoken words, which is five minutes at a slow, clear pace.
 
 ```
 0:00 to 0:25   Intro
@@ -39,7 +39,10 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"; .\scripts\start_tunnel.ps1
 
 * `curl.exe -s localhost:8555/health` must show `followup_hour_seconds: 0.05`. If it says
   3600, restart Terminal 1, or escalation takes eight days on stage.
-* Run the Experiment benchmark once now, so results are already on screen
+* Run the Experiment benchmark once now, so results are already on screen. **It takes
+  about 80 seconds** at the default 200 events over seeds 21 to 40, which are the same
+  numbers as `results/RESULTS.md`. Do not shrink it: at 300 samples the contact
+  efficiency result is underpowered and shows as inconclusive.
 * Clear the board
 * Open: GitHub README, dashboard, your inbox. Phone visible.
 * `demo_customers.csv` ready to drag
@@ -91,7 +94,7 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"; .\scripts\start_tunnel.ps1
 
 ***
 
-## 1:10 to 1:35 · Decision trace *(44 words)*
+## 1:10 to 1:35 · Decision trace *(63 words)*
 
 *Decision trace tab.*
 
@@ -104,29 +107,34 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"; .\scripts\start_tunnel.ps1
 
 *Point at the rejected card on the right.*
 
-> "There they are. Agent dial, WhatsApp, IVR, all rejected for escalation ceiling. Every
-> number here comes from the decision that actually ran."
+> "There they are. Agent dial, WhatsApp, IVR, all rejected for escalation ceiling."
+
+*Switch the dropdown to the overdue invoice.*
+
+> "Different stream, and the whole trace changes. No retry is even offered, because there
+> is no failed charge to repeat. Every number here comes from the decision that ran."
 
 ***
 
-## 1:35 to 2:20 · Experiment *(98 words)*
+## 1:35 to 2:20 · Experiment *(106 words)*
 
 *Experiment tab, results already on screen.*
 
-> "Five versions of the engine over the same batch, each isolating one capability.
->
-> Now the honest part. I wrote a prediction down before running this. I said the machine
-> learning model would beat the simple rule based version."
+> "Five versions of the engine over one batch. I wrote a prediction down first. I said the
+> machine learning model would beat the simple rule based version."
 
 *Point at the row.*
 
-> "It didn't. Inconclusive, p value nought point nine six.
+> "It didn't. Inconclusive, p value nought point nine six. And the reason is better than a
+> win. The safety rules narrow the choices so far that scoring barely matters."
+
+*Point at the green panel underneath.*
+
+> "It does win here. Eleven percent fewer messages to customers, and the recovery
+> difference is inconclusive, so nothing measurable was given up.
 >
-> And the reason is better than a win. The safety rules narrow the choices so far that
-> scoring barely matters. The two scorers disagree on four decisions in a thousand.
->
-> The one significant result is the engine against doing nothing. Every comparison is on
-> screen, including the four that went nowhere."
+> That test was not pre-registered and the panel says so. Recovery rate could never have
+> shown it. Every safety rule I have can only take a message away."
 
 ***
 
@@ -227,7 +235,8 @@ and they cost time. **Have one ready, not all five.**
 > "The model looked like it was losing and I nearly tuned it until it won. Instead I found a
 > timestamp bug that killed the escalation ladder in every test run. The model was being
 > graded in a world that didn't exist. I fixed it, ran it again, and the prediction was still
-> wrong."
+> wrong. So I went looking for the metric the engine is actually built for, found it wins
+> there, and put it below the one that failed rather than above it."
 
 **The ledger one.** *(after Safety)*
 
@@ -278,9 +287,11 @@ side works on its own.
 1. **"Doing nothing scores exactly zero, so when nothing is worth sending, it sends nothing."**
 2. **"Green means a message actually arrived. A failed send earns nothing."**
 3. **"I wrote the prediction down first, it turned out wrong, and I'm reporting it."**
+4. **"Eleven percent fewer messages, and no measurable loss of recovery."**
 
 ## Don't say
 
 * Any percentage uplift from the AI. Your own experiment showed there isn't one.
+* That the contact-efficiency result was pre-registered. It was not, and the slide says so.
 * That the 13.6 million figure is real money. It's a simulation.
 * That WhatsApp is working. It's built, and blocked by the provider.

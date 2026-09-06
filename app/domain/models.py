@@ -785,6 +785,69 @@ class StatisticalComparison:
 
 
 @dataclass(frozen=True)
+class ContactEfficiencyComparison:
+    """One arm against a baseline on CONTACT RATE, and whether recovery held up.
+
+    WHY THIS IS A SEPARATE TYPE FROM StatisticalComparison
+        Every field on that type is named `recovery_...`. Reusing it here would put a
+        contact rate in a field called `treatment_recovery_rate`, and a reader of
+        report.json would have no way to know. The two questions are also asymmetric:
+        on contact rate LOWER is better, which is the opposite of every other number in
+        this report and needs saying in the type rather than in a footnote.
+
+    WHY BOTH HALVES ARE REQUIRED
+        Contact rate alone is trivially gamed - CONTROL contacts nobody and scores a
+        perfect zero while recovering nothing. So `verdict` is only ever a win when BOTH
+        hold: significantly fewer contacts AND no detectable loss of recovery. A single
+        significant contact-rate reduction on its own is reported as
+        FEWER_CONTACTS_RECOVERY_UNCERTAIN, never as a win.
+    """
+
+    comparison_id: str
+    treatment_arm: "ExperimentArm"
+    baseline_arm: "ExperimentArm"
+    treatment_contact_rate: float
+    baseline_contact_rate: float
+    contact_rate_difference: float
+    treatment_contacts: int
+    baseline_contacts: int
+    relative_contact_reduction: float
+    recovery_per_contact_paise_treatment: float
+    recovery_per_contact_paise_baseline: float
+    confidence_interval_95: Tuple[float, float]
+    p_value: float
+    contact_status: "StatisticalStatus"
+    recovery_status: "StatisticalStatus"
+    recovery_rate_difference: float
+    recovery_confidence_interval_95: Tuple[float, float]
+    verdict: str
+    explanation: str
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "comparison_id": self.comparison_id,
+            "treatment_arm": self.treatment_arm.value,
+            "baseline_arm": self.baseline_arm.value,
+            "treatment_contact_rate": self.treatment_contact_rate,
+            "baseline_contact_rate": self.baseline_contact_rate,
+            "contact_rate_difference": self.contact_rate_difference,
+            "treatment_contacts": self.treatment_contacts,
+            "baseline_contacts": self.baseline_contacts,
+            "relative_contact_reduction": self.relative_contact_reduction,
+            "recovery_per_contact_paise_treatment": self.recovery_per_contact_paise_treatment,
+            "recovery_per_contact_paise_baseline": self.recovery_per_contact_paise_baseline,
+            "confidence_interval_95": list(self.confidence_interval_95),
+            "p_value": self.p_value,
+            "contact_status": self.contact_status.value,
+            "recovery_status": self.recovery_status.value,
+            "recovery_rate_difference": self.recovery_rate_difference,
+            "recovery_confidence_interval_95": list(self.recovery_confidence_interval_95),
+            "verdict": self.verdict,
+            "explanation": self.explanation,
+        }
+
+
+@dataclass(frozen=True)
 class ExperimentResultSummary:
     """Full machine-readable and human-readable result of an executed experiment."""
 
@@ -800,6 +863,9 @@ class ExperimentResultSummary:
     primary_comparison: StatisticalComparison
     secondary_comparisons: List[StatisticalComparison]
     provenance: DataProvenance
+    contact_efficiency_comparisons: List[ContactEfficiencyComparison] = field(
+        default_factory=list
+    )
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -815,6 +881,9 @@ class ExperimentResultSummary:
             "primary_comparison": self.primary_comparison.to_dict(),
             "secondary_comparisons": [c.to_dict() for c in self.secondary_comparisons],
             "provenance": self.provenance.value,
+            "contact_efficiency_comparisons": [
+                c.to_dict() for c in self.contact_efficiency_comparisons
+            ],
         }
 
 

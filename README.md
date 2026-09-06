@@ -53,7 +53,7 @@ Then, in the dashboard:
 | **Safety** | Invariants **executed live**, reporting real pass/fail — not a checklist |
 
 ```bash
-make test      # 481 tests
+make test      # 551 tests
 make eval      # regenerates results/report.json + results/RESULTS.md
 ```
 
@@ -221,12 +221,38 @@ From a 4,000-case batch (200 events × 20 seeds), regenerate with `make eval`:
 | Comparison | Effect | 95% CI | p | Verdict |
 |---|---:|---|---:|---|
 | Engine vs doing nothing (A5 − CONTROL) | **+0.5423** | [0.5268, 0.5577] | 0.0000 | **SIGNIFICANT** |
-| Primary (A2 − A1) | −0.0148 | [−0.0365, 0.0070] | 0.1846 | INCONCLUSIVE |
+| Primary (A2 − A1), recovery rate | −0.0148 | [−0.0365, 0.0070] | 0.1846 | INCONCLUSIVE |
 | Model vs heuristic (A5 − A3) | +0.0005 | [−0.0213, 0.0223] | 0.9642 | INCONCLUSIVE |
 
 **The ML model does not beat the transparent heuristic.** We pre-registered an experiment
 predicting it would, once outcomes depended on context. **That prediction was falsified**,
 and we report it rather than tuning it away.
+
+### Where it does win, labelled for what it is
+
+| Comparison | Contacts | Effect | 95% CI | p | Verdict |
+|---|---:|---:|---|---:|---|
+| A2 − A1, **contact rate** | 1,336 vs 1,500 | **−0.0410** | [−0.0619, −0.0201] | 0.000125 | **SIGNIFICANT** |
+
+**10.9% fewer messages to customers, with no detectable loss of recovery.** The recovery
+difference above is inconclusive, meaning its interval still contains zero; the contact
+reduction is not.
+
+**This comparison was not pre-registered, and that matters.** The registered primary is
+recovery rate and it stays inconclusive; nothing here revises it. What predates the batch
+is the design goal being tested, written down as *comparable recovery for materially fewer
+customer contacts*. It is reported second, below the result that did not come out, because
+a post-hoc metric shown first is a press release.
+
+Recovery rate could never have shown this. A1 has no shared contact ledger, so it repeats
+the first touch to everybody, while every control here can only ever **remove** a contact.
+On a metric that rewards contacting more people, more safety can only look worse; beating
+A1 there would have meant the controls were not binding.
+
+Both halves are required before the engine claims a win, because contact rate on its own is
+trivially gamed: CONTROL contacts nobody, scores a perfect reduction, and recovers nothing.
+And "no detectable loss" is not proven equivalence, since no non-inferiority margin was
+registered.
 
 The finding is more interesting than a win would have been: **compliant escalation bounds
 the action space so tightly that scorer quality is nearly irrelevant.** The two scorers
@@ -376,7 +402,7 @@ scripts/
 └── start_tunnel.ps1       public tunnel for Razorpay callbacks
 ```
 
-**74 modules · 13,273 lines · 481 tests · 24 architecture decision records**
+**76 modules · 15,070 lines · 551 tests · 25 architecture decision records**
 
 ### Decision records
 

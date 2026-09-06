@@ -1,7 +1,7 @@
 """Golden Demo Scenarios & Data Generator for Unified Recovery Engine (M8 Judge Audit).
 
-Provides 12 pre-configured, deterministic golden scenarios exercising all major branches of
-the architecture (Stage 0, Stage 1, Hard Safety Filters, AI Decisions, Contact Ledger,
+Provides 15 pre-configured, deterministic golden scenarios exercising all major branches of
+the architecture and all three revenue streams named by Track 3 (Stage 0, Stage 1, Hard Safety Filters, AI Decisions, Contact Ledger,
 Sandbox Execution, Reconciliation, Attribution, and Multi-Tenant Isolation).
 """
 
@@ -27,7 +27,7 @@ class DemoScenarioSpec:
     random_seed: int = 42
 
 
-# Pre-defined catalog of 12 Judge Golden Scenarios
+# Pre-defined catalog of Judge Golden Scenarios
 GOLDEN_DEMO_SCENARIOS: Dict[str, DemoScenarioSpec] = {
     "SCENARIO_01_SUCCESSFUL_RETRY": DemoScenarioSpec(
         scenario_id="SCENARIO_01_SUCCESSFUL_RETRY",
@@ -47,8 +47,8 @@ GOLDEN_DEMO_SCENARIOS: Dict[str, DemoScenarioSpec] = {
 
     "SCENARIO_02_REMINDER_RECOVERY": DemoScenarioSpec(
         scenario_id="SCENARIO_02_REMINDER_RECOVERY",
-        title="2. WhatsApp Customer Outreach Recovery",
-        description="Payment failure due to insufficient funds. Retry is ineligible, AI recommends WhatsApp link. Customer pays via link; attributed recovery recorded.",
+        title="2. Insufficient Funds (diagnosed from the gateway code)",
+        description="Payment failure with an explicit INSUFFICIENT_FUNDS code, so the diagnosis is evidence rather than a stream default. The mandate is still live, so a retry is offered and wins; the louder channels are suppressed by the escalation ceiling before any scoring happens.",
         raw_event={
             "merchant_id": "merchant_alpha",
             "customer_id": "cust_102",
@@ -207,6 +207,64 @@ GOLDEN_DEMO_SCENARIOS: Dict[str, DemoScenarioSpec] = {
         },
         force_sandbox_outcome=PaymentOutcome.NO_PAYMENT,
         force_mode=DecisionMode.SAFE_ABSTENTION,
+    ),
+
+    # --- the other two revenue streams Track 3 names ------------------------------------
+    #
+    # Scenarios 1 to 12 are all FAILED_PAYMENT. That was invisible until someone worked
+    # the scenario selector and noticed the trace barely moved: eight of the twelve
+    # produce the SAME decision (RECOMMEND_RETRY, four eligible, three suppressed),
+    # because the stream decides the candidate set and the stream never varied.
+    #
+    # These three exercise the branches the first twelve could not reach. A merchant
+    # uploaded debt and an abandoned basket have no stored instrument, so a retry is
+    # never generated for them and the engine has to reach a person instead. They also
+    # enter the ladder at a different rung, which changes what the ceiling suppresses.
+    "SCENARIO_13_ABANDONED_CHECKOUT": DemoScenarioSpec(
+        scenario_id="SCENARIO_13_ABANDONED_CHECKOUT",
+        title="13. Abandoned Checkout (no instrument to retry)",
+        description="A basket left at the payment page. There is no failed charge to retry, so candidate generation never offers one and the engine must reach the customer instead. Diagnosed CUSTOMER_ABANDONMENT from the stream, not from an error code.",
+        raw_event={
+            "merchant_id": "merchant_alpha",
+            "customer_id": "cust_113",
+            "event_id": "evt_s13",
+            "event_type": "ABANDONED_CHECKOUT",
+            "amount_paise": 740000,  # Rs 7,400
+            "gateway": "RAZORPAY",
+        },
+        force_sandbox_outcome=PaymentOutcome.PAYMENT_SUCCESS,
+        force_mode=DecisionMode.EXPLOIT,
+    ),
+    "SCENARIO_14_OVERDUE_B2B_INVOICE": DemoScenarioSpec(
+        scenario_id="SCENARIO_14_OVERDUE_B2B_INVOICE",
+        title="14. Overdue B2B Invoice (largest exposure, quietest channel)",
+        description="A merchant uploaded receivable of Rs 1,85,000. The largest amount in the catalogue still opens on the quietest channel, because the escalation ceiling is set by contact history rather than by how much money is at stake.",
+        raw_event={
+            "merchant_id": "merchant_alpha",
+            "customer_id": "cust_114",
+            "event_id": "evt_s14",
+            "event_type": "OVERDUE_B2B_INVOICE",
+            "amount_paise": 18500000,  # Rs 1,85,000
+            "gateway": "RAZORPAY",
+        },
+        force_sandbox_outcome=PaymentOutcome.NO_PAYMENT,
+        force_mode=DecisionMode.EXPLOIT,
+    ),
+    "SCENARIO_15_SUBSCRIPTION_RENEWAL": DemoScenarioSpec(
+        scenario_id="SCENARIO_15_SUBSCRIPTION_RENEWAL",
+        title="15. Failed Subscription Renewal (mandate still live)",
+        description="An autopay debit that did not clear. The mandate is still valid, so a retry IS a candidate here, and it wins on expected value against a Rs 999 charge where any paid channel would not.",
+        raw_event={
+            "merchant_id": "merchant_alpha",
+            "customer_id": "cust_115",
+            "event_id": "evt_s15",
+            "event_type": "FAILED_SUBSCRIPTION_RENEWAL",
+            "amount_paise": 99900,  # Rs 999
+            "gateway": "HDFC",
+            "error_code": "AUTOPAY_DEBIT_FAILED",
+        },
+        force_sandbox_outcome=PaymentOutcome.PAYMENT_SUCCESS,
+        force_mode=DecisionMode.EXPLOIT,
     ),
 }
 
