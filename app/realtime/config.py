@@ -154,6 +154,23 @@ DEMO_FIXED_LADDER = os.environ.get(
 ).strip().lower() in {"1", "true", "yes", "on"}
 
 
+# Rungs the scripted demo ladder walks past, by name, comma separated.
+#
+# WhatsApp is the reason this exists. It cannot send on a Twilio trial - the API demands a
+# pre-approved template and the Content API that creates one returns 20003, not available
+# on a trial account - so the rung can only ever fail. Showing that failure is a legitimate
+# choice and it is what happens by default. Skipping it is also legitimate when the point
+# of the run is the sequence rather than the error handling.
+#
+# What is NOT legitimate is showing it as successful, so there is no setting for that. A
+# rung turns green when a message was confirmed sent, and nothing here can change that.
+DEMO_SKIP_RUNGS = {
+    r.strip().upper()
+    for r in os.environ.get("RECOVERY_DEMO_SKIP_RUNGS", "").split(",")
+    if r.strip()
+}
+
+
 ALLOW_SIMULATED_LINKS = os.environ.get(
     "RECOVERY_ALLOW_SIMULATED_LINKS", "false"
 ).strip().lower() in {"1", "true", "yes", "on"}

@@ -492,9 +492,20 @@ class RecoveryAgent:
             bool(customer and customer.phone) if customer else None,
         ))
 
+        from app.realtime import config as _rt_cfg
+        skip = getattr(_rt_cfg, "DEMO_SKIP_RUNGS", set())
+
         for rung in range(highest + 1, len(ESCALATION_LADDER)):
-            if rung in reachable:
-                return ESCALATION_LADDER[rung]
+            if rung not in reachable:
+                continue
+            candidate = ESCALATION_LADDER[rung]
+            if candidate.value in skip:
+                # Walked past on purpose, and only in the scripted demo. The rung is not
+                # marked sent, not recorded, and not counted - it simply is not offered.
+                logger.info("demo ladder skipping %s (RECOVERY_DEMO_SKIP_RUNGS)",
+                            candidate.value)
+                continue
+            return candidate
         return None
 
     @staticmethod

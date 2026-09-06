@@ -40,6 +40,7 @@ SAFE_GATES = {
     # is really the machine leaking into the run.
     "RECOVERY_DEMO_FIXED_LADDER": "false",
     "RECOVERY_ALLOW_SIMULATED_LINKS": "false",
+    "RECOVERY_DEMO_SKIP_RUNGS": "",
 }
 
 # Credentials: blanked. With the gates closed nothing should reach an adapter anyway, but

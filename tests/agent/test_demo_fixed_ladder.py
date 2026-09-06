@@ -228,3 +228,40 @@ def test_the_ledger_names_the_rung_that_actually_went(agent_and_case):
     assert "EMAIL_LINK" not in rungs or {"SMS_LINK", "IVR_CALL"} & rungs, (
         "every confirmed contact was recorded as EMAIL_LINK regardless of what was sent"
     )
+
+
+# --- walking past a rung on purpose -------------------------------------------------
+
+
+def test_a_named_rung_is_walked_past(tmp_path, monkeypatch):
+    """WhatsApp cannot send on a Twilio trial, so the rung can only ever fail. Showing
+    that failure is legitimate and is the default. Skipping it is legitimate too, when the
+    point of the run is the sequence rather than the error handling."""
+    monkeypatch.setenv("RECOVERY_DEMO_SKIP_RUNGS", "WHATSAPP_LINK")
+    import importlib
+    from app.realtime import config as cfg
+    importlib.reload(cfg)
+
+    assert "WHATSAPP_LINK" in cfg.DEMO_SKIP_RUNGS
+
+
+def test_the_skip_list_is_empty_unless_asked_for(monkeypatch):
+    import importlib
+    from app.realtime import config as cfg
+    monkeypatch.delenv("RECOVERY_DEMO_SKIP_RUNGS", raising=False)
+    importlib.reload(cfg)
+
+    assert cfg.DEMO_SKIP_RUNGS == set()
+
+
+def test_there_is_no_setting_that_marks_a_rung_successful():
+    """The line that does not move. A rung turns green when a message was CONFIRMED sent.
+    Skipping a rung is a choice about what to show; claiming a failed send succeeded would
+    be a claim about what happened, and nothing in this project may make it."""
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[2]
+    config = (root / "app" / "realtime" / "config.py").read_text(encoding="utf-8")
+
+    for banned in ("DEMO_FORCE_SUCCESS", "DEMO_FAKE_SENT", "DEMO_MARK_DELIVERED"):
+        assert banned not in config
