@@ -104,7 +104,10 @@ faster, so take the full ninety seconds here.*
 
 *Decision trace tab.*
 
-> "One. That whole diagram, on one real case.
+> "This tab answers one question. Why did the engine do that. It is here because a recovery
+> system that cannot show its reasoning is just a mailer with extra steps.
+>
+> One. That whole diagram, on one real case.
 >
 > Two. Amber means something was removed there.
 >
@@ -124,7 +127,10 @@ faster, so take the full ninety seconds here.*
 
 *Experiment tab, results already on screen.*
 
-> "One. Five versions of the engine, one identical batch.
+> "This tab is where I try to disprove my own engine. Each version is missing one
+> capability, so every feature has to earn its place or be dropped.
+>
+> One. Five versions of the engine, one identical batch.
 >
 > Two. I predicted the model would beat the simple rule.
 >
@@ -141,7 +147,10 @@ faster, so take the full ninety seconds here.*
 
 *Safety tab.*
 
-> "One. These ran when the page loaded.
+> "This tab runs the safety rules in front of you instead of listing them. It is here
+> because every one of these could be claimed on a slide, and a claim is not a check.
+>
+> One. These ran when the page loaded.
 >
 > Two. Each prints its own evidence. A check, not a checklist.
 >
@@ -156,6 +165,10 @@ faster, so take the full ninety seconds here.*
 ## 2:55 · Live test · the demo
 
 *Live test tab. Everything before this was setup.*
+
+> "This tab is the engine actually running. A merchant drops in their unpaid customers, and
+> it decides case by case and really sends. Everything so far was me explaining it. This is
+> it working."
 
 *Drag in `demo_customers.csv`.*
 
