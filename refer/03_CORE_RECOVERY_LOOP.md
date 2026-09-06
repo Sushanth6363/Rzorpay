@@ -1,6 +1,6 @@
 # 03 — CORE RECOVERY LOOP
 
-The exact runtime sequence. **Implemented and verified 2026-09-05 at `e803e36`** (255 tests).
+The exact runtime sequence. **Implemented and verified 2026-09-05 at `e803e36`** (481 tests).
 Until 2026-09-05 this line read *"Every stage is `PLANNED`; no code exists yet"*, written before
 the build and never updated. `Code:` paths below are the **delivered** ones; stage 9 was never
 built as designed and says so.

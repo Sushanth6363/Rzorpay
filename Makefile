@@ -48,7 +48,16 @@ eval:
 eval-quick:
 	$(VENV_PY) scripts/run_evaluation.py --events 60 --seeds 21-25
 
+# The combined server, not bare Streamlit. `streamlit run` starts the dashboard and
+# nothing else - no webhook endpoint, and no background follow-up worker, which lives in
+# the listener's lifespan. A judge running the old target saw an engine that never
+# escalated and never closed a case on payment, because neither of those halves was
+# running. One command now starts all three on one port.
 demo:
+	PORT=8555 $(VENV_PY) -m app.server
+
+# Dashboard only, for a machine with no Razorpay or SMTP configuration at all.
+demo-ui:
 	$(VENV_PY) -m streamlit run streamlit_app.py --server.port 8555
 
 clean:

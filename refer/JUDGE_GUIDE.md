@@ -1,6 +1,6 @@
 # JUDGE GUIDE — Unified Recovery Engine
 
-**Verified at**: commit `e803e36`, clean tree, 2026-09-05 · **255 tests passing**
+**Verified at**: commit `e803e36`, clean tree, 2026-09-05 · **481 tests passing**
 **Project**: Razorpay AI Buildathon 2026 · Track 3 — AI Revenue Recovery
 
 > Restamped 2026-09-05. The version dated 2026-09-01 described the pre-`600f6ad` dashboard —
@@ -42,7 +42,7 @@ intervention and executing a bounded, compliant recovery workflow.
 ```bash
 python run_demo.py
 ```
-Runs the quality gate **first** — 255 tests plus a secret scan — and refuses to launch if it
+Runs the quality gate **first** — 481 tests plus a secret scan — and refuses to launch if it
 fails, then serves the dashboard on `http://localhost:8555`.
 
 ### Option B: `make`
@@ -58,7 +58,7 @@ On macOS / Linux use `.venv/bin/python`. First time on any platform, run
 `python scripts/bootstrap.py` — it builds a `.venv` on a supported interpreter (**3.11–3.13; not
 3.14**, which has no wheels for the pinned scientific stack).
 
-### Option D: Full regression suite (255 tests)
+### Option D: Full regression suite (481 tests)
 ```bash
 .venv/Scripts/python.exe -m pytest
 ```

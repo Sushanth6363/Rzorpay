@@ -6,7 +6,7 @@
 
 **Razorpay AI Buildathon 2026 · Track 3 — AI Revenue Recovery**
 
-![Tests](https://img.shields.io/badge/tests-413%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-481%20passing-brightgreen)
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)
 ![ADRs](https://img.shields.io/badge/architecture%20decisions-24-informational)
 ![Live](https://img.shields.io/badge/Razorpay-Test%20Mode%20verified-success)
@@ -53,7 +53,7 @@ Then, in the dashboard:
 | **Safety** | Invariants **executed live**, reporting real pass/fail — not a checklist |
 
 ```bash
-make test      # 413 tests
+make test      # 481 tests
 make eval      # regenerates results/report.json + results/RESULTS.md
 ```
 
@@ -376,7 +376,7 @@ scripts/
 └── start_tunnel.ps1       public tunnel for Razorpay callbacks
 ```
 
-**74 modules · 13,273 lines · 413 tests · 24 architecture decision records**
+**74 modules · 13,273 lines · 481 tests · 24 architecture decision records**
 
 ### Decision records
 

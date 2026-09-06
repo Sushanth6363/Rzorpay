@@ -259,3 +259,26 @@ def test_the_row_carries_the_due_date_from_the_merchants_own_file(repo):
     row = _row(build_board(repo, "m1"), "Rahul")
 
     assert row.due_date == "2026-08-24"
+
+
+def test_a_contacted_case_never_says_it_is_awaiting_first_evaluation(repo):
+    """One row must not contradict itself.
+
+    A live IVR dispatch produced a row reading "Awaiting first evaluation" beside
+    "2 confirmed contacts, SMS, VOICE". The stage was chosen by looking only for an
+    AGENT_DECIDED event, and a contact can exist without one when something dispatched
+    outside the agent loop. Whatever the board says about a case, it must agree with the
+    contacts it reports on the same line.
+    """
+    from app.cases.models import CaseEvent, CaseEventKind
+
+    case = repo.list_cases("m1")[0]
+    repo.add_event(CaseEvent(case_id=case.case_id, kind=CaseEventKind.MESSAGE_SENT,
+                             summary="IVR_CALL sent via TWILIO_VOICE",
+                             detail={"channel": "TWILIO_VOICE"}))
+
+    row = next(r for r in build_board(repo, "m1") if r.case_id == case.case_id)
+
+    assert row.contacts_made == 1
+    assert "Awaiting first evaluation" not in row.stage
+    assert row.flag != "WAITING"

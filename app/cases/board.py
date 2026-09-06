@@ -150,7 +150,12 @@ def build_board(
         elif case.status == CaseStatus.CLOSED:
             stage, flag = f"Closed - {case.close_reason or 'no reason given'}", "STALLED"
             note = "closed without payment"
-        elif not decided:
+        elif not decided and not sent:
+            # `and not sent` matters: a contact can exist without an AGENT_DECIDED event
+            # when something dispatched outside the agent loop. Checking only `decided`
+            # printed "Awaiting first evaluation" on a row that also said "2 confirmed
+            # contacts, SMS, VOICE" - one row contradicting itself, which is the same
+            # defect class as a ledger disagreeing with a dispatch log.
             stage, flag = "Awaiting first evaluation", "WAITING"
             note = "not yet processed"
         elif not sent and last_action == "NO_ACTION":
