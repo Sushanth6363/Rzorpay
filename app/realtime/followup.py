@@ -209,7 +209,8 @@ def _stop(opportunity_id: str, reason: str) -> None:
     conn.commit()
 
 
-def mark_handled(opportunity_id: str, reason: str = "handled") -> None:
+def mark_handled(opportunity_id: str, reason: str = "handled",
+                 only_if_due_at: Optional[str] = None) -> None:
     """Retire a row the worker has just run.
 
     WHY THIS HAS TO EXIST
@@ -231,11 +232,27 @@ def mark_handled(opportunity_id: str, reason: str = "handled") -> None:
     """
     ensure_schema()
     conn = ingest.get_conn()
-    conn.execute(
-        """UPDATE followup_queue SET status='HANDLED', stop_reason=?, updated_at=?
-           WHERE opportunity_id=? AND status='SCHEDULED';""",
-        (reason[:200], _now().isoformat(), opportunity_id),
-    )
+    if only_if_due_at:
+        # ONLY RETIRE THE ROW WE ACTUALLY RAN.
+        #
+        # The handler reschedules the NEXT touch by upserting the same opportunity id with
+        # a new due time. Retiring unconditionally afterwards overwrote that fresh
+        # SCHEDULED row with HANDLED, so the chain died after exactly one follow-up: the
+        # ladder reached SMS and then nothing further ever fired.
+        #
+        # Matching on the due time we were handed distinguishes the two: unchanged means
+        # this is still the row we ran, changed means the handler has already moved it on.
+        conn.execute(
+            """UPDATE followup_queue SET status='HANDLED', stop_reason=?, updated_at=?
+               WHERE opportunity_id=? AND status='SCHEDULED' AND next_touch_at=?;""",
+            (reason[:200], _now().isoformat(), opportunity_id, only_if_due_at),
+        )
+    else:
+        conn.execute(
+            """UPDATE followup_queue SET status='HANDLED', stop_reason=?, updated_at=?
+               WHERE opportunity_id=? AND status='SCHEDULED';""",
+            (reason[:200], _now().isoformat(), opportunity_id),
+        )
     conn.commit()
 
 
@@ -274,7 +291,7 @@ def due_followups(limit: int = 50) -> List[Dict[str, Any]]:
     rows = conn.execute(
         """
         SELECT opportunity_id, merchant_id, customer_id, origin_event_id, event_json,
-               diagnosis_code, last_action, attempt, first_seen_at
+               diagnosis_code, last_action, attempt, first_seen_at, next_touch_at
         FROM followup_queue
         WHERE status='SCHEDULED' AND next_touch_at <= ?
         ORDER BY next_touch_at LIMIT ?;
@@ -291,6 +308,7 @@ def due_followups(limit: int = 50) -> List[Dict[str, Any]]:
             "opportunity_id": r[0], "merchant_id": r[1], "customer_id": r[2],
             "origin_event_id": r[3], "event": json.loads(r[4]),
             "diagnosis_code": r[5], "last_action": r[6], "attempt": r[7],
+            "next_touch_at": r[9],
         })
     return due
 

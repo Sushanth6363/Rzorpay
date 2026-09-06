@@ -135,3 +135,52 @@ def test_it_does_not_disturb_a_row_that_is_not_due(queue):
     status = sqlite3.connect(path).execute(
         "SELECT status FROM followup_queue WHERE opportunity_id='future';").fetchone()[0]
     assert status == "SCHEDULED"
+
+
+def test_a_rescheduled_row_is_not_retired_out_from_under_the_chain(queue):
+    """The other half of the loop fix, and it killed the chain in exactly one follow-up.
+
+    The handler reschedules the NEXT touch by upserting the SAME opportunity id with a new
+    due time. Retiring unconditionally afterwards overwrote that fresh SCHEDULED row with
+    HANDLED, so the ladder reached SMS and then nothing ever fired again.
+
+    Matching on the due time we were handed distinguishes the two cases: unchanged means
+    this is still the row we ran, changed means the handler has already moved it on.
+    """
+    f, path = queue
+    _schedule_due(f, path, "opp_chain")
+    due = f.due_followups()[0]
+
+    # the handler reschedules under the same id, exactly as run_cycle does
+    c = sqlite3.connect(path)
+    c.execute("UPDATE followup_queue SET next_touch_at='2099-01-01T00:00:00+00:00' "
+              "WHERE opportunity_id='opp_chain';")
+    c.commit()
+    c.close()
+
+    f.mark_handled("opp_chain", "handled", only_if_due_at=due["next_touch_at"])
+
+    status = sqlite3.connect(path).execute(
+        "SELECT status FROM followup_queue WHERE opportunity_id='opp_chain';").fetchone()[0]
+    assert status == "SCHEDULED", "retiring the row killed the follow-up chain"
+
+
+def test_an_unchanged_row_is_still_retired(queue):
+    """The guard must not stop it doing its job when nothing rescheduled."""
+    f, path = queue
+    _schedule_due(f, path, "opp_plain")
+    due = f.due_followups()[0]
+
+    f.mark_handled("opp_plain", "handled", only_if_due_at=due["next_touch_at"])
+
+    assert f.due_followups() == []
+
+
+def test_due_followups_reports_the_due_time_it_selected_on(queue):
+    """The worker cannot make the comparison without it."""
+    f, path = queue
+    _schedule_due(f, path, "opp_time")
+
+    due = f.due_followups()[0]
+
+    assert due["next_touch_at"] == "2020-01-01T00:00:00+00:00"

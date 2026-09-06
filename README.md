@@ -53,7 +53,7 @@ Then, in the dashboard:
 | **Safety** | Invariants **executed live**, reporting real pass/fail — not a checklist |
 
 ```bash
-make test      # 619 tests
+make test      # 622 tests
 make eval      # regenerates results/report.json + results/RESULTS.md
 ```
 
@@ -402,7 +402,7 @@ scripts/
 └── start_tunnel.ps1       public tunnel for Razorpay callbacks
 ```
 
-**76 modules · 15,070 lines · 619 tests · 25 architecture decision records**
+**76 modules · 15,070 lines · 622 tests · 25 architecture decision records**
 
 ### Decision records
 

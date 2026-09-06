@@ -288,7 +288,8 @@ class BackgroundWorker:
                             # row every two seconds is not resilience, it is the loop that
                             # caused the outage - and a genuine retry already exists in
                             # the next scheduled follow-up.
-                            _followup.mark_handled(opp, reason)
+                            _followup.mark_handled(opp, reason,
+                                                   only_if_due_at=due.get("next_touch_at"))
             except Exception:
                 logger.exception("background worker iteration failed")
             self._stop.wait(self.interval)
