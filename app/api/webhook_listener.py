@@ -245,7 +245,8 @@ def _run_followup(item: Dict[str, Any]) -> None:
     # with no case still go to `_process`, which is what it was written for.
     case_id = _case_id_for_followup(origin)
     if case_id:
-        _run_case_followup(case_id, razorpay_event_id=f"followup:{event['event_id']}")
+        _run_case_followup(case_id, razorpay_event_id=f"followup:{event['event_id']}",
+                           attempt=attempt)
         return
 
     _process(event, f"followup:{event['event_id']}", "followup", attempt=attempt)
@@ -268,14 +269,15 @@ def _case_id_for_followup(origin_event_id: str) -> str:
         return ""
 
 
-def _run_case_followup(case_id: str, razorpay_event_id: str) -> None:
+def _run_case_followup(case_id: str, razorpay_event_id: str, attempt: int = 0) -> None:
     """Re-run the full agent cycle for a case, so the follow-up really sends."""
     from app.agent.loop import RecoveryAgent
     from app.cases.repository import CaseRepository
 
     conn = ingest.get_conn()
     try:
-        result = RecoveryAgent(conn, repository=CaseRepository(conn)).run_cycle(case_id)
+        result = RecoveryAgent(conn, repository=CaseRepository(conn)).run_cycle(
+            case_id, attempt=attempt)
     except Exception as exc:  # noqa: BLE001
         logger.exception("follow-up cycle failed for %s", case_id)
         ingest.record(razorpay_event_id=razorpay_event_id, razorpay_event="followup",

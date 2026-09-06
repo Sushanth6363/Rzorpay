@@ -188,15 +188,27 @@ class RecoveryAgent:
 
     # -- one cycle -------------------------------------------------------------------
 
-    def run_cycle(self, case_id: str, random_seed: Optional[int] = None) -> CycleResult:
+    def run_cycle(self, case_id: str, random_seed: Optional[int] = None,
+                  attempt: int = 0) -> CycleResult:
         """Observe, let the engine decide, act on what it decided, record the result.
 
-        `random_seed` defaults to None, which is correct for live traffic: epsilon
-        exploration is a real feature (ADR-0004) and live decisions are not a replay. It
-        also means the agent is deliberately NON-DETERMINISTIC - on a small fraction of
-        cases it will explore and abstain. Tests pass a seed so a probabilistic branch does
-        not turn into an intermittent failure that gets "fixed" by rerunning.
+        `attempt` distinguishes a follow-up from the first touch. It is 0 for the opening
+        contact and 1, 2, 3 for each scheduled reconsideration.
+
+        WHY IT HAS TO REACH THE IDEMPOTENCY KEY
+            The payment link is REUSED for the same case and amount, deliberately, so a
+            customer never receives two links for one debt. The dispatch key is built from
+            case, action and link id - so a follow-up that re-runs the same case produced
+            a key identical to the first touch, came back DUPLICATE, and silently sent
+            nothing. The ladder then had no new confirmed contact to climb from.
+
+            The original design avoided this by giving a follow-up its own opportunity id
+            (`<origin>#f1`). Routing follow-ups through the agent, so that they actually
+            dispatch, lost that distinction. Carrying the attempt into the key restores
+            it: the same case may be contacted again, on a different rung, without a
+            second payment link.
         """
+
         case = self.repo.get_case(case_id)
         if case is None:
             return CycleResult(case_id=case_id, skipped_reason="unknown case")
@@ -280,7 +292,10 @@ class RecoveryAgent:
         dispatch = self.dispatcher.dispatch(
             case_id=case_id,
             action=action,
-            idempotency_key=f"{case_id}:{action.value}:{link.payment_link_id}",
+            idempotency_key=(
+                f"{case_id}:{action.value}:{link.payment_link_id}"
+                + (f":f{attempt}" if attempt else "")
+            ),
             subject=message.subject,
             body=message.body,
             html_body=message.html,
