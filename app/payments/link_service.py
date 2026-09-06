@@ -134,10 +134,25 @@ class PaymentLinkService:
 
         # A simulated link would make the whole loop untestable: it produces no webhook, so
         # the case could never close. Refuse it rather than let a demo silently dead-end.
+        #
+        # RECOVERY_ALLOW_SIMULATED_LINKS is the deliberate exception. When the provider is
+        # unreachable or rate limited, every other half of the engine still works, and
+        # being unable to show any of it is worse than showing it with a link nobody can
+        # pay. The operator opts in explicitly, and the refusal below names the flag so
+        # the choice is discoverable rather than folklore.
         if result.get("is_simulated"):
-            return None, (
-                "FAILED: the client returned a simulated link. A simulated link fires no "
-                "webhook, so the case could never close. Check the Razorpay API response."
+            from app.realtime import config as _rt_config
+
+            if not getattr(_rt_config, "ALLOW_SIMULATED_LINKS", False):
+                return None, (
+                    "FAILED: the client returned a simulated link. A simulated link fires "
+                    "no webhook, so the case could never close. Check the Razorpay API "
+                    "response, or set RECOVERY_ALLOW_SIMULATED_LINKS=true to accept a link "
+                    "that cannot be paid."
+                )
+            logger.warning(
+                "accepting a SIMULATED payment link for %s: it fires no webhook, so this "
+                "case cannot close on payment", case.case_id,
             )
 
         link = PaymentLink(

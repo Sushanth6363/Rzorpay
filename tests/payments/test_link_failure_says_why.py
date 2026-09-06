@@ -154,3 +154,68 @@ def test_the_write_timeout_is_no_longer_five_seconds():
     create = source[source.index("def create_payment_link"):]
 
     assert "timeout=5," not in create
+
+
+# --- the simulated-link fallback ---------------------------------------------------------
+
+
+def test_a_simulated_link_is_refused_by_default(case_and_conn):
+    """The guard that matters: a simulated link fires no webhook, so the case can never
+    close, and a demo dead-ending silently at its most important moment is worse than one
+    that fails loudly."""
+    message = _attempt(case_and_conn, {
+        "id": "plink_mock", "short_url": "https://rzp.io/i/mock", "is_simulated": True,
+    })
+
+    assert "simulated link" in message
+
+
+def test_the_refusal_names_the_flag_that_overrides_it(case_and_conn):
+    """A workaround nobody can find is not a workaround."""
+    message = _attempt(case_and_conn, {
+        "id": "plink_mock", "short_url": "https://rzp.io/i/mock", "is_simulated": True,
+    })
+
+    assert "RECOVERY_ALLOW_SIMULATED_LINKS" in message
+
+
+def test_it_is_accepted_when_explicitly_opted_in(case_and_conn, monkeypatch):
+    """When the provider is unreachable, every other half of the engine still works and
+    showing none of it is the worse outcome. The operator takes that trade knowingly."""
+    from app.realtime import config as rt_config
+    monkeypatch.setattr(rt_config, "ALLOW_SIMULATED_LINKS", True, raising=False)
+
+    conn, repo, case = case_and_conn
+    service = PaymentLinkService(conn, client=_Client({
+        "id": "plink_mock", "short_url": "https://rzp.io/i/mock", "is_simulated": True,
+    }), repository=repo)
+
+    link, _ = service.get_or_create_link(case)
+
+    assert link is not None and link.payment_link_id == "plink_mock"
+
+
+def test_opting_in_does_not_also_accept_a_response_with_no_link_id(case_and_conn, monkeypatch):
+    """The flag relaxes ONE check. A genuine provider error is still an error."""
+    from app.realtime import config as rt_config
+    monkeypatch.setattr(rt_config, "ALLOW_SIMULATED_LINKS", True, raising=False)
+
+    message = _attempt(case_and_conn, {
+        "error": "Razorpay API HTTP 429",
+        "details": '{"error":{"description":"Too many requests"}}',
+        "is_simulated": True,
+    })
+
+    assert "429" in message
+
+
+def test_the_flag_is_off_unless_it_is_set():
+    """Default-safe. A public deployment must not silently hand out unpayable links."""
+    import importlib
+    import os
+
+    from app.realtime import config as rt_config
+    os.environ.pop("RECOVERY_ALLOW_SIMULATED_LINKS", None)
+    importlib.reload(rt_config)
+
+    assert rt_config.ALLOW_SIMULATED_LINKS is False

@@ -127,6 +127,21 @@ FOLLOWUP_HOUR_SECONDS = float(os.environ.get("RECOVERY_FOLLOWUP_HOUR_SECONDS", "
 # due in ten seconds must not sit in the queue for a minute waiting to be noticed.
 WORKER_INTERVAL_SECONDS = int(os.environ.get("RECOVERY_WORKER_INTERVAL_SECONDS", "60"))
 
+# A DELIBERATE FALLBACK, NOT A CONVENIENCE.
+#
+# `rzp_test_mock` keys make the client return a locally generated link. `link_service`
+# refuses those by default and should: a simulated link fires no webhook, so the case can
+# never close, and a demo that dead-ends silently at its most important moment is worse
+# than one that fails loudly.
+#
+# But when the provider is unreachable or rate limited, every OTHER half of the engine
+# still works - decisions, real email, the escalation ladder, the board, the timeline -
+# and being unable to show any of it is the worse outcome. This lets the operator accept
+# that trade knowingly. It is off by default, and the refusal message says it exists.
+ALLOW_SIMULATED_LINKS = os.environ.get(
+    "RECOVERY_ALLOW_SIMULATED_LINKS", "false"
+).strip().lower() in {"1", "true", "yes", "on"}
+
 
 def is_live_key(key_id: str) -> bool:
     return key_id.startswith("rzp_live")
