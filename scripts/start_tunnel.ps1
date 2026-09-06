@@ -19,7 +19,11 @@
 #>
 [CmdletBinding()]
 param(
-    [int]$Port = 8000,
+    # 8555 is the COMBINED server: dashboard, webhook listener and the follow-up worker
+    # in one process. The old default, 8000, was the standalone listener - pointing the
+    # tunnel there while the demo ran on 8555 sent Razorpay's webhooks to a different
+    # process, with a second follow-up worker competing over the same database.
+    [int]$Port = 8555,
     [string]$EnvFile = ".env",
     [string]$Distro = "Ubuntu",
     [string]$NgrokPath = "/home/astra/bin/ngrok"
