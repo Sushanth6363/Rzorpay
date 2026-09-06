@@ -42,6 +42,7 @@ from app.dispatch.dispatcher import CONTACT_ACTIONS, ChannelDispatcher, Dispatch
 from app.domain.enums import ExperimentArm
 from app.experiment.policies import build_orchestrator_for_arm
 from app.domain.enums import ActionType
+from app.ledger.engine import ContactLedgerEngine
 from app.orchestration.recovery_orchestrator import RecoveryOrchestrator
 from app.payments.link_service import PaymentLinkService
 
@@ -99,6 +100,49 @@ class RecoveryAgent:
 
     # -- observe ---------------------------------------------------------------------
 
+    def _record_real_ledger_outcome(self, outcome, dispatch, merchant_id: str) -> None:
+        """Write the dispatcher's real result into the contact ledger.
+
+        WHY THIS IS NOT COSMETIC
+            `get_customer_ledger_history` drives the escalation ceiling and the contact
+            budget, and the unrecovered handoff report lists EXECUTED rows as "already
+            tried". A row that says EXECUTED for a message nobody received would advance
+            the ladder toward a phone call on the strength of an email that never left, and
+            would tell a collections agent not to bother re-sending it.
+
+        THE MAPPING
+            SENT     -> EXECUTED. A real contact: the ladder may advance, the slot is spent.
+            anything -> RELEASED. Nothing reached the customer, so the contact budget must
+            else        get its slot back. A dry run, a missing credential and a provider
+                        rejection are all the same fact here - no message arrived - and none
+                        of them has earned the right to escalate.
+
+        Failure to write is logged, never raised. A dispatch that succeeded must not be
+        turned into a failed cycle by bookkeeping performed after it.
+        """
+        entry = getattr(outcome, "ledger_entry", None)
+        if entry is None:
+            return
+
+        engine = ContactLedgerEngine(conn=self.conn, merchant_id=merchant_id)
+        detail = {
+            "channel": dispatch.channel,
+            "dispatch_status": dispatch.status,
+            "detail": dispatch.reason,
+            "provider_id": dispatch.provider_id,
+            "source": "ChannelDispatcher",
+        }
+        try:
+            if dispatch.status == "SENT":
+                engine.record_execution_result(
+                    ledger_id=entry.ledger_id, success=True, metadata=detail,
+                )
+            else:
+                engine.release_reservation(ledger_id=entry.ledger_id, metadata=detail)
+        except Exception as exc:  # noqa: BLE001 - bookkeeping must not fail a real send
+            logger.warning("could not record real ledger outcome for %s: %s",
+                           entry.ledger_id, exc)
+
     def build_event(self, case: Case) -> Dict[str, Any]:
         """Translate a Case into the raw event the existing pipeline consumes."""
         now = datetime.now(timezone.utc).isoformat()
@@ -138,8 +182,13 @@ class RecoveryAgent:
             )
 
         # DELEGATE. Every decision is made here, by the unchanged engine.
+        # defer_execution_result: the orchestrator must NOT stamp the sandbox simulator's
+        # outcome into the contact ledger on this path. Nothing has been sent yet, and what
+        # eventually goes out is decided by ChannelDispatcher a few lines below. See
+        # `_record_real_ledger_outcome`.
         outcome = self.orchestrator.process_and_execute(
             raw_event=self.build_event(case), arm="A5", random_seed=random_seed,
+            defer_execution_result=True,
         )
         decision = outcome.decision
         action = decision.selected_action
@@ -210,6 +259,10 @@ class RecoveryAgent:
             payment_url=link.short_url,
         )
         result.dispatch = dispatch.to_dict()
+
+        # The ledger now learns what ACTUALLY happened, from the dispatcher rather than
+        # from a simulator. This is what makes the audit trail true on the live path.
+        self._record_real_ledger_outcome(outcome, dispatch, case.merchant_id)
 
         # SCHEDULE THE NEXT LOOK. Without this a CSV-originated case gets exactly ONE
         # contact and then nothing ever happens again - no second touch, no escalation to

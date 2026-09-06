@@ -83,6 +83,7 @@ class RecoveryOrchestrator:
         reconcile_unknown_as: Optional[LedgerStatus] = None,
         experiment_id: str = "exp_sandbox_m6",
         arm: str = "A5_S_LEARNER",
+        defer_execution_result: bool = False,
     ) -> EndToEndRecoveryResult:
         """Execute full end-to-end recovery loop for a raw payment/recovery event."""
         eval_time = decision_timestamp or self.clock.now_iso()
@@ -280,7 +281,31 @@ class RecoveryOrchestrator:
         )
 
         # 8. Record Execution Result in Ledger
-        if exec_result.execution_status == ExecutionStatus.EXECUTION_UNKNOWN:
+        #
+        # WHOSE OUTCOME IS THIS?
+        #     In the sandbox, the simulator's result IS the observed outcome, and writing it
+        #     here is correct: that is what the experiment measures.
+        #
+        #     In the LIVE path it is not. There, `exec_result` is still a simulation, while
+        #     the real message is sent afterwards by ChannelDispatcher and the real payment
+        #     arrives later still, by webhook. Writing the simulated outcome here produced a
+        #     contact_ledger row stamped EXECUTED with a payment outcome MILLISECONDS after
+        #     creation - before the email had left, and minutes before the customer paid.
+        #     Dry runs, where nothing was sent at all, were recorded as EXECUTED too.
+        #
+        #     That matters beyond tidiness. `get_customer_ledger_history` drives the
+        #     escalation ceiling and the contact budget, and the unrecovered handoff report
+        #     lists EXECUTED rows as "already tried" - so a fabricated outcome would advance
+        #     the ladder for a message nobody received and tell a collections agent an email
+        #     had been sent that never was.
+        #
+        #     `defer_execution_result` leaves the row at its attempted state so the caller
+        #     can record what actually happened. The sandbox path is untouched, because
+        #     changing it would invalidate every number in results/RESULTS.md.
+        if defer_execution_result:
+            pass
+
+        elif exec_result.execution_status == ExecutionStatus.EXECUTION_UNKNOWN:
             ledger_engine.mark_execution_unknown(
                 ledger_id=ledger_entry.ledger_id,
                 metadata={"reason": exec_result.failure_reason},
