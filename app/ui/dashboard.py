@@ -898,6 +898,83 @@ def section_case_board() -> None:
             with card_col:
                 _render_case_detail(repo, row)
 
+    _reset_controls(repo, rows)
+
+
+def _reset_controls(repo, rows) -> None:
+    """Clear the board between demo runs.
+
+    A DEMO CONTROL, LABELLED AS ONE
+        Recovery data is a financial record and production deletes it on a retention
+        schedule, not from a button. This exists so a run can be reset without hand-editing
+        SQLite, and it says so rather than pretending to be a product feature.
+
+    OPEN LINKS ARE CANCELLED FIRST
+        A live payment link whose case has been deleted is a link a customer can still pay,
+        with nothing left to record the payment against. Cancellation happens while the
+        case still exists to be updated, and the result is reported - a link the provider
+        refused to cancel is stated, not swallowed.
+    """
+    unpaid = [r for r in rows if not r.paid]
+    paid = [r for r in rows if r.paid]
+
+    with st.expander("Reset the board (demo control)"):
+        st.markdown(
+            '<div class="note">Deletes cases and their timelines from the local database. '
+            'Open payment links are cancelled at Razorpay first, because a live link with '
+            'no case behind it can still be paid and nothing would record it. This is here '
+            'for repeatable demos; a production system deletes on a retention schedule, '
+            'not from a button.</div>', unsafe_allow_html=True,
+        )
+        confirm = st.checkbox(
+            f"Yes, delete permanently. This cannot be undone.", key="reset_confirm")
+
+        left, right = st.columns(2)
+        clear_unpaid = left.button(
+            f"Clear {len(unpaid)} unpaid", use_container_width=True,
+            disabled=not confirm or not unpaid,
+            help="Keeps every case that was actually paid, as evidence.")
+        clear_all = right.button(
+            f"Delete all {len(rows)}", use_container_width=True, type="primary",
+            disabled=not confirm or not rows,
+            help="Removes everything, including cases closed by a real payment.")
+
+        if clear_unpaid or clear_all:
+            target = rows if clear_all else unpaid
+            _delete_cases(repo, target)
+            st.rerun()
+
+        if paid and not clear_all:
+            st.caption(
+                f"{len(paid)} paid case(s) carry the only evidence of a real recovery. "
+                f"'Clear unpaid' keeps them."
+            )
+
+
+def _delete_cases(repo, rows) -> None:
+    """Cancel any live links, then erase the cases. Reports what actually happened."""
+    from app.payments.link_service import PaymentLinkService
+
+    cancelled, failed = 0, 0
+    try:
+        payments = PaymentLinkService(repo.conn, repository=repo)
+        for row in rows:
+            try:
+                cancelled += payments.cancel_open_links(row.case_id, reason="demo reset")
+            except Exception:  # noqa: BLE001 - one bad link must not block the reset
+                failed += 1
+    except Exception as exc:  # noqa: BLE001 - no provider configured is not fatal here
+        st.info(f"Payment links were not cancelled ({exc}). Deleting cases anyway.")
+
+    removed = repo.delete_cases([r.case_id for r in rows])
+    st.success(
+        f"Deleted {removed.get('cases', 0)} case(s), "
+        f"{removed.get('case_events', 0)} timeline entries, "
+        f"{removed.get('followup_queue', 0)} scheduled follow-up(s). "
+        f"Cancelled {cancelled} payment link(s)."
+        + (f" {failed} link(s) could not be cancelled and may still be live." if failed else "")
+    )
+
 
 def _render_case_detail(repo, row) -> None:
     """Everything known about one case, expanded in place beneath its card."""

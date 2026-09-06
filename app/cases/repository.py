@@ -28,7 +28,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import threading
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
 from app.cases.models import (
     Case,
@@ -391,6 +391,66 @@ class CaseRepository:
              json.dumps(event.detail, default=str)),
         )
         self.conn.commit()
+
+    def delete_cases(self, case_ids: Sequence[str]) -> Dict[str, int]:
+        """Erase these cases and everything that hangs off them. Returns rows removed.
+
+        A DEMO CONTROL, NOT A PRODUCT FEATURE
+            Recovery data is a financial record; production deletes it on a retention
+            schedule, not from a button. This exists so a demo can be reset between runs
+            without hand-editing SQLite, and it is labelled that way in the UI.
+
+        WHAT IT DELIBERATELY DOES NOT DO
+            It does not cancel payment links at the provider. A live link whose case has
+            been deleted is a link a customer can still pay, with nothing left to record
+            the payment against - so the CALLER cancels first, while the case still exists
+            to be updated. Doing it here would hide a network call inside a delete and
+            leave the link live whenever the provider was unreachable.
+        """
+        if not case_ids:
+            return {}
+
+        marks = ",".join("?" for _ in case_ids)
+        ids = list(case_ids)
+        removed: Dict[str, int] = {}
+
+        with _LOCK:
+            # Opportunity ids first: the follow-up queue and the ledger are keyed by them,
+            # and once the case rows are gone there is no way to find them again.
+            opp_ids = [
+                row[0] for row in self.conn.execute(
+                    f"SELECT opportunity_id FROM cases WHERE case_id IN ({marks});", ids
+                ).fetchall() if row[0]
+            ]
+            # A CSV case schedules its follow-up under the case id itself.
+            opp_ids.extend(ids)
+
+            # dispatch_log is created by ChannelDispatcher on first use, so a database
+            # that has never sent anything does not have it. Absent is not an error here.
+            for table, column in (("case_events", "case_id"),
+                                  ("payment_links", "case_id"),
+                                  ("dispatch_log", "case_id"),
+                                  ("cases", "case_id")):
+                try:
+                    cur = self.conn.execute(
+                        f"DELETE FROM {table} WHERE {column} IN ({marks});", ids)
+                    removed[table] = cur.rowcount
+                except sqlite3.OperationalError:
+                    pass  # table absent in this database
+
+            if opp_ids:
+                opp_marks = ",".join("?" for _ in opp_ids)
+                for table in ("followup_queue", "contact_ledger", "opportunities"):
+                    try:
+                        cur = self.conn.execute(
+                            f"DELETE FROM {table} WHERE opportunity_id IN ({opp_marks});",
+                            opp_ids)
+                        removed[table] = cur.rowcount
+                    except sqlite3.OperationalError:
+                        pass  # table absent in this database
+
+            self.conn.commit()
+        return removed
 
     def timeline(self, case_id: str, limit: int = 200) -> List[CaseEvent]:
         self.conn.row_factory = sqlite3.Row
