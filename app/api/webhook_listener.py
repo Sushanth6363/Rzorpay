@@ -97,6 +97,24 @@ def get_orchestrator() -> RecoveryOrchestrator:
             db_conn=ingest.get_conn(),
             downtime_provider_override=LiveRazorpayDowntimeProvider(),
         )
+
+        # THE FOLLOW-UP PATH RUNS HERE, NOT THROUGH RecoveryAgent.
+        #
+        # `_run_followup` re-enters the engine through THIS orchestrator, so the
+        # compressed-clock relaxation applied in RecoveryAgent never reached it. The
+        # result was the escalation ladder appearing not to work at all: the first touch
+        # went out through the agent, every follow-up came back here with the full 24h
+        # quiet period against a clock where five seconds stands for a week, so the
+        # cooldown was permanently active and the ceiling never rose. Observed as two
+        # EMAIL_LINK rows fourteen seconds apart and no SMS.
+        #
+        # Same rule as the agent: relaxed ONLY when the clock is compressed. At real
+        # timing the quiet period binds exactly as in production.
+        if getattr(config, "FOLLOWUP_HOUR_SECONDS", 3600) < 3600:
+            from app.pipeline.escalation import EscalationPolicy
+
+            orch.pipeline.escalation_policy = EscalationPolicy(cooldown_hours=0)
+
         _LOCAL.orchestrator = orch
     return orch
 
