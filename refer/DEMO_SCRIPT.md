@@ -24,12 +24,27 @@ If you only tell one, tell the payment one. It's the best story in the project.
 
 ## Before you start (2 minutes, off camera)
 
-```bash
-PORT=8555 .venv/Scripts/python.exe -m app.server
-./scripts/start_tunnel.ps1
+**Terminal 1 — the engine.** Dashboard, webhook listener and the follow-up worker, all on
+one port:
+
+```powershell
+cd "C:\Users\Dell\Documents\New folder\Razorpay"; $env:PORT="8555"; .venv\Scripts\python.exe -m app.server
 ```
 
-- [ ] `curl -s localhost:8555/health` → `followup_hour_seconds: 0.05`, `worker_interval_seconds: 2`
+**Terminal 2 — the tunnel**, so Razorpay can reach this laptop. Leave it open for the whole
+demo; closing it kills the webhook path:
+
+```powershell
+cd "C:\Users\Dell\Documents\New folder\Razorpay"; .\scripts\start_tunnel.ps1
+```
+
+**Terminal 3 — spare**, for the health check below and anything you need mid-demo:
+
+```powershell
+cd "C:\Users\Dell\Documents\New folder\Razorpay"
+```
+
+- [ ] `curl.exe -s localhost:8555/health` shows `followup_hour_seconds: 0.05` and `worker_interval_seconds: 2`
       — if it says `3600` and `60`, the server started before the demo settings, and your
       escalation will take eight days on stage
 - [ ] Run the Experiment benchmark once now, so results are already on screen
