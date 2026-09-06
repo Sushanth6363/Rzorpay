@@ -269,7 +269,7 @@ class RecoveryAgent:
         # engine choosing has been misled, which is the one outcome this project refuses.
         from app.realtime import config as _rt_config
         if getattr(_rt_config, "DEMO_FIXED_LADDER", False):
-            forced = self._next_rung(decision, action)
+            forced = self._next_rung(decision, action, case_id=case_id)
             if forced is not None and forced != action:
                 scripted = (
                     f"DEMO FIXED LADDER: the engine chose {action.value} on expected "
@@ -421,23 +421,74 @@ class RecoveryAgent:
             })
         return out
 
-    @staticmethod
-    def _next_rung(decision: Any, chosen: ActionType) -> Optional[ActionType]:
-        """The next eligible rung above `chosen`, for the scripted demo ladder only.
+    def _next_rung(self, decision: Any, chosen: ActionType,
+                   case_id: str = "") -> Optional[ActionType]:
+        """The next eligible rung above everything already tried, for the demo ladder only.
 
         Reads the ladder order from the escalation module rather than a second list here,
         so a change to the ladder cannot leave the demo showing an order the engine does
         not use. Only ELIGIBLE candidates qualify: the scripted sequence must never
         override a safety rejection, which would turn a demo aid into a way of sending
         something the engine refused.
+
+        IT STEPS PAST A RUNG THAT WAS ALREADY ATTEMPTED AND FAILED.
+            WhatsApp cannot send on a Twilio trial - the API needs a pre-approved template
+            and the Content API that creates one is not available on that tier. The real
+            engine handles this correctly by NOT advancing: a rung only earns the next one
+            by being confirmed sent, so it retries WhatsApp indefinitely and never reaches
+            the call.
+
+            That is right in production and useless on stage, where the point is to watch
+            the sequence run to the end. So the scripted ladder advances past anything
+            already tried, whether it succeeded or not. This is bounded to the demo path
+            and, like every other part of it, labels itself in the timeline.
         """
         from app.pipeline.escalation import ESCALATION_LADDER, RUNG_OF
 
-        eligible = {
-            c.action_type for c in getattr(decision, "candidate_scores", [])
-            if c.eligibility.value == "ELIGIBLE"
-        }
+        # WHAT THE SCRIPTED SEQUENCE IS ALLOWED TO REACH FOR.
+        #
+        # ELIGIBLE always. Plus anything held back SOLELY by the escalation ceiling, and
+        # nothing else - never a contact budget rejection, an outage suppression, or a
+        # channel the customer cannot receive. Those protect the customer or reflect the
+        # world; the ceiling is the pacing rule this demo exists to illustrate.
+        #
+        # The ceiling rises only on a CONFIRMED contact, so a rung that cannot send - as
+        # WhatsApp cannot on a Twilio trial - pins the ladder there for ever. Correct in
+        # production, and it means the sequence never reaches the call on stage.
+        CEILING = "ESCALATION_CEILING"
+        eligible = set()
+        for c in getattr(decision, "candidate_scores", []):
+            reason = c.reject_reason.value if c.reject_reason else ""
+            if c.eligibility.value == "ELIGIBLE" or reason == CEILING:
+                eligible.add(c.action_type)
         start = RUNG_OF.get(chosen, -1)
+
+        # Everything this case has already put in front of the customer, successful or not.
+        #
+        # THE FIRST TOUCH IS NEVER SCRIPTED. With nothing attempted there is nothing to
+        # step past, and overriding here would open the case one rung louder than the
+        # engine chose - the sequence started at SMS and skipped email entirely. The
+        # opening contact is the engine's own decision; the script only moves it ALONG.
+        attempted: List[ActionType] = []
+        if case_id:
+            try:
+                self.conn.row_factory = None
+                for (name,) in self.conn.execute(
+                    "SELECT DISTINCT action_type FROM dispatch_log WHERE case_id=?;",
+                    (case_id,),
+                ).fetchall():
+                    try:
+                        action_type = ActionType(name)
+                    except ValueError:
+                        continue
+                    attempted.append(action_type)
+                    start = max(start, RUNG_OF.get(action_type, -1))
+            except Exception:  # noqa: BLE001 - a demo aid must not break a real cycle
+                logger.debug("could not read attempted rungs for %s", case_id)
+
+        if not attempted:
+            return None
+
         for rung in range(start + 1, len(ESCALATION_LADDER)):
             candidate = ESCALATION_LADDER[rung]
             if candidate in eligible:
