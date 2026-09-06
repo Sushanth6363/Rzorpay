@@ -364,9 +364,22 @@ class RecoveryAgent:
         # so "closed loop" was true for webhook cases and false for the CSV path the demo
         # actually uses.
         #
-        # Only after a real or dry-run send, never after a block: a message that did not go
-        # out has not started a conversation to follow up on.
-        if dispatch.status in ("SENT", "SKIPPED"):
+        # AFTER A SEND, AND AFTER A FAILED SEND.
+        #
+        # This used to schedule only on SENT or SKIPPED, on the reasoning that a message
+        # which did not go out has not started a conversation to follow up on. True of the
+        # conversation, wrong about the debt. A provider failure ended the case in silence:
+        # WhatsApp cannot send on a Twilio trial, so the ladder reached it, failed, and
+        # nothing was ever scheduled again. The money stayed owed and the engine stopped.
+        #
+        # That is the exact failure this product exists to prevent, and it is worse than
+        # never trying, because the board still shows the case as in progress.
+        #
+        # BLOCKED is still excluded, and that distinction matters: blocked means a control
+        # refused - the contact budget is spent, the case is already paid, an outage is on -
+        # and those are decisions to stop, not accidents. A FAILED send is the provider
+        # having a problem, which is precisely when trying again later is right.
+        if dispatch.status in ("SENT", "SKIPPED", "FAILED"):
             from app.realtime import followup
 
             due = followup.schedule(

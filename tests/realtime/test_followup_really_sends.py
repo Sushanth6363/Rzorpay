@@ -168,3 +168,49 @@ def test_an_unresolvable_origin_does_not_raise(live):
     wl, conn, repo, case = live
 
     assert wl._case_id_for_followup("") == ""
+
+
+# --- a provider failure must not abandon the debt --------------------------------------
+
+
+def test_a_failed_send_still_schedules_the_next_look(live, monkeypatch):
+    """The case ended in silence when a provider refused.
+
+    Scheduling used to require SENT or SKIPPED, reasoning that a message which did not go
+    out has not started a conversation to follow up on. True of the conversation, wrong
+    about the debt. Observed live: WhatsApp cannot send on a Twilio trial, so the ladder
+    reached it, failed, and nothing was ever scheduled again. The money stayed owed, the
+    engine stopped, and the board still showed the case in progress - which is worse than
+    never having tried, because nobody would go looking.
+    """
+    from app.dispatch import channels
+    monkeypatch.setattr(channels, "send_email_smtp",
+                        lambda *a, **k: channels.DispatchResult(
+                            "EMAIL_SMTP", "FAILED", "provider refused"))
+    wl, conn, repo, case = live
+
+    wl._run_case_followup(case.case_id, "followup:test")
+
+    conn.row_factory = None
+    scheduled = conn.execute(
+        "SELECT COUNT(*) FROM followup_queue WHERE status='SCHEDULED';").fetchone()[0]
+    assert scheduled >= 1, "a provider failure ended the case with nothing scheduled"
+
+
+def test_a_blocked_send_does_not_schedule(live, monkeypatch):
+    """BLOCKED is a control refusing, not a provider having a problem: the budget is spent,
+    the case is paid, an outage is on. Those are decisions to stop, and retrying them later
+    would walk straight back through the control that just said no."""
+    from app.dispatch import dispatcher as disp
+    wl, conn, repo, case = live
+    monkeypatch.setattr(
+        disp.ChannelDispatcher, "precheck",
+        lambda self, case_id, action: disp.DispatchOutcome(
+            False, "BLOCKED", "contact budget exhausted"))
+
+    wl._run_case_followup(case.case_id, "followup:blocked")
+
+    conn.row_factory = None
+    scheduled = conn.execute(
+        "SELECT COUNT(*) FROM followup_queue WHERE status='SCHEDULED';").fetchone()[0]
+    assert scheduled == 0
