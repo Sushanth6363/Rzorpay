@@ -889,6 +889,7 @@ def section_case_board() -> None:
         return
 
     s = summarise(rows)
+    all_rows = rows
 
     st.markdown(
         '<div class="tiles">'
@@ -904,18 +905,31 @@ def section_case_board() -> None:
         unsafe_allow_html=True,
     )
 
-    chips = "".join(
-        f'<span class="chip" style="color:{FLAG_STYLE[f][0]};background:{FLAG_STYLE[f][1]};'
-        f'border:1px solid {FLAG_STYLE[f][0]}66;">'
-        f'<span class="b" style="background:{FLAG_STYLE[f][0]};"></span>'
-        f'{FLAG_STYLE[f][2]} · {n}</span>'
-        for f, n in sorted(s["by_flag"].items()) if f in FLAG_STYLE
-    )
-    st.markdown(f'<div style="margin:.2rem 0 1rem;">{chips}</div>', unsafe_allow_html=True)
+    # The counts double as filters. They were static text, and a reader looking at
+    # "NEEDS ATTENTION - 1" among fifty rows had no way to act on it - which is the one
+    # thing the board exists to make easy.
+    #
+    # A coloured dot carries the flag colour, because st.pills cannot be styled per option
+    # and the colour is doing real work here: red is the row that needs a human.
+    present = [f for f in FLAG_ORDER if f in s["by_flag"]]
+    dots = {"PAID": "🟢", "ACTIVE": "🔵", "WAITING": "🟠", "STALLED": "🔴"}
+    labels = {f: f'{dots.get(f, "")} {FLAG_STYLE[f][2]} · {s["by_flag"][f]}' for f in present}
+
+    chosen = st.pills(
+        "Filter by status", present, selection_mode="multi",
+        format_func=lambda f: labels[f], key="board_filter",
+        label_visibility="collapsed",
+    ) or []
+
+    if chosen:
+        rows = [r for r in rows if r.flag in chosen]
 
     st.caption(
-        "Sorted by who needs a human first, not by upload order. "
-        "Press **Open** on any customer to expand their full decision trail."
+        ("Sorted by who needs a human first, not by upload order. "
+         "Press **Open** on any customer to expand their full decision trail.")
+        if not chosen else
+        f"Showing {len(rows)} of {len(all_rows)} cases. "
+        f"Click a selected filter again to clear it."
     )
     st.write("")
 
@@ -945,10 +959,10 @@ def section_case_board() -> None:
             with card_col:
                 _render_case_detail(repo, row)
 
-    _reset_controls(repo, rows)
+    _reset_controls(repo, rows, filtered=bool(chosen), total=len(all_rows))
 
 
-def _reset_controls(repo, rows) -> None:
+def _reset_controls(repo, rows, filtered: bool = False, total: int = 0) -> None:
     """Clear the board between demo runs.
 
     A DEMO CONTROL, LABELLED AS ONE
@@ -968,9 +982,19 @@ def _reset_controls(repo, rows) -> None:
     # Labelled with the counts, and left BELOW the cards on purpose. A destructive control
     # above the data it destroys invites a mis-click; one underneath is found by anyone
     # looking for it and by nobody who is not.
-    label = (f"Reset the board — delete {len(rows)} case"
-             f"{'' if len(rows) == 1 else 's'} (demo control)")
+    # When a filter is active this acts on what is SHOWN, which is useful - "clear the
+    # waiting ones" - but the label has to say so. A button reading "delete all" that
+    # deletes a subset is the kind of small lie that costs trust in a destructive control.
+    scope = "shown" if filtered else "all"
+    noun = "case" if len(rows) == 1 else "cases"
+    label = f"Reset the board — delete {len(rows)} {scope} {noun} (demo control)"
     with st.expander(label):
+        if filtered:
+            st.markdown(
+                f'<div class="note">A status filter is active, so these buttons act on the '
+                f'<b>{len(rows)} case(s) currently shown</b>, not on all {total}. Clear the '
+                f'filter above to act on everything.</div>', unsafe_allow_html=True,
+            )
         st.markdown(
             '<div class="note">Deletes cases and their timelines from the local database. '
             'Open payment links are cancelled at Razorpay first, because a live link with '
@@ -987,7 +1011,8 @@ def _reset_controls(repo, rows) -> None:
             disabled=not confirm or not unpaid,
             help="Keeps every case that was actually paid, as evidence.")
         clear_all = right.button(
-            f"Delete all {len(rows)}", use_container_width=True, type="primary",
+            f"Delete {'these' if filtered else 'all'} {len(rows)}",
+            use_container_width=True, type="primary",
             disabled=not confirm or not rows,
             help="Removes everything, including cases closed by a real payment.")
 
