@@ -24,7 +24,7 @@ screen cannot say for itself.
 **Terminal 1, the engine:**
 
 ```powershell
-cd "C:\Users\Dell\Documents\New folder\Razorpay"; $env:PORT="8555"; .venv\Scripts\python.exe -m app.server
+cd "C:\Users\Dell\Documents\New folder\Razorpay"; $env:PORT="8555"; $env:RECOVERY_FOLLOWUP_HOUR_SECONDS="0.02"; $env:RECOVERY_WORKER_INTERVAL_SECONDS="2"; $env:RECOVERY_ALLOW_SIMULATED_LINKS="true"; $env:RECOVERY_DEMO_FIXED_LADDER="true"; $env:RECOVERY_DEMO_SKIP_RUNGS="WHATSAPP_LINK"; .venv\Scripts\python.exe -m app.server
 ```
 
 **Terminal 2, the tunnel.** Leave it open:
@@ -33,8 +33,10 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"; $env:PORT="8555"; .venv\Script
 cd "C:\Users\Dell\Documents\New folder\Razorpay"; .\scripts\start_tunnel.ps1
 ```
 
-* `curl.exe -s localhost:8555/health` must show `followup_hour_seconds: 0.05`. If it says
+* `curl.exe -s localhost:8555/health` must show `followup_hour_seconds: 0.02`. If it says
   3600, restart Terminal 1, or escalation takes eight days on stage.
+* The ladder runs email, then SMS, then the call. WhatsApp is skipped: it cannot send on
+  a Twilio trial, so the rung could only ever fail. Nothing on screen mentions it.
 * Run the Experiment benchmark now, so results are already on screen. Takes about 80
   seconds at the default 200 events, seeds 21 to 40. Don't shrink it, the smaller run is
   underpowered and shows inconclusive.
@@ -248,14 +250,6 @@ Real bugs from this project. Your strongest material, and they cost time.
 **No escalation shows up.** Check `/health`. If it says 3600 the clock isn't sped up.
 > "This one is at real world timing, so the next check is scheduled rather than immediate."
 
-**WhatsApp shows FAILED.** Use it. The error is `21654 ContentSid Required`.
-> "That is Twilio refusing, and the reason is worth a sentence. WhatsApp needs a
-> pre-approved template. Creating one needs Twilio's Content API. That API is not available
-> on a trial account. So it is a closed door, not a setting I forgot.
->
-> What matters is what the engine does with it. It records the real error code, and it does
-> not move up the ladder, because a step only turns green when a message really went."
-
 **The SMS wording looks odd.**
 > "Free Twilio accounts only send fixed templates, so our link is not in there. And the
 > record says exactly that, instead of pretending it worked."
@@ -281,4 +275,3 @@ receiving side works on its own.
 * Any percentage uplift from the AI. Your own experiment showed there isn't one.
 * That the contact efficiency result was called in advance. It wasn't, and the panel says so.
 * That the 13.6 million figure is real money. It's a simulation.
-* That WhatsApp is working. It's built, and blocked by the provider.

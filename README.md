@@ -108,7 +108,7 @@ flowchart TD
     G -->|"EV ≤ 0"| H["NO_ACTION<br/>abstain, record why"]
     G -->|"best action"| I["Create Razorpay payment link"]
     I --> J["ChannelDispatcher<br/>re-reads case state first"]
-    J --> K["Send · email, SMS, WhatsApp, IVR"]
+    J --> K["Send · email, SMS, IVR"]
     K --> L["Schedule next review<br/>delay derived per case"]
     L -.->|"time passes"| D
     M(["Payment webhook<br/>HMAC verified"]) --> N["Case PAID<br/>cancel links · stop follow-ups"]
@@ -133,7 +133,7 @@ ends it.
 
 ```mermaid
 flowchart LR
-    R0["0 · EMAIL<br/>ignorable"] --> R1["1 · SMS"] --> R2["2 · WHATSAPP<br/>expects a reply"] --> R3["3 · IVR CALL<br/>interrupts"] --> R4["4 · AGENT DIAL<br/>a person calls"]
+    R0["0 · EMAIL<br/>ignorable"] --> R1["1 · SMS"] --> R3["2 · IVR CALL<br/>interrupts"] --> R4["3 · AGENT DIAL<br/>a person calls"]
     style R0 fill:#e0e7ff,color:#1e1b4b
     style R4 fill:#fee2e2,color:#450a0a
 ```
@@ -173,7 +173,6 @@ delay  =  base(diagnosis)  ×  multiplier(channel)  ×  backoff(attempt)
 |---|---:|---|
 | Machine retry | 0.5 | no human involved |
 | SMS | 0.8 | read quickly |
-| WhatsApp | 0.9 | |
 | Email | 1.2 | unanswered ≠ ignored |
 | IVR call | 1.5 | |
 | Agent dial | 2.0 | do not crowd them |
