@@ -158,20 +158,49 @@ def send_email_smtp(
 
 
 def _twilio_creds() -> Optional[tuple]:
-    sid = os.environ.get("TWILIO_ACCOUNT_SID", "")
-    token = os.environ.get("TWILIO_AUTH_TOKEN", "")
-    return (sid, token) if sid and token else None
+    """Return (account_sid, auth_user, auth_password), or None if unusable.
+
+    TWILIO ACCEPTS TWO KINDS OF CREDENTIAL AND THEY AUTHENTICATE DIFFERENTLY
+        Account SID + Auth Token   the account-wide credential. The SID is both the
+                                   username and the account in the URL path.
+        API Key SID + Secret       a scoped, revocable key pair (`SK...`). Here the KEY
+                                   authenticates, while the URL still names the ACCOUNT.
+
+        Using the account SID as the username alongside an API key secret fails with a
+        401 that reads like a wrong password, which is a genuinely confusing hour to
+        spend. So the account and the identity are resolved separately.
+
+        An API key is preferred when present: it can be revoked without rotating the
+        account-wide token that every other integration depends on.
+    """
+    account_sid = os.environ.get("TWILIO_ACCOUNT_SID", "").strip()
+    if not account_sid:
+        return None
+
+    key_sid = os.environ.get("TWILIO_API_KEY_SID", "").strip()
+    key_secret = os.environ.get("TWILIO_API_KEY_SECRET", "").strip()
+    if key_sid and key_secret:
+        return (account_sid, key_sid, key_secret)
+
+    token = os.environ.get("TWILIO_AUTH_TOKEN", "").strip()
+    if token:
+        return (account_sid, account_sid, token)
+
+    return None
 
 
 def _twilio_post(path: str, data: Dict[str, str], channel: str) -> DispatchResult:
     creds = _twilio_creds()
     if not creds:
-        return _missing(channel, "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN")
-    sid, token = creds
+        return _missing(
+            channel, "TWILIO_ACCOUNT_SID",
+            "and either TWILIO_AUTH_TOKEN or TWILIO_API_KEY_SID + TWILIO_API_KEY_SECRET",
+        )
+    account_sid, auth_user, auth_password = creds
     try:
         res = requests.post(
-            f"https://api.twilio.com/2010-04-01/Accounts/{sid}/{path}",
-            auth=(sid, token), data=data, timeout=20,
+            f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/{path}",
+            auth=(auth_user, auth_password), data=data, timeout=20,
         )
     except Exception as exc:
         return DispatchResult(channel, "FAILED", str(exc)[:200])
