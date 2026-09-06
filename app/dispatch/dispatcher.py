@@ -285,9 +285,18 @@ class ChannelDispatcher:
         name = customer.name if customer else ""
 
         if self.dry_run:
+            # NAME THE REASON THAT ACTUALLY APPLIED.
+            #
+            # This line used to say "RECOVERY_DISPATCH_ENABLED is not set" for every dry
+            # run, including the ones caused by the toggle on the Live test page. On a
+            # server with dispatch enabled that message is simply false, and it sends the
+            # reader off to fix an environment variable that was never the problem. There
+            # are two independent reasons a send is held, so the record has to say which.
             outcome = DispatchOutcome(
                 True, "SKIPPED",
-                "DRY RUN: RECOVERY_DISPATCH_ENABLED is not set, nothing was sent",
+                "DRY RUN: the page's dry-run toggle is on, nothing was sent"
+                if self._dry_run_override
+                else "DRY RUN: RECOVERY_DISPATCH_ENABLED is not set, nothing was sent",
                 channel=self._channel_name(action),
                 detail={"would_send_to": email or phone, "payment_url": payment_url},
             )
