@@ -138,6 +138,22 @@ WORKER_INTERVAL_SECONDS = int(os.environ.get("RECOVERY_WORKER_INTERVAL_SECONDS",
 # still works - decisions, real email, the escalation ladder, the board, the timeline -
 # and being unable to show any of it is the worse outcome. This lets the operator accept
 # that trade knowingly. It is off by default, and the refusal message says it exists.
+# A FIXED LADDER FOR DEMONSTRATION. NOT THE ENGINE DECIDING.
+#
+# The engine ranks by expected value, and the ceiling is a CAP rather than an instruction:
+# after one confirmed email, SMS becomes eligible but email may still score higher, so the
+# engine correctly keeps emailing. That is the right behaviour and it is impossible to show
+# on stage - the ladder never visibly climbs.
+#
+# With this on, the agent takes the next reachable rung above the highest confirmed contact
+# instead of the highest-EV action. It is a SCRIPTED SEQUENCE, and everything it produces
+# says so: the reasoning line, the case timeline, and the dispatch record. Off by default,
+# because an audience shown a fixed sequence and told it is a decision has been misled.
+DEMO_FIXED_LADDER = os.environ.get(
+    "RECOVERY_DEMO_FIXED_LADDER", "false"
+).strip().lower() in {"1", "true", "yes", "on"}
+
+
 ALLOW_SIMULATED_LINKS = os.environ.get(
     "RECOVERY_ALLOW_SIMULATED_LINKS", "false"
 ).strip().lower() in {"1", "true", "yes", "on"}

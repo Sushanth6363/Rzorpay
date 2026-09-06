@@ -233,19 +233,49 @@ class RecoveryAgent:
         decision = outcome.decision
         action = decision.selected_action
 
+        reasoning = self._explain(decision, action)
+        scripted = ""
+
+        # DEMO ONLY, AND IT SAYS SO EVERYWHERE IT APPEARS.
+        #
+        # The engine ranks by expected value and the ceiling is a CAP, not an instruction.
+        # After one confirmed email, SMS becomes eligible but email often still scores
+        # higher (Rs 7,789 against Rs 7,530 on a Rs 25,000 invoice), so the engine keeps
+        # emailing. Correct, and impossible to demonstrate: the ladder never visibly moves.
+        #
+        # Under RECOVERY_DEMO_FIXED_LADDER the agent takes the next eligible rung above the
+        # highest already used, in order, so the climb is deterministic. That is a SCRIPTED
+        # SEQUENCE and not a decision, so the reasoning line, the timeline event and the
+        # cycle result all label it. An audience shown a fixed sequence and told it is the
+        # engine choosing has been misled, which is the one outcome this project refuses.
+        from app.realtime import config as _rt_config
+        if getattr(_rt_config, "DEMO_FIXED_LADDER", False):
+            forced = self._next_rung(decision, action)
+            if forced is not None and forced != action:
+                scripted = (
+                    f"DEMO FIXED LADDER: the engine chose {action.value} on expected "
+                    f"value; this scripted sequence takes the next rung instead."
+                )
+                action = forced
+                reasoning = f"{scripted} {reasoning}"
+
         result = CycleResult(
             case_id=case_id,
             action=action.value,
-            decision_mode=decision.decision_mode.value,
+            decision_mode=("SCRIPTED_LADDER" if scripted
+                           else decision.decision_mode.value),
             diagnosis=self._diagnosis(outcome),
-            reasoning=self._explain(decision, action),
+            reasoning=reasoning,
         )
 
         self.repo.attach_opportunity(case_id, outcome.opportunity_id)
         self.repo.add_event(CaseEvent(
             case_id=case_id, kind=CaseEventKind.AGENT_DECIDED, actor="agent",
-            summary=f"Agent selected {action.value}",
-            detail={"reasoning": result.reasoning, "mode": result.decision_mode},
+            summary=(f"SCRIPTED demo ladder selected {action.value}" if scripted
+                     else f"Agent selected {action.value}"),
+            detail={"reasoning": result.reasoning, "mode": result.decision_mode,
+                    "scripted": bool(scripted),
+                    "ranking": self._ranking(decision)},
         ))
 
         if action not in CONTACT_ACTIONS:
@@ -349,6 +379,50 @@ class RecoveryAgent:
     def _diagnosis(outcome: Any) -> str:
         """Stage 1's verdict, read off the result the orchestrator returned."""
         return str(getattr(outcome, "diagnosis_code", "") or "")
+
+    @staticmethod
+    def _ranking(decision: Any) -> List[Dict[str, Any]]:
+        """Every candidate with its expected value and, if suppressed, why.
+
+        THIS IS THE AUDIT. It is what makes "email keeps winning" a checkable claim rather
+        than an assertion: the timeline carries the full ranking for each touch, so a
+        reader can see that SMS was ELIGIBLE and simply scored lower, which is a different
+        fact from SMS being blocked.
+        """
+        out: List[Dict[str, Any]] = []
+        for c in sorted(getattr(decision, "candidate_scores", []),
+                        key=lambda x: -x.expected_value_paise):
+            out.append({
+                "action": c.action_type.value,
+                "eligibility": c.eligibility.value,
+                "ev_rupees": round(c.expected_value_paise / 100, 2),
+                "uplift_pct": round(c.incremental_effect * 100, 1),
+                "rejected_for": c.reject_reason.value if c.reject_reason else "",
+            })
+        return out
+
+    @staticmethod
+    def _next_rung(decision: Any, chosen: ActionType) -> Optional[ActionType]:
+        """The next eligible rung above `chosen`, for the scripted demo ladder only.
+
+        Reads the ladder order from the escalation module rather than a second list here,
+        so a change to the ladder cannot leave the demo showing an order the engine does
+        not use. Only ELIGIBLE candidates qualify: the scripted sequence must never
+        override a safety rejection, which would turn a demo aid into a way of sending
+        something the engine refused.
+        """
+        from app.pipeline.escalation import ESCALATION_LADDER, RUNG_OF
+
+        eligible = {
+            c.action_type for c in getattr(decision, "candidate_scores", [])
+            if c.eligibility.value == "ELIGIBLE"
+        }
+        start = RUNG_OF.get(chosen, -1)
+        for rung in range(start + 1, len(ESCALATION_LADDER)):
+            candidate = ESCALATION_LADDER[rung]
+            if candidate in eligible:
+                return candidate
+        return None
 
     @staticmethod
     def _explain(decision: Any, action: ActionType) -> str:
