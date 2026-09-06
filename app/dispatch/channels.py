@@ -213,15 +213,62 @@ def _twilio_post(path: str, data: Dict[str, str], channel: str) -> DispatchResul
     )
 
 
+# The ten fixed strings a Twilio TRIAL account accepts in place of a message body. On a
+# trial the `Body` parameter must BE one of these identifiers; anything else is rejected
+# with 572006 "Trial accounts can only use predefined SMS templates".
+TRIAL_SMS_TEMPLATES = frozenset({
+    "sms_2fa", "sms_appointment_reminders", "sms_order_confirmation",
+    "sms_delivery_updates", "sms_customer_support", "sms_marketing_promotions",
+    "sms_event_notifications", "sms_account_alerts", "sms_feedback_surveys",
+    "sms_internal_alerts",
+})
+
+
 def send_sms(to_number: str, body: str) -> DispatchResult:
+    """Send an SMS, or explain exactly why the customer will not receive our text.
+
+    TRIAL MODE SENDS SOMETHING, BUT NOT OUR MESSAGE
+        Setting TWILIO_TRIAL_SMS_TEMPLATE makes this send one of Twilio's fixed template
+        identifiers instead of the composed message. That is the only way an SMS leaves a
+        trial account at all.
+
+        The customer then receives TWILIO'S wording, which means THE PAYMENT LINK IS NOT
+        DELIVERED. The channel is proven; the recovery action is not performed. Those are
+        different things and the result says so, because a dispatch that reads plainly
+        "SENT" here would light a ladder rung and consume a contact slot for a message
+        that cannot recover anything.
+    """
     sender = os.environ.get("TWILIO_SMS_FROM", "")
     if not sender:
         return _missing("TWILIO_SMS", "TWILIO_SMS_FROM")
     if not to_number:
         return DispatchResult("TWILIO_SMS", "SKIPPED", "row has no phone number")
-    return _twilio_post(
-        "Messages.json", {"To": to_number, "From": sender, "Body": body}, "TWILIO_SMS"
+
+    template = os.environ.get("TWILIO_TRIAL_SMS_TEMPLATE", "").strip()
+    if not template:
+        return _twilio_post(
+            "Messages.json", {"To": to_number, "From": sender, "Body": body}, "TWILIO_SMS"
+        )
+
+    if template not in TRIAL_SMS_TEMPLATES:
+        return DispatchResult(
+            "TWILIO_SMS", "NOT_CONFIGURED",
+            f"TWILIO_TRIAL_SMS_TEMPLATE={template!r} is not one of Twilio's trial "
+            f"templates: {', '.join(sorted(TRIAL_SMS_TEMPLATES))}",
+        )
+
+    result = _twilio_post(
+        "Messages.json", {"To": to_number, "From": sender, "Body": template}, "TWILIO_SMS"
     )
+    if result.status == "SENT":
+        return DispatchResult(
+            channel=result.channel, status="SENT",
+            detail=(f"trial template {template!r} delivered - Twilio's wording, "
+                    f"NOT our message, so the payment link was not included"),
+            provider_id=result.provider_id,
+            extra={**dict(result.extra), "template_substituted": template},
+        )
+    return result
 
 
 # --- WhatsApp: Meta Cloud API, or Twilio ---------------------------------------------------
