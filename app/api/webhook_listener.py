@@ -221,7 +221,69 @@ def _run_followup(item: Dict[str, Any]) -> None:
         followup.cancel_for_entity(origin, "payment received before follow-up")
         return
 
+    # A FOLLOW-UP ON A REAL CASE MUST ACTUALLY SEND SOMETHING.
+    #
+    # `_process` was built for webhook traffic, where "dispatch" means creating a payment
+    # link. It calls process_and_execute WITHOUT defer_execution_result, so the SANDBOX
+    # SIMULATOR's imagined outcome is written into contact_ledger as a confirmed contact,
+    # and it never invokes ChannelDispatcher at all. On a merchant CSV case that produced
+    # exactly this, observed live:
+    #
+    #   contact_ledger  EMAIL_LINK  EXECUTED  source=ChannelDispatcher   <- real, first touch
+    #   contact_ledger  EMAIL_LINK  EXECUTED  source=simulator           <- nothing sent
+    #   contact_ledger  SMS_LINK    EXECUTED  source=simulator           <- nothing sent
+    #   dispatch_log    one row. The email. Nothing else.
+    #
+    # So the escalation ladder climbed on contacts that never happened, and the phone
+    # stayed silent while the board showed a confirmed SMS. Every claim built on that
+    # ledger - the ceiling, the contact budget, the "already tried" handoff report - was
+    # reading fabricated history.
+    #
+    # RecoveryAgent.run_cycle is the path that does this correctly: it defers the sandbox
+    # outcome, dispatches through ChannelDispatcher, and records what the dispatcher
+    # actually returned. Follow-ups on a case go through it. Webhook-born opportunities
+    # with no case still go to `_process`, which is what it was written for.
+    case_id = _case_id_for_followup(origin)
+    if case_id:
+        _run_case_followup(case_id, razorpay_event_id=f"followup:{event['event_id']}")
+        return
+
     _process(event, f"followup:{event['event_id']}", "followup", attempt=attempt)
+
+
+def _case_id_for_followup(origin_event_id: str) -> str:
+    """The case this follow-up belongs to, or "" for a webhook-born opportunity."""
+    if not origin_event_id:
+        return ""
+    try:
+        from app.cases.repository import CaseRepository
+
+        row = CaseRepository(ingest.get_conn()).conn.execute(
+            "SELECT case_id FROM cases WHERE source_event_id=? OR case_id=? LIMIT 1;",
+            (origin_event_id, origin_event_id),
+        ).fetchone()
+        return str(row[0]) if row else ""
+    except Exception:  # noqa: BLE001 - a lookup must never kill the worker
+        logger.exception("could not resolve a case for follow-up %s", origin_event_id)
+        return ""
+
+
+def _run_case_followup(case_id: str, razorpay_event_id: str) -> None:
+    """Re-run the full agent cycle for a case, so the follow-up really sends."""
+    from app.agent.loop import RecoveryAgent
+    from app.cases.repository import CaseRepository
+
+    conn = ingest.get_conn()
+    try:
+        result = RecoveryAgent(conn, repository=CaseRepository(conn)).run_cycle(case_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("follow-up cycle failed for %s", case_id)
+        ingest.record(razorpay_event_id=razorpay_event_id, razorpay_event="followup",
+                      status="FAILED", raw_event={"case_id": case_id, "error": str(exc)})
+        return
+
+    logger.info("follow-up for %s: %s (%s)", case_id, result.action,
+                (result.dispatch or {}).get("status", "no dispatch"))
 
 
 def _verify(body: bytes, signature: str) -> tuple:
