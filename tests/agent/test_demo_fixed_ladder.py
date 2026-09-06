@@ -56,8 +56,10 @@ def agent_and_case(tmp_path, monkeypatch, request):
     f.ensure_schema()
 
     from app.dispatch import channels
+    # IVR is stubbed too. The ladder now walks all the way to the call, and an unstubbed
+    # voice channel in a test suite is one credential away from placing a real phone call.
     for name, attr in (("EMAIL_SMTP", "send_email_smtp"), ("TWILIO_SMS", "send_sms"),
-                       ("WA", "send_whatsapp")):
+                       ("WA", "send_whatsapp"), ("TWILIO_VOICE", "send_ivr_call")):
         monkeypatch.setattr(channels, attr, (lambda n: (
             lambda *a, **k: channels.DispatchResult(n, "SENT", "ok", provider_id="M")))(name))
 

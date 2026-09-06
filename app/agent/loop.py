@@ -423,53 +423,35 @@ class RecoveryAgent:
 
     def _next_rung(self, decision: Any, chosen: ActionType,
                    case_id: str = "") -> Optional[ActionType]:
-        """The next eligible rung above everything already tried, for the demo ladder only.
+        """The next rung of the ladder, in order, for the scripted demo only.
 
-        Reads the ladder order from the escalation module rather than a second list here,
-        so a change to the ladder cannot leave the demo showing an order the engine does
-        not use. Only ELIGIBLE candidates qualify: the scripted sequence must never
-        override a safety rejection, which would turn a demo aid into a way of sending
-        something the engine refused.
+        WHY IT WALKS RATHER THAN RANKS
+            The demo has to show the whole ladder: email, then SMS, then WhatsApp, then the
+            call. The engine will not produce that sequence, for two correct reasons. It
+            ranks by expected value, and email often outscores SMS. And the ceiling rises
+            only on a CONFIRMED contact, so WhatsApp - which cannot send on a Twilio trial,
+            where the API needs a template and the Content API that makes one is not
+            available on that tier - pins the ladder there for ever.
 
-        IT STEPS PAST A RUNG THAT WAS ALREADY ATTEMPTED AND FAILED.
-            WhatsApp cannot send on a Twilio trial - the API needs a pre-approved template
-            and the Content API that creates one is not available on that tier. The real
-            engine handles this correctly by NOT advancing: a rung only earns the next one
-            by being confirmed sent, so it retries WhatsApp indefinitely and never reaches
-            the call.
+            So this walks: one rung per touch, from the highest already attempted. It does
+            not skip a rung that failed, because the failure is worth seeing; WhatsApp
+            appearing and being refused is the clearest demonstration in the run that a
+            rung only counts when a message really went.
 
-            That is right in production and useless on stage, where the point is to watch
-            the sequence run to the end. So the scripted ladder advances past anything
-            already tried, whether it succeeded or not. This is bounded to the demo path
-            and, like every other part of it, labels itself in the timeline.
+        THE THREE THINGS IT WILL NOT DO
+            It never scripts the FIRST touch. With nothing attempted there is nothing to
+            step past, and overriding there opens the case louder than the engine chose.
+
+            It never offers a channel the customer cannot receive. Reachability is about
+            the customer, not about pacing.
+
+            It never continues past the top of the ladder. There the script stops and the
+            engine takes the case back.
         """
-        from app.pipeline.escalation import ESCALATION_LADDER, RUNG_OF
+        from app.pipeline.escalation import ESCALATION_LADDER, RUNG_OF, reachable_rungs
 
-        # WHAT THE SCRIPTED SEQUENCE IS ALLOWED TO REACH FOR.
-        #
-        # ELIGIBLE always. Plus anything held back SOLELY by the escalation ceiling, and
-        # nothing else - never a contact budget rejection, an outage suppression, or a
-        # channel the customer cannot receive. Those protect the customer or reflect the
-        # world; the ceiling is the pacing rule this demo exists to illustrate.
-        #
-        # The ceiling rises only on a CONFIRMED contact, so a rung that cannot send - as
-        # WhatsApp cannot on a Twilio trial - pins the ladder there for ever. Correct in
-        # production, and it means the sequence never reaches the call on stage.
-        CEILING = "ESCALATION_CEILING"
-        eligible = set()
-        for c in getattr(decision, "candidate_scores", []):
-            reason = c.reject_reason.value if c.reject_reason else ""
-            if c.eligibility.value == "ELIGIBLE" or reason == CEILING:
-                eligible.add(c.action_type)
-        start = RUNG_OF.get(chosen, -1)
-
-        # Everything this case has already put in front of the customer, successful or not.
-        #
-        # THE FIRST TOUCH IS NEVER SCRIPTED. With nothing attempted there is nothing to
-        # step past, and overriding here would open the case one rung louder than the
-        # engine chose - the sequence started at SMS and skipped email entirely. The
-        # opening contact is the engine's own decision; the script only moves it ALONG.
         attempted: List[ActionType] = []
+        highest = -1
         if case_id:
             try:
                 self.conn.row_factory = None
@@ -482,17 +464,24 @@ class RecoveryAgent:
                     except ValueError:
                         continue
                     attempted.append(action_type)
-                    start = max(start, RUNG_OF.get(action_type, -1))
+                    highest = max(highest, RUNG_OF.get(action_type, -1))
             except Exception:  # noqa: BLE001 - a demo aid must not break a real cycle
                 logger.debug("could not read attempted rungs for %s", case_id)
 
         if not attempted:
             return None
 
-        for rung in range(start + 1, len(ESCALATION_LADDER)):
-            candidate = ESCALATION_LADDER[rung]
-            if candidate in eligible:
-                return candidate
+        case = self.repo.get_case(case_id) if case_id else None
+        customer = (self.repo.get_customer(case.merchant_id, case.customer_id)
+                    if case else None)
+        reachable = set(reachable_rungs(
+            bool(customer and customer.email) if customer else None,
+            bool(customer and customer.phone) if customer else None,
+        ))
+
+        for rung in range(highest + 1, len(ESCALATION_LADDER)):
+            if rung in reachable:
+                return ESCALATION_LADDER[rung]
         return None
 
     @staticmethod

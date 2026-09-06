@@ -33,6 +33,13 @@ SAFE_GATES = {
     "RECOVERY_ALLOW_LIVE_CREDENTIALS": "false",
     "RECOVERY_LINK_NOTIFY": "engine",
     "ALLOW_UNSIGNED_WEBHOOKS": "false",
+    # Demo aids, pinned off for the same reason as the gates above: a test run must not
+    # inherit whatever was last exported for a rehearsal. These two changed which rung a
+    # follow-up took and whether an unpayable link was accepted, so tests passed alone and
+    # failed in the suite depending on which file ran first - which reads as flakiness and
+    # is really the machine leaking into the run.
+    "RECOVERY_DEMO_FIXED_LADDER": "false",
+    "RECOVERY_ALLOW_SIMULATED_LINKS": "false",
 }
 
 # Credentials: blanked. With the gates closed nothing should reach an adapter anyway, but

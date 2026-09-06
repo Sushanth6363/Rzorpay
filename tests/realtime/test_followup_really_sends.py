@@ -48,6 +48,10 @@ def live(tmp_path, monkeypatch):
     monkeypatch.setenv("RECOVERY_DB_PATH", str(tmp_path / "fu.db"))
     monkeypatch.setenv("RECOVERY_DISPATCH_ENABLED", "true")
     monkeypatch.setenv("RECOVERY_ALLOW_SIMULATED_LINKS", "true")
+    # Pinned, not inherited. The scripted demo ladder changes which rung a follow-up takes,
+    # so leaving this to whatever a previous test file exported makes these pass alone and
+    # fail in the suite - which is how it first showed up.
+    monkeypatch.setenv("RECOVERY_DEMO_FIXED_LADDER", "false")
     import importlib
     from app.realtime import config as cfg
     importlib.reload(cfg)
