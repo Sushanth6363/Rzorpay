@@ -538,6 +538,9 @@ async def _lifespan(app_: Starlette):
         process_fn=_retry_item,
         reconcile_fn=_reconcile_stale,
         followup_fn=_run_followup,
+        # At demo speed a review falling due in ten seconds must not wait a full minute to
+        # be noticed. The default is unchanged at 60s.
+        interval_seconds=config.WORKER_INTERVAL_SECONDS,
     )
     _worker.start()
     try:

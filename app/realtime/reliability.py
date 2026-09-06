@@ -56,7 +56,7 @@ MAX_ATTEMPTS = len(RETRY_BACKOFF_SECONDS)
 # receipt still has a chance to arrive and resolve it properly.
 RECONCILE_AFTER_MINUTES = 30
 
-SWEEP_INTERVAL_SECONDS = 60
+SWEEP_INTERVAL_SECONDS = 60  # overridden by config.WORKER_INTERVAL_SECONDS
 
 RETRY_DDL = """
 CREATE TABLE IF NOT EXISTS retry_queue (

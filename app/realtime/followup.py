@@ -159,7 +159,10 @@ def schedule(
         return None
 
     delay = compute_delay_hours(diagnosis_code, last_action, attempt)
-    due = _now() + timedelta(hours=delay)
+    # Scale hours to real seconds. At the default (3600) this is exactly `hours=delay`;
+    # at demo speed the same policy plays out in seconds with every ratio intact.
+    from app.realtime import config as _cfg
+    due = _now() + timedelta(seconds=delay * _cfg.FOLLOWUP_HOUR_SECONDS)
     now_iso = _now().isoformat()
 
     conn = ingest.get_conn()

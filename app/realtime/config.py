@@ -109,6 +109,25 @@ PROVIDER_NOTIFIES = LINK_NOTIFY_OWNER == "razorpay"
 VOICE_COMPANION_SMS = _flag("RECOVERY_VOICE_COMPANION_SMS", True)
 
 
+# --- demo time compression ----------------------------------------------------------------
+# The follow-up ladder is designed in real time: a gateway blip is re-checked in about four
+# hours, an overdue invoice in about eight days. Correct for production and useless in a
+# five-minute demo, where nobody can wait eight days to see the second rung.
+#
+# This scales the CLOCK, not the policy. One notional hour becomes this many real seconds,
+# so every relative difference is preserved exactly - an invoice still waits twenty times
+# longer than a gateway failure, and the backoff still widens each gap. Only the unit
+# changes. A demo that instead flattened every delay to a constant would be showing a
+# different engine from the one being described.
+#
+# 3600 is real time and the default. 0.2 turns an eight-day wait into about forty seconds.
+FOLLOWUP_HOUR_SECONDS = float(os.environ.get("RECOVERY_FOLLOWUP_HOUR_SECONDS", "3600"))
+
+# How often the background worker looks for due follow-ups. At demo speed a review falling
+# due in ten seconds must not sit in the queue for a minute waiting to be noticed.
+WORKER_INTERVAL_SECONDS = int(os.environ.get("RECOVERY_WORKER_INTERVAL_SECONDS", "60"))
+
+
 def is_live_key(key_id: str) -> bool:
     return key_id.startswith("rzp_live")
 
@@ -135,5 +154,7 @@ def describe() -> dict:
         "allow_live_credentials": ALLOW_LIVE_CREDENTIALS,
         "link_notify_owner": LINK_NOTIFY_OWNER,
         "voice_companion_sms": VOICE_COMPANION_SMS,
+        "followup_hour_seconds": FOLLOWUP_HOUR_SECONDS,
+        "worker_interval_seconds": WORKER_INTERVAL_SECONDS,
         "webhook_max_age_seconds": WEBHOOK_MAX_AGE_SECONDS,
     }
