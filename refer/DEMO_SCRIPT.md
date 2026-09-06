@@ -78,23 +78,59 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 > "One engine handles all four streams. Failed payments, abandoned checkouts, failed
 > renewals, and overdue invoices.
 >
-> The whole thing is one loop." *(trace it with your cursor)*
+> The whole thing is one loop, and it's all on this diagram."
+
+*Point at the two boxes at the very top.*
+
+> "Everything starts in one of these two places. Either a webhook comes in from Razorpay,
+> because a payment failed or somebody walked away from a checkout. Or a merchant uploads a
+> CSV of overdue invoices. Both of them feed into the same pipeline, and after this point the
+> engine doesn't care which door you came through."
+
+*Run your cursor down the boxes underneath.*
+
+> "Stage zero checks there's real money to recover here. Stage one asks the question in the
+> box, why is this unpaid. Candidate generation asks what's even legal for this kind of case.
+> And the safety filter throws out anything that isn't allowed right now, contact budget,
+> outage suppression, the escalation ceiling."
+
+*Point at the indigo diamond in the middle.*
+
+> "Everything funnels into this one decision. Whatever survived all of that gets ranked by
+> expected value, and the best one wins.
 >
-> "An event comes in, either from a webhook or from a merchant's CSV. Stage zero checks
-> there's real money to recover. Stage one works out why it's unpaid. Then we list the
-> actions that are even legal for this kind of case. The safety filter throws out anything
-> that isn't allowed right now. Whatever survives gets ranked by expected value, and the best
-> one runs.
+> And look at the two arrows coming out of it. The one going left says E V less than or equal
+> to zero, and it leads to that amber box, no action. If nothing is worth doing, the engine
+> abstains and writes down why. The other arrow is the best action, and that's the path that
+> creates a Razorpay payment link and actually sends something."
+
+*Point at the dotted arrow curving back up.*
+
+> "This dotted line is the part I'd most like you to notice. After it sends, it schedules its
+> own next look, and that arrow loops straight back up to stage one. It re-reads the case and
+> decides again, from scratch. Nothing outside the system is driving that."
+
+*Point at the green box on the right, then the red one at the bottom.*
+
+> "There are only two ways out. The green one is money arriving. A signed webhook comes in,
+> the case is marked paid, open links get cancelled, and every scheduled follow up stops.
 >
-> Then it schedules its own next look, and goes quiet. A worker wakes it up later, it
-> re-reads the case, and decides again. That keeps going until the money arrives, or a
-> stopping rule ends it."
+> The red one is the stopping rules. When we've done everything we're allowed to do, the case
+> leaves as a handoff report for a human, carrying everything we already tried, so nobody
+> re-sends the email we've sent three times."
 
 *Scroll to the escalation ladder diagram.*
 
-> "Contact gets louder one step at a time. Email, then SMS, then WhatsApp, then a voice call,
-> then a human. And it can only ever go up one rung from the last contact we know actually
-> arrived. Never two, no matter what the model says."
+> "And this is how contact gets louder, one step at a time.
+>
+> Zero is email, and it says ignorable, because it is. You can leave an email unread and
+> nothing has happened to you. One is SMS. Two is WhatsApp, which expects a reply. Three
+> interrupts you with a phone call. And four, the red one on the end, is a person calling a
+> person.
+>
+> The rule is that it can only ever move one step to the right, from the last contact we know
+> actually arrived. Never two, no matter what the model says. So the engine cannot open a
+> relationship with a phone call."
 
 *Stay on the README.*
 
@@ -116,15 +152,29 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 
 *Dashboard, then Decision trace.*
 
-> "This screen answers one question. Why did it do that?
+> "That diagram, running on one real case. This screen answers one question. Why did it do
+> that?
 >
-> One case, from the raw event all the way to the action it took. Eight stages, and every
-> number here is read back from the decision that actually ran. Nothing is scripted."
+> The numbered steps down the left are the same pipeline you just saw. And the colours are
+> doing work here."
 
-*Point at the amber steps.*
+*Point at step three, the indigo one.*
 
-> "You can see where things got removed. Three actions were rejected before any scoring
-> happened at all. The engine isn't allowed to open a relationship with a phone call."
+> "Indigo means the decision was made at this step."
+
+*Point at steps five and seven, the amber ones with the SUPPRESSED tag.*
+
+> "Amber means something was taken away. Step five says four eligible, three suppressed
+> before any scoring happened. Step seven names them."
+
+*Point at the Rejected before scoring card on the right.*
+
+> "And there they are. Agent dial, WhatsApp, IVR call, all three rejected, and the reason
+> next to each one is escalation ceiling. This customer hasn't earned a phone call yet.
+>
+> Above it, the answer. The action it chose, and the expected value that won, five thousand
+> two hundred and fifty rupees. Every number on this screen is read back from the decision
+> that actually ran. Nothing here is scripted."
 
 ---
 
@@ -167,10 +217,13 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 
 ## 1:55 to 2:15 · Safety and tests
 
-*Safety tab.*
+*Safety tab. Point at the green bar across the top.*
 
-> "These checks ran when this page loaded. That's what the count says. A tick here means it
-> actually executed, just now.
+> "That bar is counting checks that ran when this page loaded. Not a config file, not a
+> document. Three of three passed, three executed, on this page load.
+>
+> Each row underneath has a green tick, the invariant code, and the actual evidence
+> underneath it in monospace. That's the string the check returned, not a description of it.
 >
 > Underneath, six more are enforced in the architecture and covered by tests. They're listed
 > deliberately without ticks, because this page didn't run them. A green tick that isn't
@@ -206,6 +259,16 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 >
 > One row in here is broken on purpose. It gets rejected with a reason, not quietly skipped.
 > A dropped row is money the merchant thinks is being chased, and nothing is chasing it."
+
+*Point at the cards appearing on the board.*
+
+> "Each row is one customer. The coloured stripe down the left is the status, and the four
+> chips in the middle are the escalation ladder from that diagram. Grey means we haven't been
+> there. Green means a message was confirmed sent. And the dashed one is what it has decided
+> to do next, but hasn't sent yet.
+>
+> Those counts above the cards are filters. Click needs attention, and you get only the rows
+> that need a person."
 
 *Switch to your inbox.*
 
@@ -274,10 +337,13 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 > arrives, it cancels everything already in flight. Someone who has paid can't be chased by a
 > message that was lined up five minutes ago."
 
-*Point at the timeline.*
+*Point at the timeline that opens underneath.*
 
-> "Case created. Agent decided. Link created. Message sent. Follow up scheduled. Payment
-> received. Case closed."
+> "And this is the whole life of that case, in order. Case created. Agent decided. Link
+> created. Message sent. Follow up scheduled. Payment received. Case closed.
+>
+> That's seven lines, and every one of them was written by the engine as it happened. Nobody
+> typed that."
 
 **⚠ What broke here** *(20 seconds, the best story you have)*
 
