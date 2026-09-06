@@ -1,4 +1,4 @@
 customer_id,name,email,phone,amount,due_date
 CUST001,Sushanth C,cs2394204@gmail.com,6363613285,25000,24-08-2026
 CUST002,Bad Email Row,not-an-email,9876543211,5000,01-08-2026
-,,,,,
+CUST003,Sush,sushanthc012@gmail.com,,9000,20-08-2026

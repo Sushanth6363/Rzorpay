@@ -52,3 +52,13 @@ results/
 data/*.db
 data/*.db-wal
 data/*.db-shm
+# Hand-made backups of it. Taken while debugging a demo, useful for an hour, and never
+# something a clone should carry.
+data/*.db.*
+*.db.old
+*.db.bak
+
+# Excel saves a second copy beside a CSV you open in it. It is never the file the
+# engine reads, and one got committed by accident.
+*.csv.xlsx
+~$*

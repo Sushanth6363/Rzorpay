@@ -25,6 +25,7 @@ and closing the case the moment the money arrives.
 | | |
 |---|---|
 | [See it work](#see-it-work) | The 60-second path for a reviewer |
+| [Clone and run](#clone-and-run) | Setup, verification, and what to do when it breaks |
 | [The idea](#the-idea) | Why every contact is a number, not a rule |
 | [How the loop runs](#how-the-loop-runs) | Detect, diagnose, decide, execute, follow up, stop |
 | [The recovery workflow](#the-recovery-workflow) | Escalation ladder and derived reminder timing |
@@ -36,12 +37,51 @@ and closing the case the moment the money arrives.
 
 ---
 
-## See it work
+## Clone and run
+
+Nothing here needs an API key, a payment account or a network call. The dashboard, the
+five-arm experiment and the full test suite all run offline on a fresh clone.
 
 ```bash
+git clone https://github.com/Sushanth6363/Rzorpay.git
+cd Rzorpay
 make setup     # builds .venv with a supported Python, installs everything
-make demo      # judge dashboard on http://localhost:8555
+make demo      # dashboard on http://localhost:8555
 ```
+
+**No `make`?** Every target is a one-line script:
+
+```bash
+python scripts/bootstrap.py                       # instead of: make setup
+.venv/Scripts/python -m streamlit run app/ui/dashboard.py --server.port 8555
+```
+
+On macOS or Linux use `.venv/bin/python` in place of `.venv/Scripts/python`.
+
+### Verify it for yourself
+
+```bash
+make test      # 630 tests, about 40 seconds
+make eval      # regenerates results/report.json and results/RESULTS.md
+```
+
+`make eval` reprints the batch content hash. It is `0837b24cbe3992a6…` on this commit, and
+it is the check that matters: the same hash means you generated the identical batch, so
+every figure in `results/RESULTS.md` is reproduced rather than taken on trust.
+
+### If something goes wrong
+
+| Symptom | Cause and fix |
+|---|---|
+| `make setup` fails on a wheel | You are on Python 3.14. The pinned scientific stack has no wheels for it yet. `scripts/bootstrap.py` looks for a supported interpreter; install 3.11 or 3.12 and rerun. |
+| Port 8555 already in use | Something is already bound to it. On Windows: `Get-NetTCPConnection -LocalPort 8555 -State Listen \| Select -Expand OwningProcess \| ForEach { Stop-Process -Id $_ -Force }` |
+| The Experiment tab is empty | It computes nothing until you press **Run benchmark**. Nothing is precomputed or cached. |
+| The board says "no cases yet" | Correct on a fresh clone. Upload a CSV on **Live test** to create some. |
+| A red row on the board | Also correct. It means contacted, no payment, nothing scheduled — a case that needs a human. |
+
+**The engine sends nothing on a fresh clone.** `RECOVERY_DISPATCH_ENABLED` is off by
+default, so the Live test tab decides and records but delivers no email or SMS. See
+[Running the live loop](#running-the-live-loop) to turn it on with your own credentials.
 
 Then, in the dashboard:
 
