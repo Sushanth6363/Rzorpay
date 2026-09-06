@@ -4,6 +4,14 @@ Every significant decision is recorded as an ADR. **An ADR is mandatory before**
 
 `ADR-0001-template.md` is the template. Real decisions are numbered from **0002**.
 
+> **On the documents these ADRs cite.** Several record where a decision came from, naming
+> working files like `p0.1-technical-correction.md`, `p0.2-closure.md`, `final.md` or a
+> path under `research/`. Those were correction passes and pre-build research, not part of
+> the product, and they were removed from the tree to keep a clone readable. They remain in
+> git history: `git log --all --diff-filter=D --name-only` finds them, and any commit before
+> the removal has them in full. The citations are left as written because they are accurate
+> about where each decision was made.
+
 | ADR | Title | Status | Date | Affects |
 |---|---|---|---|---|
 | [0001](ADR-0001-template.md) | *(template — not a decision)* | — | — | — |
