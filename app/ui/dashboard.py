@@ -965,7 +965,12 @@ def _reset_controls(repo, rows) -> None:
     unpaid = [r for r in rows if not r.paid]
     paid = [r for r in rows if r.paid]
 
-    with st.expander("Reset the board (demo control)"):
+    # Labelled with the counts, and left BELOW the cards on purpose. A destructive control
+    # above the data it destroys invites a mis-click; one underneath is found by anyone
+    # looking for it and by nobody who is not.
+    label = (f"Reset the board — delete {len(rows)} case"
+             f"{'' if len(rows) == 1 else 's'} (demo control)")
+    with st.expander(label):
         st.markdown(
             '<div class="note">Deletes cases and their timelines from the local database. '
             'Open payment links are cancelled at Razorpay first, because a live link with '
