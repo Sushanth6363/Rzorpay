@@ -112,7 +112,25 @@ class PaymentLinkService:
 
         link_id = str(result.get("id") or "")
         if not link_id:
-            return None, "FAILED: provider returned no payment link id"
+            # SAY WHAT THE PROVIDER SAID.
+            #
+            # This used to return the bare sentence "provider returned no payment link
+            # id", which describes the shape of the response and not one thing about why.
+            # The client does not raise on an HTTP error or a timeout - it returns a dict
+            # carrying `error` and `details` - so the real reason was sitting in `result`
+            # and was thrown away at exactly the moment someone needed it. On stage that
+            # reads as the engine failing for no reason.
+            provider_error = str(result.get("error") or "").strip()
+            provider_detail = str(result.get("details") or "").strip()
+            if provider_error or provider_detail:
+                return None, (
+                    f"FAILED: {provider_error or 'provider rejected the request'}"
+                    f"{' - ' + provider_detail if provider_detail else ''}"
+                )[:400]
+            return None, (
+                "FAILED: provider returned no payment link id, and no error field either. "
+                f"Response keys: {sorted(result)}"
+            )[:400]
 
         # A simulated link would make the whole loop untestable: it produces no webhook, so
         # the case could never close. Refuse it rather than let a demo silently dead-end.

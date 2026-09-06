@@ -132,7 +132,12 @@ class RazorpayIntegrationClient:
                 f"{self.base_url}/payment_links",
                 auth=(self.key_id, self.key_secret),
                 json=payload,
-                timeout=5,
+                # 5s was too tight for a POST that creates a link AND, when notify is on,
+                # queues Razorpay's own email and SMS. A timeout here returns a dict with
+                # no `id`, which surfaced as "provider returned no payment link id" with
+                # no indication that the network was the cause. Reads are still fast; it
+                # is the write that occasionally is not.
+                timeout=15,
             )
             if response.status_code in (200, 201):
                 res_json = response.json()
