@@ -65,21 +65,6 @@ STYLES = """
   .pill.mute  { background:rgba(128,128,128,.13); opacity:.75; border:1px solid rgba(128,128,128,.28); }
   .pill.acc   { background:rgba(67,56,202,.14);  color:#4338CA; border:1px solid rgba(67,56,202,.34); }
 
-  .stage { display:flex; align-items:flex-start; gap:.8rem; padding:.55rem 0;
-           border-left:2px solid rgba(128,128,128,.22); padding-left:.95rem; margin-left:.35rem; }
-  .stage.active { border-left-color:#4338CA; }
-  .stage.halt   { border-left-color:#DC2626; }
-  .stage .n { font-size:.7rem; opacity:.5; min-width:1.1rem; font-weight:700; padding-top:.15rem; }
-  .stage .body { flex:1; }
-  .stage .t { font-size:.87rem; font-weight:600; margin-bottom:.1rem; }
-  .stage .d { font-size:.79rem; opacity:.68; line-height:1.45; }
-
-  .verdict { border-radius:10px; padding:.9rem 1.1rem; margin:.5rem 0 1rem;
-             border:1px solid rgba(128,128,128,.25); }
-  .verdict .lab { font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; opacity:.6; }
-  .verdict .big { font-size:1.6rem; font-weight:680; font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
-  .verdict .ci  { font-size:.8rem; opacity:.7; font-variant-numeric:tabular-nums; }
-
   /* --- case board: a card per customer, not a spreadsheet ------------------------- */
   /* Three columns: who they are, how far up the ladder, what they owe. The ladder sits
      INLINE rather than on its own row - it halves the card height, which is the
@@ -237,29 +222,28 @@ def pill(text: str, kind: str = "mute") -> str:
     return f'<span class="pill {kind}">{text}</span>'
 
 
-def stage(n: int, title: str, detail: str, state: str = "") -> str:
-    return (
-        f'<div class="stage {state}"><div class="n">{n}</div><div class="body">'
-        f'<div class="t">{title}</div><div class="d">{detail}</div></div></div>'
-    )
-
-
-# ---------------------------------------------------------------------------
-# live invariant checks — executed, never asserted as decoration
-# ---------------------------------------------------------------------------
-
 def step(n: int, title: str, detail: str, state: str = "", tag: str = "") -> str:
-    """One numbered stage of the pipeline.
+    """One numbered stage of the decision pipeline.
 
-    `state` is a claim, not decoration: "on" says this stage acted, "warn" that it
-    suppressed something, "stop" that it halted the case. A reader should be able to see
-    where the decision was actually made without reading every line.
+    `state` is a claim, not decoration: "on" says the decision was made here, "warn" that
+    something was suppressed, "stop" that the case was halted. A reader should be able to
+    see WHERE the decision happened without reading every line.
     """
-    chip = (f'<span class="pill warn" style="font-size:.63rem;">{tag}</span>') if tag else ""
+    chip = f'<span class="pill warn" style="font-size:.63rem;">{tag}</span>' if tag else ""
     return (
         f'<div class="step {state}"><div class="n">{n}</div><div class="bd">'
         f'<div class="t">{title}{chip}</div><div class="d">{detail}</div></div></div>'
     )
+
+
+def tile(key: str, value: str, delta: str = "", delta_colour: str = "") -> str:
+    """One headline number. Shared by every tab so a figure looks the same everywhere."""
+    d = f'<div class="d" style="color:{delta_colour};">{delta}</div>' if delta else ""
+    return f'<div class="tile"><div class="k">{key}</div><div class="v">{value}</div>{d}</div>'
+
+
+def tiles(*cells: str) -> None:
+    st.markdown('<div class="tiles">' + "".join(cells) + "</div>", unsafe_allow_html=True)
 
 
 def answer_card(heading: str, body: str) -> str:
@@ -314,16 +298,16 @@ def run_invariant_checks() -> List[Dict[str, Any]]:
 # sections
 # ---------------------------------------------------------------------------
 
-def _escalation_stage(result: Any, n: int) -> str:
-    """Render the compliant-escalation ceiling as one pipeline stage.
+def _escalation_step(result: Any, n: int) -> str:
+    """Render the compliant-escalation ceiling as one pipeline step.
 
     Reads the escalation assessment off the executed decision — never scripted. Shows the
     ceiling that bound this decision and, when it removed a candidate, why.
     """
     esc = getattr(result, "escalation", None)
     if esc is None:
-        return stage(n, "Compliant escalation",
-                     "No escalation assessment on this path.", "")
+        return step(n, "Compliant escalation",
+                    "No escalation assessment on this path.")
     ceiling = esc.allowed_max_rung
     ladder = esc.ladder
     ceiling_action = ladder[ceiling].replace("_", " ").title() if 0 <= ceiling < len(ladder) else "—"
@@ -333,13 +317,14 @@ def _escalation_stage(result: Any, n: int) -> str:
             f"Suppressed louder channels: "
             f"{', '.join(a.replace('_', ' ').title() for a in esc.suppressed_actions)}."
         )
-        state = "halt"
+        state = "warn"
     else:
         detail = f"Ceiling <b>{ceiling_action}</b>. No louder channel was in play to suppress."
-        state = "active"
+        state = "on"
     if esc.cooldown_active:
         detail += " Quiet period active — intensity held."
-    return stage(n, "Compliant escalation", detail, state)
+    return step(n, "Compliant escalation", detail, state,
+                tag="SUPPRESSED" if esc.suppressed_actions else "")
 
 
 def section_trace(seed: int, outage_toggle: bool, exhaust_toggle: bool) -> None:
@@ -372,16 +357,14 @@ def section_trace(seed: int, outage_toggle: bool, exhaust_toggle: bool) -> None:
     st.caption(spec.description)
 
     # --- outcome strip -----------------------------------------------------
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Selected action", d.selected_action.value.replace("_", " ").title())
-    c2.metric("Decision mode", d.decision_mode.value.replace("_", " ").title())
-    c3.metric("Simulated outcome", result.attribution.payment_outcome.value.replace("_", " ").title())
     attributed = result.attribution.attributed_recovered_paise
-    c4.metric(
-        "Attributed to intervention",
-        rupees(attributed),
-        delta=None if attributed else "self-cure — not attributed",
-        delta_color="off",
+    tiles(
+        tile("Selected action", d.selected_action.value.replace("_", " ").title()),
+        tile("Decision mode", d.decision_mode.value.replace("_", " ").title()),
+        tile("Simulated outcome",
+             result.attribution.payment_outcome.value.replace("_", " ").title()),
+        tile("Attributed to intervention", rupees(attributed),
+             "" if attributed else "self-cure — not attributed", "#D97706"),
     )
 
     st.write("")
@@ -417,7 +400,7 @@ def section_trace(seed: int, outage_toggle: bool, exhaust_toggle: bool) -> None:
             step(6, "Expected value ranking",
                  f"Model <code>{d.model_version}</code> scored every surviving candidate "
                  f"against doing nothing."),
-            _escalation_stage(result, 7).replace('class="stage', 'class="step'),
+            _escalation_step(result, 7),
             step(8, "Arbitration & attribution",
                  f"{result.attribution.payment_outcome.value.replace('_', ' ').title()} → "
                  f"attributed {rupees(attributed)}."
@@ -557,9 +540,6 @@ def section_experiment() -> None:
     p = summary.primary_comparison
     inconclusive = p.status != StatisticalStatus.STATISTICALLY_SIGNIFICANT
 
-    def tile(key: str, value: str) -> str:
-        return f'<div class="tile"><div class="k">{key}</div><div class="v">{value}</div></div>'
-
     total_opps = sum(m.total_opportunities for m in summary.arm_metrics.values())
     at_risk = max((getattr(m, "total_at_risk_paise", 0) for m in summary.arm_metrics.values()),
                   default=0)
@@ -689,9 +669,11 @@ def section_experiment() -> None:
     if streams:
         st.markdown("##### Stream coverage — one engine, four streams")
         total_s = sum(streams.values()) or 1
-        cols = st.columns(len(streams))
-        for col, (name, count) in zip(cols, sorted(streams.items(), key=lambda kv: -kv[1])):
-            col.metric(name.replace("_", " ").title(), count, f"{count / total_s:.0%}")
+        tiles(*[
+            tile(name.replace("_", " ").title(), f"{count:,}",
+                 f"{count / total_s:.0%} of batch", "#818CF8")
+            for name, count in sorted(streams.items(), key=lambda kv: -kv[1])
+        ])
         st.markdown(
             '<div class="note">Track 3 names three sources: payment failures, checkout abandonment, '
             'overdue receivables. A single-stream batch cannot demonstrate a <b>unified</b> engine. '
@@ -858,10 +840,6 @@ def section_case_board() -> None:
 
     s = summarise(rows)
 
-    def tile(key: str, value: str, delta: str = "", delta_colour: str = "") -> str:
-        d = (f'<div class="d" style="color:{delta_colour};">{delta}</div>') if delta else ""
-        return f'<div class="tile"><div class="k">{key}</div><div class="v">{value}</div>{d}</div>'
-
     st.markdown(
         '<div class="tiles">'
         + tile("Cases", str(s["cases"]))
@@ -1008,10 +986,11 @@ def section_handoff_report() -> None:
         return
 
     summary = unrecovered.summarise(rows)
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Customers unrecovered", summary["customers"])
-    c2.metric("Still outstanding", rupees(summary["total_unrecovered_paise"]))
-    c3.metric("Contacts already spent", summary["contacts_spent"])
+    tiles(
+        tile("Customers unrecovered", str(summary["customers"])),
+        tile("Still outstanding", rupees(summary["total_unrecovered_paise"])),
+        tile("Contacts already spent", str(summary["contacts_spent"])),
+    )
 
     st.dataframe(
         pd.DataFrame([r.to_dict() for r in rows]),
@@ -1048,10 +1027,17 @@ def section_live_test() -> None:
     )
     st.write("")
 
+    # Colour carries the fact: green can send, grey cannot. A channel with no credential
+    # says "Not set" rather than going quiet, because an adapter that appears configured
+    # and silently sends nothing is the failure this whole file is written against.
     ready = channels.configured_channels()
-    cols = st.columns(len(ready))
-    for col, (name, ok) in zip(cols, ready.items()):
-        col.metric(name.replace("_", " ").title(), "Ready" if ok else "Not set")
+    tiles(*[
+        tile(name.replace("_", " ").title(),
+             "Ready" if ok else "Not set",
+             "can send" if ok else "no credential",
+             "#10B981" if ok else "#9CA3AF")
+        for name, ok in ready.items()
+    ])
     if not any(ready.values()):
         st.warning(
             "No channel has credentials, so nothing can actually send. Dry run still shows "
