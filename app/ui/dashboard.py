@@ -575,7 +575,10 @@ def section_experiment() -> None:
 
     # Every comparison, each with its own verdict. Shown in full because reporting only the
     # favourable ones is how an honest experiment becomes a marketing chart.
-    others = [c for c in getattr(summary, "comparisons", []) or []
+    # `secondary_comparisons`, named exactly. A getattr with a [] default silently hid
+    # this whole panel when the attribute name was wrong - the feature simply never
+    # appeared, and nothing failed to say so.
+    others = [c for c in summary.secondary_comparisons
               if c.comparison_id != p.comparison_id]
     if others:
         st.write("")

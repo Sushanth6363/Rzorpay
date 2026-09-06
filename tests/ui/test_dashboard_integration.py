@@ -86,3 +86,20 @@ def test_m8_06_scenario_11_cross_tenant_isolation_inv1():
     assert res_alpha.customer_id == "cust_101"
     assert res_beta.customer_id == "cust_101"
     assert res_alpha.opportunity_id != res_beta.opportunity_id
+
+
+def test_the_experiment_summary_exposes_the_attributes_the_dashboard_reads():
+    """A getattr with a default silently hid the secondary-comparison panel when the
+    attribute name was wrong: the feature never rendered and nothing reported it missing.
+
+    These names are a contract between the runner and the dashboard, so a rename should
+    fail here rather than quietly remove a panel a judge was meant to see.
+    """
+    import dataclasses
+
+    from app.domain.models import ExperimentResultSummary
+
+    fields = {f.name for f in dataclasses.fields(ExperimentResultSummary)}
+
+    for required in ("arm_metrics", "primary_comparison", "secondary_comparisons"):
+        assert required in fields, f"the dashboard reads {required} off the summary"
