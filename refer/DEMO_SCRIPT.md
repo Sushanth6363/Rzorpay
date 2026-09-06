@@ -1,18 +1,18 @@
-# 5-minute demo script — read-aloud version
+# 5 minute demo script, read aloud version
 
 **Unified Recovery Engine · Razorpay AI Buildathon 2026 · Track 3**
 
 > Everything in a quote block is written to be **spoken**. Short sentences, plain words,
-> natural pauses. Read it at normal talking pace and it lands at five minutes.
-> Anything in *italics* is a stage direction. Don't read it out.
+> and pauses where you need to breathe. Read it at normal talking pace and it lands at five
+> minutes. Anything in *italics* is a stage direction. Don't read it out.
 
 ```
-0:00 – 0:20   Intro
-0:20 – 1:00   GitHub: the README and the architecture
-1:00 – 1:20   Decision trace
-1:20 – 1:55   Experiment, including the result that went against us
-1:55 – 2:15   Safety and tests
-2:15 – 5:00   The live run
+0:00 to 0:20   Intro
+0:20 to 1:00   GitHub, the README and the architecture
+1:00 to 1:20   Decision trace
+1:20 to 1:55   Experiment, including the result that went against us
+1:55 to 2:15   Safety and tests
+2:15 to 5:00   The live run
 ```
 
 Each section has a **⚠ What broke here** box. Those are optional, and the timings above
@@ -24,31 +24,31 @@ If you only tell one, tell the payment one. It's the best story in the project.
 
 ## Before you start (2 minutes, off camera)
 
-**Terminal 1 — the engine.** Dashboard, webhook listener and the follow-up worker, all on
+**Terminal 1, the engine.** Dashboard, webhook listener and the follow up worker, all on
 one port:
 
 ```powershell
 cd "C:\Users\Dell\Documents\New folder\Razorpay"; $env:PORT="8555"; .venv\Scripts\python.exe -m app.server
 ```
 
-**Terminal 2 — the tunnel**, so Razorpay can reach this laptop. Leave it open for the whole
-demo; closing it kills the webhook path:
+**Terminal 2, the tunnel**, so Razorpay can reach this laptop. Leave it open for the whole
+demo. Closing it kills the webhook path:
 
 ```powershell
 cd "C:\Users\Dell\Documents\New folder\Razorpay"; .\scripts\start_tunnel.ps1
 ```
 
-**Terminal 3 — spare**, for the health check below and anything you need mid-demo:
+**Terminal 3, spare**, for the health check below and anything you need mid demo:
 
 ```powershell
 cd "C:\Users\Dell\Documents\New folder\Razorpay"
 ```
 
-- [ ] `curl.exe -s localhost:8555/health` shows `followup_hour_seconds: 0.05` and `worker_interval_seconds: 2`
-      — if it says `3600` and `60`, the server started before the demo settings, and your
-      escalation will take eight days on stage
+- [ ] `curl.exe -s localhost:8555/health` shows `followup_hour_seconds: 0.05` and `worker_interval_seconds: 2`.
+      If it says `3600` and `60`, the server started before the demo settings, and your
+      escalation will take eight days on stage.
 - [ ] Run the Experiment benchmark once now, so results are already on screen
-- [ ] Reset the board → tick confirm → **Clear N unpaid**
+- [ ] Reset the board, tick confirm, then **Clear N unpaid**
 - [ ] Tabs open: GitHub README, dashboard, your inbox. Phone where you can see it.
 - [ ] `demo_customers.csv` ready to drag in
 
@@ -56,7 +56,7 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 
 ---
 
-## 0:00 – 0:20 · Intro
+## 0:00 to 0:20 · Intro
 
 > "Hi, I'm Sushanth. This is the Unified Recovery Engine, built for Track 3.
 >
@@ -71,12 +71,12 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 
 ---
 
-## 0:20 – 1:00 · The README and the architecture
+## 0:20 to 1:00 · The README and the architecture
 
 *Open the GitHub README. Scroll to the flow diagram.*
 
 > "One engine handles all four streams. Failed payments, abandoned checkouts, failed
-> renewals, overdue invoices.
+> renewals, and overdue invoices.
 >
 > The whole thing is one loop." *(trace it with your cursor)*
 >
@@ -86,9 +86,9 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 > that isn't allowed right now. Whatever survives gets ranked by expected value, and the best
 > one runs.
 >
-> Then it schedules its own next look and goes quiet. A worker wakes it up later, it re-reads
-> the case, and decides again. That keeps going until the money arrives, or a stopping rule
-> ends it."
+> Then it schedules its own next look, and goes quiet. A worker wakes it up later, it
+> re-reads the case, and decides again. That keeps going until the money arrives, or a
+> stopping rule ends it."
 
 *Scroll to the escalation ladder diagram.*
 
@@ -112,9 +112,9 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 
 ---
 
-## 1:00 – 1:20 · Decision trace
+## 1:00 to 1:20 · Decision trace
 
-*Dashboard → Decision trace.*
+*Dashboard, then Decision trace.*
 
 > "This screen answers one question. Why did it do that?
 >
@@ -128,7 +128,7 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 
 ---
 
-## 1:20 – 1:55 · The experiment
+## 1:20 to 1:55 · The experiment
 
 *Experiment tab. Results already on screen.*
 
@@ -136,9 +136,9 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 > capability, so you can see what each part is actually worth.
 >
 > Now, the honest part. I wrote a prediction down before running this. I said the machine
-> learning model would beat the simple rule-based version.
+> learning model would beat the simple rule based version.
 >
-> It didn't." *(point at the row)* "That comparison came back inconclusive. The p-value is
+> It didn't." *(point at the row)* "That comparison came back inconclusive. The p value is
 > nought point nine six.
 >
 > And the reason is more interesting than a win would have been. The safety rules narrow the
@@ -165,7 +165,7 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 
 ---
 
-## 1:55 – 2:15 · Safety and tests
+## 1:55 to 2:15 · Safety and tests
 
 *Safety tab.*
 
@@ -194,7 +194,7 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 
 ---
 
-## 2:15 – 3:00 · Upload a CSV, and a real email goes out
+## 2:15 to 3:00 · Upload a CSV, and a real email goes out
 
 *Live test tab. Drag in `demo_customers.csv`.*
 
@@ -226,7 +226,7 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 
 ---
 
-## 3:00 – 4:00 · It escalates on its own
+## 3:00 to 4:00 · It escalates on its own
 
 *Back to the board. Wait about ten seconds. Refresh. Then again.*
 
@@ -262,13 +262,13 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 
 ---
 
-## 4:00 – 4:40 · Payment always wins
+## 4:00 to 4:40 · Payment always wins
 
 *Point at the green PAID row. Then click Open.*
 
 > "That's a real payment. Twenty five thousand rupees, in test mode. Razorpay's webhook came
 > into this machine, we verified the signature, and the case closed itself. Marked paid, the
-> open link cancelled, and every scheduled follow-up stopped.
+> open link cancelled, and every scheduled follow up stopped.
 >
 > The case gets re-read at the moment we send, not when the action was queued. So if money
 > arrives, it cancels everything already in flight. Someone who has paid can't be chased by a
@@ -276,31 +276,31 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 
 *Point at the timeline.*
 
-> "Case created. Agent decided. Link created. Message sent. Follow-up scheduled. Payment
+> "Case created. Agent decided. Link created. Message sent. Follow up scheduled. Payment
 > received. Case closed."
 
-**⚠ What broke here** *(20 seconds — the best story you have)*
+**⚠ What broke here** *(20 seconds, the best story you have)*
 
 > "The first time I actually paid this link, the case didn't close.
 >
 > The webhook arrived. The signature checked out. It was recorded. And the case just sat
-> there, still open, with a follow-up still scheduled. The engine was about to chase me for
+> there, still open, with a follow up still scheduled. The engine was about to chase me for
 > money I had just paid it.
 >
 > That got past three hundred and ninety five passing tests.
 >
-> Razorpay sent a payment event, not a payment-link event. And a payment event hides our
+> Razorpay sent a payment event, not a payment link event. And a payment event hides our
 > reference somewhere different. We were only looking in one place.
 >
-> There was a second bug underneath it. The code that cancels the follow-up was matching on
+> There was a second bug underneath it. The code that cancels the follow up was matching on
 > the wrong column, so it updated zero rows, reported success, and nothing checked.
 >
-> Both fixed. And the test I wrote for it uses the actual data Razorpay sent me, not a made-up
-> example. A made-up example would have had the same wrong assumption baked into it."
+> Both fixed. And the test I wrote for it uses the actual data Razorpay sent me, not a made up
+> example. A made up example would have had the same wrong assumption baked into it."
 
 ---
 
-## 4:40 – 5:00 · Close
+## 4:40 to 5:00 · Close
 
 > "The one idea underneath all of this. Doing nothing scores exactly zero. So when no action
 > is worth taking, the engine contacts nobody. That's deliberate. It's the difference between
@@ -319,7 +319,7 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 | What happens | What to say, then keep moving |
 |---|---|
 | Email doesn't arrive | "SMTP is a live dependency. The dispatch log shows it was sent, with the provider's ID." Then show the timeline. |
-| No escalation shows up | Check `/health`. If it says 3600, say "this is running at real-world timing" and show the scheduled next review instead. |
+| No escalation shows up | Check `/health`. If it says 3600, say "this is running at real world timing" and show the scheduled next review instead. |
 | WhatsApp shows FAILED | **Use it.** "That's Twilio actually refusing. It's a paid feature. The engine records the failure and doesn't move up the ladder, because a rung only lights up when a message was confirmed sent." |
 | SMS wording looks odd | "Free Twilio accounts can only send fixed templates, so the payment link isn't in there. And the record says exactly that, instead of claiming it worked." |
 | Payment doesn't close a case | Run `scripts/send_test_webhook.py` and show the receiving side works on its own. |
