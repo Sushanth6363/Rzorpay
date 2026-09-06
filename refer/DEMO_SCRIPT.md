@@ -7,10 +7,10 @@
 ```
 0:00   Intro
 0:20   Architecture             90 seconds on the diagram, the one slow section
-1:50   Decision trace           five points
-2:10   Experiment               five points
-2:35   Safety                   five points
-2:55   Live test                the demo itself
+1:50   Decision trace           two sentences
+2:05   Experiment               two sentences
+2:25   Safety                   two sentences
+2:40   Live test                the demo itself, and the longest section
 4:40   Close
 ```
 
@@ -102,71 +102,43 @@ faster, so take the full ninety seconds here.*
 
 ***
 
-## 1:50 · Decision trace · five points
+## 1:50 · Decision trace · two sentences
 
-*Decision trace tab.*
+*Decision trace tab. Scroll down it slowly while you talk.*
 
-> "This tab answers one question. Why did the engine do that. It is here because a system
-> that cannot show its reasoning is just a spam tool.
+> "This tab shows why the engine did what it did, on one real case, top to bottom.
 >
-> One. That whole diagram, on one real case.
->
-> Two. Orange means something was thrown out at that step.
->
-> Three. Four actions were allowed, three were blocked before we scored anything.
->
-> Four. That card on the right names each one and why.
->
-> Five. Change the case at the top, and the whole thing changes."
-
-*Switch the dropdown to the overdue invoice.*
-
-> "Different kind of case, so a retry is not even on the list. Nothing failed, so there is
-> nothing to retry."
+> Orange means something was thrown out at that step, and the card on the right names each
+> one and why."
 
 ***
 
-## 2:10 · Experiment · five points
+## 2:05 · Experiment · two sentences
 
-*Experiment tab, results already on screen.*
+*Experiment tab, results already on screen. Point at the p value, then the green panel.*
 
-> "This tab is where I try to prove my own engine wrong. Each version has one piece taken
-> out, so every feature has to show it is worth keeping.
+> "This is where I try to prove my own engine wrong. Five versions over the same cases, each
+> with one piece taken out.
 >
-> One. Five versions of the engine, over the same set of cases.
->
-> Two. I wrote down first that the model would beat the simple rule.
->
-> Three. It did not. p value zero point nine six. The safety rules cut the choices down so
-> much that the scoring barely matters.
->
-> Four. It wins here instead. Eleven percent fewer messages, and no drop in money recovered
-> that we can measure.
->
-> Five. I did not call that one in advance, and the title of the panel says so."
+> My prediction that the model would beat the simple rule was wrong, and I am reporting
+> that. It wins here instead, eleven percent fewer messages with no drop in money we can
+> measure."
 
 ***
 
-## 2:35 · Safety · five points
+## 2:25 · Safety · two sentences
 
-*Safety tab.*
+*Safety tab. Point at the green bar.*
 
-> "This tab runs the safety rules in front of you instead of listing them. Anyone can put
-> these on a slide. A claim is not a check.
+> "These safety rules ran live when the page loaded, and each one shows what it actually
+> found.
 >
-> One. These ran when the page loaded.
->
-> Two. Each one shows what it actually found.
->
-> Three. The six below have no tick, because this page did not run them.
->
-> Four. Five hundred and fifty one tests.
->
-> Five. And it all runs the same on a fresh copy of the code."
+> Anyone can put these on a slide. Five hundred and fifty one tests behind them, and it all
+> runs the same on a fresh copy of the code."
 
 ***
 
-## 2:55 · Live test · the demo
+## 2:40 · Live test · the demo
 
 *Live test tab. Everything before this was setup.*
 
