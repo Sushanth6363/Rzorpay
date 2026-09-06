@@ -1,4 +1,4 @@
-# 5 minute demo script, read aloud version
+# 5 minute demo script, written to be read aloud
 
 **Unified Recovery Engine · Razorpay AI Buildathon 2026 · Track 3**
 
@@ -20,7 +20,7 @@ assume you skip them. Use one or two if you have room, or save them for question
 
 If you only tell one, tell the payment one. It's the best story in the project.
 
----
+***
 
 ## Before you start (2 minutes, off camera)
 
@@ -44,17 +44,17 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"; .\scripts\start_tunnel.ps1
 cd "C:\Users\Dell\Documents\New folder\Razorpay"
 ```
 
-- [ ] `curl.exe -s localhost:8555/health` shows `followup_hour_seconds: 0.05` and `worker_interval_seconds: 2`.
+* [ ] `curl.exe -s localhost:8555/health` shows `followup_hour_seconds: 0.05` and `worker_interval_seconds: 2`.
       If it says `3600` and `60`, the server started before the demo settings, and your
       escalation will take eight days on stage.
-- [ ] Run the Experiment benchmark once now, so results are already on screen
-- [ ] Reset the board, tick confirm, then **Clear N unpaid**
-- [ ] Tabs open: GitHub README, dashboard, your inbox. Phone where you can see it.
-- [ ] `demo_customers.csv` ready to drag in
+* [ ] Run the Experiment benchmark once now, so results are already on screen
+* [ ] Reset the board, tick confirm, then **Clear N unpaid**
+* [ ] Tabs open: GitHub README, dashboard, your inbox. Phone where you can see it.
+* [ ] `demo_customers.csv` ready to drag in
 
 > **Dispatch is live.** Every upload sends a real email. Only use a CSV with your own address.
 
----
+***
 
 ## 0:00 to 0:20 · Intro
 
@@ -69,7 +69,7 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 > I built something that decides, case by case, whether contacting someone is actually worth
 > it. And when it isn't, it doesn't."
 
----
+***
 
 ## 0:20 to 1:00 · The README and the architecture
 
@@ -107,7 +107,7 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 *Point at the dotted arrow curving back up.*
 
 > "This dotted line is the part I'd most like you to notice. After it sends, it schedules its
-> own next look, and that arrow loops straight back up to stage one. It re-reads the case and
+> own next look, and that arrow loops straight back up to stage one. It reads the case again and
 > decides again, from scratch. Nothing outside the system is driving that."
 
 *Point at the green box on the right, then the red one at the bottom.*
@@ -117,7 +117,7 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 >
 > The red one is the stopping rules. When we've done everything we're allowed to do, the case
 > leaves as a handoff report for a human, carrying everything we already tried, so nobody
-> re-sends the email we've sent three times."
+> sends the email we've already sent three times."
 
 *Scroll to the escalation ladder diagram.*
 
@@ -146,7 +146,7 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 > decision path. If you're going to chase someone for money, you should be able to explain
 > exactly why, from a number."
 
----
+***
 
 ## 1:00 to 1:20 · Decision trace
 
@@ -176,7 +176,7 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 > two hundred and fifty rupees. Every number on this screen is read back from the decision
 > that actually ran. Nothing here is scripted."
 
----
+***
 
 ## 1:20 to 1:55 · The experiment
 
@@ -210,10 +210,10 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 > decision time, and that quietly killed the escalation ladder in every single test run. The
 > model was being graded in a world that didn't exist.
 >
-> I fixed it, re-ran everything, and the prediction was still wrong. So that's what I'm
+> I fixed it, ran everything again, and the prediction was still wrong. So that's what I'm
 > reporting."
 
----
+***
 
 ## 1:55 to 2:15 · Safety and tests
 
@@ -245,7 +245,7 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 > a demo, the tests started running with live credentials loaded. One test caught itself.
 > Nothing was protecting the rest."
 
----
+***
 
 ## 2:15 to 3:00 · Upload a CSV, and a real email goes out
 
@@ -287,7 +287,7 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 > Now a channel we can't reach gets rejected straight away, and it starts at the first rung
 > that can actually reach the person."
 
----
+***
 
 ## 3:00 to 4:00 · It escalates on its own
 
@@ -323,7 +323,7 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 > Twilio fetches it without any credentials, and otherwise anyone who guessed a case ID could
 > have a customer's name and their debt read out loud."
 
----
+***
 
 ## 4:00 to 4:40 · Payment always wins
 
@@ -333,7 +333,7 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 > into this machine, we verified the signature, and the case closed itself. Marked paid, the
 > open link cancelled, and every scheduled follow up stopped.
 >
-> The case gets re-read at the moment we send, not when the action was queued. So if money
+> The case is read again at the moment we send, not when the action was queued. So if money
 > arrives, it cancels everything already in flight. Someone who has paid can't be chased by a
 > message that was lined up five minutes ago."
 
@@ -364,7 +364,7 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 > Both fixed. And the test I wrote for it uses the actual data Razorpay sent me, not a made up
 > example. A made up example would have had the same wrong assumption baked into it."
 
----
+***
 
 ## 4:40 to 5:00 · Close
 
@@ -378,20 +378,42 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 >
 > Thank you."
 
----
+***
 
 ## If something goes wrong
 
-| What happens | What to say, then keep moving |
-|---|---|
-| Email doesn't arrive | "SMTP is a live dependency. The dispatch log shows it was sent, with the provider's ID." Then show the timeline. |
-| No escalation shows up | Check `/health`. If it says 3600, say "this is running at real world timing" and show the scheduled next review instead. |
-| WhatsApp shows FAILED | **Use it.** "That's Twilio actually refusing. It's a paid feature. The engine records the failure and doesn't move up the ladder, because a rung only lights up when a message was confirmed sent." |
-| SMS wording looks odd | "Free Twilio accounts can only send fixed templates, so the payment link isn't in there. And the record says exactly that, instead of claiming it worked." |
-| Payment doesn't close a case | Run `scripts/send_test_webhook.py` and show the receiving side works on its own. |
-| "Is that your model deciding?" on the trace tab | "No, and the screen says so. That one uses base rates. The live path uses the trained model. I checked all seven scenarios and it picks the identical action every time, because the safety rules had already narrowed it down." |
+Each of these has an answer that turns it into a point. Say it, then keep moving.
 
----
+**The email doesn't arrive.**
+> "SMTP is a live dependency. The dispatch log shows it was sent, with the provider's ID."
+
+*Then show the timeline.*
+
+**No escalation shows up.**
+Check `/health`. If it says 3600, the clock isn't compressed.
+> "This one is running at real world timing, so the next review is scheduled rather than
+> immediate."
+
+*Then point at the scheduled next review on the card.*
+
+**WhatsApp shows FAILED.** Use it, don't hide it.
+> "That's Twilio actually refusing. It's a paid feature on their side. The engine records
+> the failure, and it does not move up the ladder, because a rung only lights up when a
+> message was confirmed sent."
+
+**The SMS wording looks odd.**
+> "Free Twilio accounts can only send fixed templates, so our payment link isn't in there.
+> And the record says exactly that, instead of claiming it worked."
+
+**A payment doesn't close a case.**
+Run `scripts/send_test_webhook.py` and show the receiving side works on its own.
+
+**Somebody asks, is that your model deciding, on the trace tab.**
+> "No, and the screen says so. That one uses base rates. The live path uses the trained
+> model. I checked all seven scenarios and it picks the identical action every time, because
+> the safety rules had already narrowed it down."
+
+***
 
 ## Three lines worth landing
 
@@ -401,6 +423,6 @@ cd "C:\Users\Dell\Documents\New folder\Razorpay"
 
 ## Don't say
 
-- Any percentage uplift from the AI. Your own experiment showed there isn't one.
-- That the 13.6 million figure is real money. It's a simulation, and the README says so.
-- That WhatsApp is working. It's built, and it's blocked by the provider.
+* Any percentage uplift from the AI. Your own experiment showed there isn't one.
+* That the 13.6 million figure is real money. It's a simulation, and the README says so.
+* That WhatsApp is working. It's built, and it's blocked by the provider.
